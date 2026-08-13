@@ -1,0 +1,75 @@
+# pyproject.toml
+#
+# PROVENANCE — dependencies included below and why:
+#   fastapi              DOCUMENTED — ARCHITECTURE.md §6 ("Framework: FastAPI")
+#   sqlalchemy            DOCUMENTED — DEBUG_LOG.md M0 ("FastAPI + SQLAlchemy async")
+#   alembic                DOCUMENTED — DEBUG_LOG.md M0 ("+ Alembic")
+#   asyncpg                RECONSTRUCTED — necessary async PostgreSQL driver for the
+#                          documented "SQLAlchemy async" + PostgreSQL combination;
+#                          not itself named in any Atlas document.
+#   redis                  DOCUMENTED — DEBUG_LOG.md M0 ("+ Redis")
+#   qdrant-client          DOCUMENTED — DEBUG_LOG.md M0 ("+ Qdrant")
+#   structlog              DOCUMENTED — DEBUG_LOG.md M0 ("structured logging (structlog...)")
+#   pydantic-settings      DOCUMENTED — DEBUG_LOG.md Architecture Decisions
+#                          ("ai/config.py ... decouples AI config from
+#                          pydantic-settings")
+#   openai                 RECONSTRUCTED — implied by DEBUG_LOG.md's "OpenAIProvider
+#                          implementation" and the documented OPENAI_API_KEY env var;
+#                          the SDK package name itself is not stated verbatim.
+#
+# NOT included (see .ai/MISSING_INFORMATION.md for why): pytest (test
+# framework name not confirmed), mypy (confirmed as used in CI, but as
+# a dev-only/CI dependency — listed in [dependency-groups.dev] below,
+# not main deps), uvicorn (RECONSTRUCTED — the ASGI server needed to
+# actually run FastAPI; not named verbatim in any Atlas document, but
+# omitting it would make the documented Dockerfile CMD non-functional,
+# so it is included as a framework-necessary reconstruction).
+#
+# Version numbers: NOT documented anywhere for any package. No
+# specific version pins are invented below — see
+# .ai/MISSING_INFORMATION.md.
+
+[project]
+name = "atlas-backend"
+version = "0.1.0"
+description = "Atlas AI Travel Platform — backend (FastAPI)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "alembic",
+    "asyncpg",
+    "redis",
+    "qdrant-client",
+    "structlog",
+    "pydantic-settings",
+    "openai",
+]
+
+[dependency-groups]
+dev = [
+    # DOCUMENTED — DEBUG_LOG.md Known Issues: "mypy strict mode may
+    # flag untyped external packages ... CI runs mypy with
+    # --ignore-missing-imports".
+    "mypy",
+    # RECONSTRUCTED — GUIDELINES.md §14 requires "Unit tests,
+    # Integration tests" for the backend but does not name a specific
+    # framework. pytest is the conventional choice for this stack but
+    # is NOT independently confirmed — see .ai/MISSING_INFORMATION.md.
+    # Included here, flagged, rather than silently omitted, since the
+    # requirement for *some* test framework is documented even though
+    # the specific one is not.
+    "pytest",
+]
+
+[tool.mypy]
+# DOCUMENTED — DEBUG_LOG.md: "mypy strict mode", "--ignore-missing-imports"
+strict = true
+ignore_missing_imports = true
+
+[build-system]
+# RECONSTRUCTED — conventional for uv-managed projects; not
+# independently specified by Atlas documentation.
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,0 +1,494 @@
+@import "tailwindcss";
+
+/**
+ * Atlas Design Tokens — Tailwind v4 theme layer
+ * Source of truth: DESIGN_TOKENS.md (14). This file is the ONLY place
+ * raw token values may appear — components consume the generated
+ * utilities/semantic classes below, never hex/px literals directly
+ * (DESIGN_TOKENS.md Part 5 "No component may bypass Design Tokens").
+ *
+ * Verified against the installed tailwindcss/theme.css defaults:
+ * - --spacing (0.25rem/4px multiplier) already matches Atlas's 4px grid
+ *   exactly (space-1..space-32) — no override needed, use Tailwind's
+ *   native numeric spacing utilities (p-4, gap-6, m-8...).
+ * - --text-xs..--text-7xl already match Atlas's type scale exactly
+ *   (12/14/16/18/20/24/30/36/48/60/72px) — no override needed.
+ * - --font-weight-* already match Atlas's weight scale exactly
+ *   (Atlas "font-regular" 400 = Tailwind's `font-normal` utility).
+ * - --breakpoint-*, --radius-*, --shadow-*, --leading-*, --tracking-*
+ *   Tailwind defaults do NOT match Atlas — overridden explicitly below.
+ */
+@theme {
+  /* ---- Breakpoints (12_RESPONSIVE_SYSTEM.md) ---- */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 640px;
+  --breakpoint-lg: 768px;
+  --breakpoint-xl: 1024px;
+  --breakpoint-2xl: 1280px;
+  --breakpoint-3xl: 1536px;
+
+  /* ---- Radius (14_DESIGN_TOKENS.md Radius Tokens) ---- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+
+  /* ---- Additional type size Atlas defines but Tailwind doesn't ---- */
+  --text-2xs: 0.625rem; /* 10px */
+  --text-2xs--line-height: 1.4;
+
+  /* ---- Line height / letter spacing — overridden to Atlas's exact values ---- */
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+  --leading-loose: 1.8;
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+
+  /* ---- Shadows (14_DESIGN_TOKENS.md Shadow Tokens: blur + opacity) ----
+     Atlas gives blur+opacity only; y-offset derived as ~blur/2 (soft,
+     layered convention per "Atlas Glass Design Language > Glass Shadows").
+     Neutral black base — no shadow tint specified in the source doc. */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 2px 8px 0 rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 16px 0 rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 6px 28px 0 rgb(0 0 0 / 0.10);
+  --shadow-xl: 0 8px 40px 0 rgb(0 0 0 / 0.12);
+  --shadow-2xl: 0 12px 64px 0 rgb(0 0 0 / 0.14);
+
+  /* ---- Blur (14_DESIGN_TOKENS.md Blur Tokens) ----
+     Tailwind's own blur-lg (16px) and blur-xl (24px) defaults do not
+     match Atlas's (20px / 28px) — overridden in full for precision. */
+  --blur-xs: 4px;
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 20px;
+  --blur-xl: 28px;
+  --blur-2xl: 40px;
+
+  /* ---- Z-index (14_DESIGN_TOKENS.md Z-Index Tokens) ----
+     Generates z-dropdown, z-sticky, z-fixed, z-overlay, z-modal,
+     z-popover, z-tooltip, z-toast utilities. */
+  --z-base: var(--atlas-z-base);
+  --z-dropdown: var(--atlas-z-dropdown);
+  --z-sticky: var(--atlas-z-sticky);
+  --z-fixed: var(--atlas-z-fixed);
+  --z-overlay: var(--atlas-z-overlay);
+  --z-modal: var(--atlas-z-modal);
+  --z-popover: var(--atlas-z-popover);
+  --z-tooltip: var(--atlas-z-tooltip);
+  --z-toast: var(--atlas-z-toast);
+
+  /* ---- Easing (14_DESIGN_TOKENS.md Easing Tokens) ----
+     ease-in / ease-out / ease-in-out reuse Tailwind's own defaults,
+     which are already standard "natural, no bounce" curves and satisfy
+     MOTION_SYSTEM.md §6. ease-standard is Atlas-specific, mapped to the
+     same standard curve as ease-in-out (no bezier given in the source
+     doc). Spring tokens (spring-soft/spring-gentle) are NOT CSS easings
+     — they are Framer Motion spring physics presets, defined as JS
+     constants in lib/tokens/motion.ts instead. */
+  --ease-standard: var(--ease-in-out);
+
+  /* ---- Font family (14_DESIGN_TOKENS.md Typography Tokens) ----
+     Loaded via @fontsource/plus-jakarta-sans in app/layout.tsx
+     (self-hosted static font files — see that file for why this was
+     used instead of next/font/google). */
+  --font-sans: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui,
+    sans-serif;
+
+  /* ==================================================================
+     Color — semantic tokens (Light theme), per DESIGN_TOKENS.md
+     "Semantic Color Mapping (Light Theme)" and the Primitive palettes.
+     Primitive hex values are defined once as plain custom properties
+     below the @theme block (they are never consumed directly by
+     components — only these --color-* semantic entries are).
+     ================================================================== */
+  --color-background: var(--atlas-neutral-25);
+  --color-surface: var(--atlas-neutral-0);
+  --color-surface-secondary: var(--atlas-neutral-50);
+  --color-surface-elevated: var(--atlas-neutral-0);
+
+  --color-text-primary: var(--atlas-neutral-900);
+  --color-text-secondary: var(--atlas-neutral-600);
+  --color-text-muted: var(--atlas-neutral-500);
+  --color-text-disabled: var(--atlas-neutral-400);
+  --color-on-primary: var(--atlas-neutral-0);
+
+  --color-border: var(--atlas-neutral-200);
+  --color-divider: var(--atlas-neutral-100);
+
+  --color-primary: var(--atlas-primary-500);
+  --color-primary-hover: var(--atlas-primary-600);
+  --color-primary-active: var(--atlas-primary-700);
+  --color-primary-tint: var(--atlas-primary-50);
+
+  /* color-error (error-500) is DESIGN_TOKENS.md's literal semantic
+     mapping — used for borders/icons (passes the 3:1 non-text bar).
+     color-error-strong (error-600) is an implementation-level addition
+     for on-surface ERROR TEXT specifically: error-500 body text on a
+     white surface computes to 3.76:1, under the 4.5:1 normal-text
+     minimum MASTER_RULES.md §12 requires; error-600 computes to
+     4.83:1. See handoff notes for the exact figures and the
+     recommended DESIGN_TOKENS.md amendment. */
+  --color-error: var(--atlas-error-500);
+  --color-error-strong: var(--atlas-error-600);
+  --color-error-tint: var(--atlas-error-50);
+
+  --color-disabled-surface: var(--atlas-neutral-100);
+
+  /* Success / Warning / Info — DESIGN_TOKENS.md's "Semantic Color Mapping"
+     gives these as literal X → X-500, same pattern as color-primary. Not
+     previously wired (AUTH-01 had no need for them). */
+  --color-success: var(--atlas-success-500);
+  --color-warning: var(--atlas-warning-500);
+  --color-info: var(--atlas-info-500);
+
+  /* Accent — no explicit semantic-mapping line exists in the source doc
+     for this one; inferred by the same X → X-500 pattern every other
+     palette follows. Low-risk inference (naming only, values are
+     documented); flagged in HANDOFF notes same as color-secondary's
+     absence, for symmetry. */
+  --color-accent: var(--atlas-accent-500);
+
+  /* Glass — DESIGN_TOKENS.md "Semantic Color Mapping": Glass →
+     rgba(255,255,255,0.65), Glass Border → rgba(255,255,255,0.18),
+     Glass Highlight → rgba(255,255,255,0.35). This is the *base* glass
+     token distinct from the four numbered Glass Level utilities below
+     (which have their own, separately documented per-level opacity). */
+  --color-glass: rgb(255 255 255 / 65%);
+  --color-glass-border: rgb(255 255 255 / 18%);
+  --color-glass-highlight: rgb(255 255 255 / 35%);
+
+  /* Focus — DESIGN_TOKENS.md "Focus State": "Focus ring: 2px, Primary
+     color, Outside border." No separate hex is given beyond "primary",
+     so this aliases color-primary rather than introducing a new value. */
+  --color-focus-ring: var(--atlas-primary-500);
+
+  /* Selection — no explicit value documented anywhere; aliased to the
+     primary tint rather than invented, since primary-50 is already the
+     documented "light background" treatment used elsewhere (e.g.
+     color-primary-tint). Flagged as thin/inferred, not firm. */
+  --color-selection: var(--atlas-primary-50);
+}
+
+/**
+ * Primitive palette (14_DESIGN_TOKENS.md "Primitive Color Tokens").
+ * Not part of @theme on purpose — Design Tokens' own rule: "No
+ * component may directly consume primary-500, neutral-900... or any
+ * primitive token. Components consume only semantic tokens." Kept as
+ * plain custom properties so only the semantic layer above can see them.
+ */
+:root {
+  /* Neutral (14_DESIGN_TOKENS.md "Neutral Palette") — complete 13-step scale.
+     ATLAS-P1-AUTH-01 only defined the 9 shades it consumed; 300/700/800/950
+     added here to match the published table exactly. */
+  --atlas-neutral-0: #ffffff;
+  --atlas-neutral-25: #fcfcfd;
+  --atlas-neutral-50: #f8fafc;
+  --atlas-neutral-100: #f1f5f9;
+  --atlas-neutral-200: #e2e8f0;
+  --atlas-neutral-300: #cbd5e1;
+  --atlas-neutral-400: #94a3b8;
+  --atlas-neutral-500: #64748b;
+  --atlas-neutral-600: #475569;
+  --atlas-neutral-700: #334155;
+  --atlas-neutral-800: #1e293b;
+  --atlas-neutral-900: #0f172a;
+  --atlas-neutral-950: #020617;
+
+  /* Primary (14_DESIGN_TOKENS.md "Primary Palette") — complete 10-step scale. */
+  --atlas-primary-50: #eef4ff;
+  --atlas-primary-100: #dce8ff;
+  --atlas-primary-200: #b8d3ff;
+  --atlas-primary-300: #86b5ff;
+  --atlas-primary-400: #5a97ff;
+  --atlas-primary-500: #2f6bff;
+  --atlas-primary-600: #2558e6;
+  --atlas-primary-700: #1e47bf;
+  --atlas-primary-800: #183a99;
+  --atlas-primary-900: #112a6f;
+
+  /* Accent (14_DESIGN_TOKENS.md "Accent Palette") — not previously wired.
+     No semantic token name is given for it explicitly in the "Semantic
+     Color Mapping" list; --color-accent below maps to accent-500 by the
+     same pattern every other palette follows (X → X-500), flagged there. */
+  --atlas-accent-50: #effcf8;
+  --atlas-accent-100: #d6f8ed;
+  --atlas-accent-200: #a8efd8;
+  --atlas-accent-300: #6ce2bf;
+  --atlas-accent-400: #39d3a8;
+  --atlas-accent-500: #12c48f;
+  --atlas-accent-600: #0ea777;
+  --atlas-accent-700: #0a8860;
+  --atlas-accent-800: #086c4d;
+  --atlas-accent-900: #05523a;
+
+  /* Success (14_DESIGN_TOKENS.md "Success Palette") — not previously wired. */
+  --atlas-success-50: #f0fdf4;
+  --atlas-success-100: #dcfce7;
+  --atlas-success-200: #bbf7d0;
+  --atlas-success-300: #86efac;
+  --atlas-success-400: #4ade80;
+  --atlas-success-500: #22c55e;
+  --atlas-success-600: #16a34a;
+  --atlas-success-700: #15803d;
+  --atlas-success-800: #166534;
+  --atlas-success-900: #14532d;
+
+  /* Warning (14_DESIGN_TOKENS.md "Warning Palette") — not previously wired. */
+  --atlas-warning-50: #fffbeb;
+  --atlas-warning-100: #fef3c7;
+  --atlas-warning-200: #fde68a;
+  --atlas-warning-300: #fcd34d;
+  --atlas-warning-400: #fbbf24;
+  --atlas-warning-500: #f59e0b;
+  --atlas-warning-600: #d97706;
+  --atlas-warning-700: #b45309;
+  --atlas-warning-800: #92400e;
+  --atlas-warning-900: #78350f;
+
+  /* Error (14_DESIGN_TOKENS.md "Error Palette") — complete 10-step scale. */
+  --atlas-error-50: #fef2f2;
+  --atlas-error-100: #fee2e2;
+  --atlas-error-200: #fecaca;
+  --atlas-error-300: #fca5a5;
+  --atlas-error-400: #f87171;
+  --atlas-error-500: #ef4444;
+  --atlas-error-600: #dc2626;
+  --atlas-error-700: #b91c1c;
+  --atlas-error-800: #991b1b;
+  --atlas-error-900: #7f1d1d;
+
+  /* Info (14_DESIGN_TOKENS.md "Info Palette") — not previously wired. */
+  --atlas-info-50: #eff6ff;
+  --atlas-info-100: #dbeafe;
+  --atlas-info-200: #bfdbfe;
+  --atlas-info-300: #93c5fd;
+  --atlas-info-400: #60a5fa;
+  --atlas-info-500: #3b82f6;
+  --atlas-info-600: #2563eb;
+  --atlas-info-700: #1d4ed8;
+  --atlas-info-800: #1e40af;
+  --atlas-info-900: #1e3a8a;
+
+  /* NOTE: DESIGN_SYSTEM.md §6 names a "Secondary = Teal" brand color
+     ("Purpose: Discovery, Travel, Exploration"), but DESIGN_TOKENS.md's
+     own Primitive Color Tokens section never defines a teal palette or a
+     --color-secondary semantic mapping anywhere. Deliberately NOT
+     invented here — see HANDOFF notes. No --atlas-secondary-* exists. */
+
+  /* Glass Levels 1–4 (14_DESIGN_TOKENS.md "Atlas Glass Design Language").
+     Border opacity: the doc gives a range (14–22%) not one fixed number
+     per level; kept at 18% for all four (mid-range), consistent with the
+     value AUTH-01 already chose for Level 2. Background: "Glass" semantic
+     token is separately documented as rgba(255,255,255,0.65) — 3 points
+     off Level 2's own stated 0.68 opacity. Both are literal per their own
+     section; not forced to agree — see HANDOFF notes. */
+  --atlas-glass-1-bg: rgb(255 255 255 / 58%);
+  --atlas-glass-1-blur: 10px;
+  --atlas-glass-1-border: rgb(255 255 255 / 18%);
+
+  --atlas-glass-2-bg: rgb(255 255 255 / 68%);
+  --atlas-glass-2-blur: 16px;
+  --atlas-glass-2-border: rgb(255 255 255 / 18%);
+
+  --atlas-glass-3-bg: rgb(255 255 255 / 80%);
+  --atlas-glass-3-blur: 24px;
+  --atlas-glass-3-border: rgb(255 255 255 / 18%);
+
+  --atlas-glass-4-bg: rgb(255 255 255 / 88%);
+  --atlas-glass-4-blur: 32px;
+  --atlas-glass-4-border: rgb(255 255 255 / 18%);
+
+  /* Motion durations in ms (14_DESIGN_TOKENS.md "Motion Tokens"), mirrored
+     as JS constants in lib/tokens/motion.ts for Framer Motion (seconds).
+     slower/slowest added — DESIGN_TOKENS.md defines 6 total, only 3 were
+     previously wired. */
+  --atlas-duration-instant: 0ms;
+  --atlas-duration-fast: 120ms;
+  --atlas-duration-normal: 200ms;
+  --atlas-duration-slow: 300ms;
+  --atlas-duration-slower: 450ms;
+  --atlas-duration-slowest: 700ms;
+
+  /* Z-index (14_DESIGN_TOKENS.md "Z-Index Tokens") — not previously wired.
+     Tailwind v4's own z-* utilities only go to z-50; Atlas's named scale
+     needs its own theme entries (below) to generate z-dropdown etc. */
+  --atlas-z-base: 0;
+  --atlas-z-dropdown: 1000;
+  --atlas-z-sticky: 1100;
+  --atlas-z-fixed: 1200;
+  --atlas-z-overlay: 1300;
+  --atlas-z-modal: 1400;
+  --atlas-z-popover: 1500;
+  --atlas-z-tooltip: 1600;
+  --atlas-z-toast: 1700;
+
+  /* Container widths (14_DESIGN_TOKENS.md "Container Width Tokens") — kept
+     as plain properties, not Tailwind @theme entries: consumed by the
+     Container component (DESIGNSYS-02), not by arbitrary utility classes. */
+  --atlas-container-sm: 540px;
+  --atlas-container-md: 720px;
+  --atlas-container-lg: 960px;
+  --atlas-container-xl: 1140px;
+  --atlas-container-2xl: 1320px;
+  --atlas-container-max: 1440px;
+  --atlas-container-reading: 760px;
+
+  /* Icon sizes (14_DESIGN_TOKENS.md "Icon Tokens") — consumed by the Icon
+     wrapper (DESIGNSYS-02), same reasoning as container widths above. */
+  --atlas-icon-xs: 16px;
+  --atlas-icon-sm: 20px;
+  --atlas-icon-md: 24px;
+  --atlas-icon-lg: 32px;
+  --atlas-icon-xl: 48px;
+}
+
+/* ============================================================
+   Dark theme — PLACEHOLDER, not a real Dark mode yet.
+
+   DESIGN_TOKENS.md states every semantic token "supports Light Theme,
+   Dark Theme..." but the document's own "Semantic Color Mapping" section
+   only ever gives values for "(Light Theme)" — no dark equivalents are
+   published anywhere in the Design Bible. Inventing specific dark hex
+   values here would be exactly what MASTER_RULES.md §1 forbids ("never
+   invent new architecture" when documentation is missing).
+
+   Following the same precedent as Phase 0's messages/fa.json and
+   messages/de.json (BOOTSTRAP_SPEC.md: real English placeholder text,
+   not an invented translation) — dark theme currently maps to the
+   IDENTICAL light values. The mechanism (attribute, provider, switching,
+   persistence, transition) is real and complete; the palette is not.
+   Needs a Design Bible amendment (real dark semantic values) before this
+   block can be considered done — see HANDOFF notes.
+   ============================================================ */
+:root[data-theme="dark"] {
+  --color-background: var(--atlas-neutral-25);
+  --color-surface: var(--atlas-neutral-0);
+  --color-surface-secondary: var(--atlas-neutral-50);
+  --color-surface-elevated: var(--atlas-neutral-0);
+  --color-text-primary: var(--atlas-neutral-900);
+  --color-text-secondary: var(--atlas-neutral-600);
+  --color-text-muted: var(--atlas-neutral-500);
+  --color-text-disabled: var(--atlas-neutral-400);
+  --color-on-primary: var(--atlas-neutral-0);
+  --color-border: var(--atlas-neutral-200);
+  --color-divider: var(--atlas-neutral-100);
+  --color-primary: var(--atlas-primary-500);
+  --color-primary-hover: var(--atlas-primary-600);
+  --color-primary-active: var(--atlas-primary-700);
+  --color-primary-tint: var(--atlas-primary-50);
+  --color-error: var(--atlas-error-500);
+  --color-error-strong: var(--atlas-error-600);
+  --color-error-tint: var(--atlas-error-50);
+  --color-disabled-surface: var(--atlas-neutral-100);
+  --color-success: var(--atlas-success-500);
+  --color-warning: var(--atlas-warning-500);
+  --color-info: var(--atlas-info-500);
+  --color-accent: var(--atlas-accent-500);
+  --color-glass: rgb(255 255 255 / 65%);
+  --color-glass-border: rgb(255 255 255 / 18%);
+  --color-glass-highlight: rgb(255 255 255 / 35%);
+  --color-focus-ring: var(--atlas-primary-500);
+  --color-selection: var(--atlas-primary-50);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+  }
+
+  /* Applied by ThemeProvider only AFTER the initial paint (never on first
+     load, which would itself look like an animation/flash) — see
+     components/providers/theme-provider.tsx. Scoped to color properties
+     only, per DESIGN_TOKENS.md Part 5 "Runtime Theme Switching...
+     <150ms perceived transition", and respects reduced motion. */
+  html.atlas-theme-transition,
+  html.atlas-theme-transition * {
+    transition-property: background-color, border-color, color,
+      box-shadow;
+    transition-duration: var(--atlas-duration-fast);
+    transition-timing-function: var(--ease-standard);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.atlas-theme-transition,
+    html.atlas-theme-transition * {
+      transition-duration: 0ms !important;
+    }
+  }
+}
+
+/* Glass Level 2 utility — used by the Authentication card (Card Contract:
+   Glass Level 2, DESIGN_TOKENS.md Part 6). Respects the documented
+   "Reduced Transparency" fallback: disable blur, use an elevated solid
+   surface instead, same spacing/radius. */
+.atlas-glass-2 {
+  background-color: var(--atlas-glass-2-bg);
+  border: 1px solid var(--atlas-glass-2-border);
+  backdrop-filter: blur(var(--atlas-glass-2-blur));
+  -webkit-backdrop-filter: blur(var(--atlas-glass-2-blur));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .atlas-glass-2 {
+    background-color: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--color-border);
+  }
+}
+
+/* Glass Level 1 — Navigation, Toolbar, Floating Controls (most common). */
+.atlas-glass-1 {
+  background-color: var(--atlas-glass-1-bg);
+  border: 1px solid var(--atlas-glass-1-border);
+  backdrop-filter: blur(var(--atlas-glass-1-blur));
+  -webkit-backdrop-filter: blur(var(--atlas-glass-1-blur));
+}
+
+/* Glass Level 3 — Dialogs, Large Panels, Timeline Details, AI Context Panels. */
+.atlas-glass-3 {
+  background-color: var(--atlas-glass-3-bg);
+  border: 1px solid var(--atlas-glass-3-border);
+  backdrop-filter: blur(var(--atlas-glass-3-blur));
+  -webkit-backdrop-filter: blur(var(--atlas-glass-3-blur));
+}
+
+/* Glass Level 4 — Modal Background, special Landing sections. Used sparingly. */
+.atlas-glass-4 {
+  background-color: var(--atlas-glass-4-bg);
+  border: 1px solid var(--atlas-glass-4-border);
+  backdrop-filter: blur(var(--atlas-glass-4-blur));
+  -webkit-backdrop-filter: blur(var(--atlas-glass-4-blur));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .atlas-glass-1,
+  .atlas-glass-3,
+  .atlas-glass-4 {
+    background-color: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--color-border);
+  }
+}

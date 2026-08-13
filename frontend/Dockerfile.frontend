@@ -1,0 +1,50 @@
+# Dockerfile.frontend
+#
+# DOCUMENTED (DEBUG_LOG.md M0 record): "Dockerfile.frontend (pnpm,
+# standalone output, multi-stage)". This confirms: (1) pnpm is the
+# package manager, (2) Next.js `output: 'standalone'` is used,
+# (3) the build is multi-stage. DEBUG_LOG.md's Known Issues also
+# confirms pnpm major version 11 ("pnpm 11 build scripts blocked on
+# Windows"). Nothing else about this file's exact contents is
+# specified anywhere.
+#
+# RECONSTRUCTED: base image tag, stage names, exact copy/install steps.
+# Node.js version is not documented anywhere; 20-slim is used below as
+# a placeholder and is flagged in .ai/MISSING_INFORMATION.md.
+
+# ---- Stage 1: deps ----
+FROM node:20-slim AS deps
+
+# DOCUMENTED: pnpm, major version 11 (DEBUG_LOG.md Known Issues).
+RUN corepack enable && corepack prepare pnpm@11 --activate
+
+WORKDIR /app
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --frozen-lockfile
+
+# ---- Stage 2: build ----
+FROM node:20-slim AS builder
+RUN corepack enable && corepack prepare pnpm@11 --activate
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# DOCUMENTED (DEBUG_LOG.md Known Issues): "Build succeeds via `next
+# build` directly" — confirms the build command.
+RUN pnpm exec next build
+
+# ---- Stage 3: runtime ----
+# DOCUMENTED: standalone output (DEBUG_LOG.md), which is a Next.js
+# mechanism for producing a minimal, self-contained runtime folder —
+# the runtime stage below follows Next.js's own documented standalone
+# output layout (a general Next.js mechanic, not an Atlas-specific
+# decision).
+FROM node:20-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+CMD ["node", "server.js"]

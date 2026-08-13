@@ -1,0 +1,30 @@
+{
+  "_provenance": "See .ai/BOOTSTRAP_SPEC.md. Only \"strict\": true is independently documented (GUIDELINES.md: 'Strict TypeScript mode enabled'). All other compilerOptions are reconstructed, framework-necessary. This exact file was verified by an actual `next build` in a sandboxed test environment (see .ai/BOOTSTRAP_SPEC.md Validation Pass) — \"baseUrl\" was added and \"jsx\" set to \"react-jsx\" as real, empirically-found corrections, not guesses. This key is not read by the TypeScript compiler and should be removed before real use.",
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

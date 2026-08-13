@@ -1,0 +1,117 @@
+# docker-compose.yml
+#
+# PROVENANCE: DEBUG_LOG.md M0 record states "Docker: docker-compose.yml
+# (5 services, healthchecks, volumes)" as delivered. The count (5),
+# the presence of healthchecks, and the presence of volumes are
+# DOCUMENTED. The 5 service NAMES are not listed verbatim anywhere.
+#
+# RECONSTRUCTED: the 5 services below are inferred from the other
+# infrastructure pieces DEBUG_LOG.md and ARCHITECTURE.md confirm exist
+# (PostgreSQL, Redis, Qdrant, a FastAPI backend, a Next.js frontend) —
+# five confirmed components, which is why five services is a
+# well-supported (not just default-guessed) inference. Image tags,
+# port numbers, credentials, and healthcheck commands are NOT given
+# anywhere and are reconstructed placeholders — see
+# .ai/BOOTSTRAP_SPEC.md and .ai/MISSING_INFORMATION.md.
+
+services:
+  postgres:
+    # DOCUMENTED: PostgreSQL is the primary database (ARCHITECTURE.md §10).
+    # RECONSTRUCTED: image tag, credentials, port — not specified anywhere.
+    image: postgres:16
+    environment:
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: atlas_dev_password  # placeholder — see .env.example
+      POSTGRES_DB: atlas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    # DOCUMENTED: Redis is used for sessions, rate limiting, temp memory,
+    # caching (ARCHITECTURE.md §10, GUIDELINES.md §10).
+    # RECONSTRUCTED: image tag, port — not specified anywhere.
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    # DOCUMENTED: Qdrant is the vector database for RAG / semantic search
+    # (ARCHITECTURE.md §9-10).
+    # RECONSTRUCTED: image tag, ports — not specified anywhere.
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    # DOCUMENTED: FastAPI backend, built via Dockerfile.backend
+    # ("uv-based, multi-stage" — DEBUG_LOG.md), exposes
+    # /api/v1/health checking postgres+redis+qdrant (DEBUG_LOG.md).
+    # RECONSTRUCTED: port number, env var names beyond what's implied.
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://atlas:atlas_dev_password@postgres:5432/atlas
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
+      # OPENAI_API_KEY is documented by name (DEBUG_LOG.md Known Issues:
+      # "AI smoke tests require OPENAI_API_KEY"); sourced from .env, not
+      # hardcoded here, per GUIDELINES.md §17 / §11.
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    # DOCUMENTED: Next.js frontend, built via Dockerfile.frontend
+    # ("pnpm, standalone output, multi-stage" — DEBUG_LOG.md), includes
+    # a smoke health page that calls backend /api/v1/health.
+    # RECONSTRUCTED: port number.
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  # DOCUMENTED: "volumes" confirmed to exist by DEBUG_LOG.md.
+  # RECONSTRUCTED: specific volume names.
+  postgres_data:
+  redis_data:
+  qdrant_data:

@@ -1,0 +1,50 @@
+# .gitignore
+#
+# DOCUMENTED: this file's existence is confirmed — DEBUG_LOG.md M0
+# record: ".gitignore, .env.example, README.md" delivered.
+# RECONSTRUCTED: exact entries are not given verbatim anywhere; the
+# categories below follow directly from the documented stack (Next.js
+# frontend, Python/uv backend, Docker, secrets policy in
+# GUIDELINES.md §17/§11).
+
+# --- Environment / secrets (GUIDELINES.md §17, §11) ---
+.env
+.env.local
+.env.*.local
+
+# --- Node / pnpm / Next.js (documented: pnpm, Next.js) ---
+node_modules/
+.next/
+next-env.d.ts
+.pnpm-store/
+*.tsbuildinfo
+
+# Note (found during validation — see .ai/BOOTSTRAP_SPEC.md Validation
+# Pass 2): running `pnpm approve-builds` creates/writes a
+# pnpm-workspace.yaml containing only an `allowBuilds:` section (which
+# native-build-script packages are approved to run install scripts).
+# This is unrelated to defining a multi-package pnpm workspace (which
+# this project does not use — see .ai/MISSING_INFORMATION.md). That
+# approval record reflects one sandbox's interactive choices, not a
+# project decision, so it is deliberately NOT committed here; each
+# environment (dev machine, CI) makes/records its own approval.
+pnpm-workspace.yaml
+
+# --- Python / uv (documented: uv-based backend) ---
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.pytest_cache/
+# Note: uv.lock is intentionally NOT ignored — like pnpm-lock.yaml,
+# lockfiles are committed for reproducible builds. (Fixed during
+# validation pass — an earlier draft of this file incorrectly
+# ignored it.)
+
+# --- Docker ---
+*.pid
+
+# --- OS / editor noise (RECONSTRUCTED — not Atlas-specific) ---
+.DS_Store
+.vscode/
+.idea/

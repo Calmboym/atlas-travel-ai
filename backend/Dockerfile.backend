@@ -1,0 +1,45 @@
+# Dockerfile.backend
+#
+# DOCUMENTED (DEBUG_LOG.md M0 record): "Dockerfile.backend (uv-based,
+# multi-stage)". This confirms: (1) the Python package/project manager
+# is `uv`, (2) the build is multi-stage. Nothing else about this file's
+# exact contents is specified anywhere.
+#
+# RECONSTRUCTED: base image tag, stage names, exact copy/install steps,
+# entrypoint command. Python version is not documented anywhere; 3.12
+# is used below as a placeholder and is flagged in
+# .ai/MISSING_INFORMATION.md — it is not sourced from any Atlas document.
+
+# ---- Stage 1: build ----
+FROM python:3.12-slim AS builder
+
+# uv is the documented package manager (DEBUG_LOG.md).
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# RECONSTRUCTED: pyproject.toml is the conventional manifest for uv
+# projects; not independently confirmed by Atlas documentation.
+COPY pyproject.toml ./
+RUN uv sync --no-dev
+
+COPY app ./app
+
+# ---- Stage 2: runtime ----
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+COPY --from=builder /app /app
+# RECONSTRUCTED: venv path assumes uv's default .venv location.
+ENV PATH="/app/.venv/bin:$PATH"
+
+# DOCUMENTED: backend exposes /api/v1/health (DEBUG_LOG.md).
+# RECONSTRUCTED: port number (8000) is a placeholder, not documented.
+EXPOSE 8000
+
+# RECONSTRUCTED: exact entrypoint/module path is not documented.
+# "app.main:app" assumes the confirmed backend/app/ layout
+# (DEBUG_LOG.md Architecture Decisions: "ai/ package independent
+# from backend/app/") with a conventional main.py entrypoint —
+# the entrypoint filename itself is not documented.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
