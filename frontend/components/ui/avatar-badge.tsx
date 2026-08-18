@@ -57,9 +57,8 @@ export function Avatar({
       {showImage ? (
         // Plain <img>, not next/image: avatar sources are arbitrary/
         // user-provided, which doesn't fit next/image's static-domain
-        // allowlisting. (No @next/next lint rule is active to suppress
-        // here — see this file's eslint.config.mjs header comment on
-        // why eslint-config-next isn't wired in yet.)
+        // allowlisting.
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}

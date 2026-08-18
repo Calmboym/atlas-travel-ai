@@ -130,15 +130,15 @@ export function ResizablePanelGroup({
       >
         {first}
       </div>
-      {/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex --
-          Confirmed false positive for the WAI-ARIA "Window Splitter" pattern
+      {/* WAI-ARIA "Window Splitter" pattern
           (https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/): a
-          role="separator" with aria-valuenow becomes a focusable widget per
-          spec, which jsx-a11y's static role list doesn't account for — see
-          https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/issues/577,
-          where the plugin maintainers confirm exactly these two rules fire
-          incorrectly on this exact pattern. Real keyboard support (arrow
-          keys, Home/End) is implemented below, not skipped. */}
+          role="separator" with aria-valuenow is a focusable widget per
+          spec. jsx-eslint/eslint-plugin-jsx-a11y#577 documents older
+          versions flagging this as a false positive; the currently
+          installed version (6.10.2) does not, so no suppression is
+          needed here now — noted in case a future upgrade regresses
+          it. Real keyboard support (arrow keys, Home/End) is
+          implemented below, not skipped. */}
       <div
         role="separator"
         aria-orientation={isHorizontal ? "vertical" : "horizontal"}
@@ -161,7 +161,6 @@ export function ResizablePanelGroup({
           isHorizontal ? "w-1 cursor-col-resize" : "h-1 cursor-row-resize",
         )}
       />
-      {/* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */}
       <div
         id={secondPanelId}
         style={{ flexBasis: `${100 - split}%` }}

@@ -2,7 +2,7 @@
   "name": "atlas-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Atlas — AI Travel Platform frontend (Next.js). This package contains ONLY the ATLAS-P1-AUTH-01 (Registration UI) deliverable added to the Phase 0 frontend scaffold described in DEBUG_LOG.md.",
+  "description": "Atlas — AI Travel Platform frontend (Next.js). Phase 0 scaffold plus ATLAS-P1-AUTH-01 (Registration UI), ATLAS-P1-DESIGNSYS-01 (design token/CSS wiring + ThemeProvider), and ATLAS-P1-DESIGNSYS-02 (Foundation UI primitives).",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -32,13 +32,13 @@
     "framer-motion": "^11.15.0",
     "lucide-react": "^0.469.0",
     "next": "^16.2.11",
+    "next-intl": "^4.13.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.82.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.6",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

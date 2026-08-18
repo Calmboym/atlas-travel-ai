@@ -1,5 +1,21 @@
 {
   "HomePage": {
     "title": "Atlas — bootstrap placeholder, not final copy"
+  },
+  "Navigation": {
+    "dashboard": "Dashboard",
+    "trips": "Trips",
+    "chat": "AI Chat",
+    "saved": "Saved",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "help": "Help",
+    "discover": "Discover",
+    "aiAssistant": "AI Assistant",
+    "features": "Features",
+    "faq": "FAQ",
+    "logIn": "Log in",
+    "getStarted": "Get started"
   }
 }

@@ -73,3 +73,18 @@ ignore_missing_imports = true
 # independently specified by Atlas documentation.
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+# app/ currently contains no Python source (see .ai/MISSING_INFORMATION.md
+# and REPORT.md: writing real application code was explicitly out of
+# scope for scaffold reconstruction). `uv sync` otherwise tries to
+# build this project itself as an installable wheel via Hatchling,
+# which fails with "Unable to determine which files to ship inside the
+# wheel" once there's no package content matching the project name —
+# confirmed by actually running `uv sync` against the empty scaffold.
+# `package = false` tells uv this pyproject.toml exists to declare
+# dependencies for a venv, not to be built/installed as a package
+# itself — the standard uv mechanism for this exact pre-application-code
+# stage. Remove this once app/ has real importable content (expected
+# when AUTH-02 and later backend tasks add it).
+package = false

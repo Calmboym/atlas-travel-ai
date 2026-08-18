@@ -24,7 +24,19 @@ import { DURATION, PRESS_SCALE } from "@/lib/tokens/motion";
  * components (button + attached menu trigger) with real complexity of
  * their own; better as a focused follow-up than a rushed addition here.
  */
-const buttonVariants = cva(
+/**
+ * Exported (DESIGNSYS-03 addition) so components that render a link
+ * styled as a button — e.g. Navbar's "Log in" / "Get started", which
+ * must be a real <a>/next-intl <Link> for correct link semantics and
+ * locale-prefixed hrefs, not a <button> — can reuse the exact same
+ * token-driven classes instead of duplicating them. Button itself
+ * intentionally still always renders a real <button> (motion.button):
+ * it has no `href` prop and no `asChild`/Slot indirection, so it can
+ * keep its native button semantics (type, disabled, form association)
+ * simple and correct. Purely additive: the CVA config below, every
+ * existing class, and Button's own behavior are unchanged.
+ */
+export const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 rounded-lg text-base font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
   {
     variants: {
