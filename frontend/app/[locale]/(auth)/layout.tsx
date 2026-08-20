@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 
 /**
  * Authentication Layout (26_APPLICATION_LAYOUT_GUIDE.md):
@@ -9,17 +10,33 @@ import Link from "next/link";
  * Shared by every route under app/(auth)/ — register (this task),
  * login/forgot-password/verify-email (later AUTH tasks reuse this
  * file rather than rebuilding it).
+ *
+ * Localization fix (AUTH-01 audit, RTL/i18n pass): this previously
+ * imported plain `next/link`, which resolves correctly but drops the
+ * active locale on click — documented as a known, deferred issue in
+ * i18n/navigation.ts's own header comment ("noted, but out of scope
+ * to change here since AuthLayout is AUTH-01's file"). Fixed here by
+ * switching to the locale-aware `Link` from i18n/navigation.ts (the
+ * same one DESIGNSYS-03's Navbar/Footer use), and localizing the
+ * "Privacy"/"Terms" copy that was also hardcoded English. Kept as an
+ * async Server Component (getTranslations from next-intl/server)
+ * rather than converting to a Client Component, per ARCHITECTURE.md
+ * §4's Server-Components-by-default rule — this layout has no
+ * interactivity that would require one.
  */
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getTranslations("Auth.layout");
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="flex h-16 items-center px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
+          aria-label={t("logoAriaLabel")}
           className="rounded-lg text-lg font-bold tracking-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           Atlas
@@ -45,14 +62,14 @@ export default function AuthLayout({
             href="/privacy"
             className="underline-offset-2 hover:text-text-secondary hover:underline"
           >
-            Privacy
+            {t("privacy")}
           </Link>{" "}
           ·{" "}
           <Link
             href="/terms"
             className="underline-offset-2 hover:text-text-secondary hover:underline"
           >
-            Terms
+            {t("terms")}
           </Link>
         </p>
       </footer>

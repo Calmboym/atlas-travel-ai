@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RegisterForm } from "@/components/auth/register-form";
+// Localization fix (AUTH-01 audit): RegisterForm now calls
+// useTranslations/useMemo-built localized schema, so it needs a real
+// NextIntlClientProvider in the tree — plain RTL `render` throws
+// ("No intl context found") without one. renderWithProviders wraps
+// exactly the way app/[locale]/layout.tsx wraps every real page (see
+// that helper's own doc comment).
+import { renderWithProviders as render } from "./layout-test-utils";
 
 function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   return async () => {

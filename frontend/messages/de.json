@@ -17,5 +17,36 @@
     "faq": "FAQ",
     "logIn": "Log in",
     "getStarted": "Get started"
+  },
+  "Auth": {
+    "layout": {
+      "logoAriaLabel": "Atlas — zur Startseite",
+      "privacy": "Datenschutz",
+      "terms": "Nutzungsbedingungen"
+    },
+    "register": {
+      "metaTitle": "Konto erstellen — Atlas",
+      "metaDescription": "Erstellen Sie Ihr Atlas-Konto, um Reisen zu speichern und dort fortzufahren, wo Sie aufgehört haben.",
+      "title": "Konto erstellen",
+      "subtitle": "Speichern Sie Reisen, setzen Sie Unterhaltungen dort fort, wo Sie aufgehört haben, und erhalten Sie auf Sie zugeschnittene Empfehlungen.",
+      "emailLabel": "E-Mail",
+      "passwordLabel": "Passwort",
+      "confirmPasswordLabel": "Passwort bestätigen",
+      "submit": "Konto erstellen",
+      "submitting": "Konto wird erstellt…",
+      "successTitle": "Konto erstellt.",
+      "successSubtitle": "Ihr Atlas-Konto ist bereit.",
+      "genericError": "Ihr Konto konnte gerade nicht erstellt werden. Bitte versuchen Sie es erneut.",
+      "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+      "logIn": "Anmelden"
+    },
+    "validation": {
+      "emailRequired": "E-Mail-Adresse ist erforderlich.",
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "passwordRequired": "Passwort ist erforderlich.",
+      "passwordTooShort": "Das Passwort muss mindestens {min} Zeichen lang sein.",
+      "confirmPasswordRequired": "Bitte bestätigen Sie Ihr Passwort.",
+      "passwordsMismatch": "Die Passwörter stimmen nicht überein."
+    }
   }
 }

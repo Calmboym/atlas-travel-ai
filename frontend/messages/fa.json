@@ -17,5 +17,36 @@
     "faq": "FAQ",
     "logIn": "Log in",
     "getStarted": "Get started"
+  },
+  "Auth": {
+    "layout": {
+      "logoAriaLabel": "اطلس — رفتن به صفحه اصلی",
+      "privacy": "حریم خصوصی",
+      "terms": "شرایط استفاده"
+    },
+    "register": {
+      "metaTitle": "ایجاد حساب کاربری — اطلس",
+      "metaDescription": "برای ذخیره سفرها و ادامه از همان‌جایی که رها کرده‌اید، حساب کاربری اطلس خود را بسازید.",
+      "title": "ایجاد حساب کاربری",
+      "subtitle": "سفرهای خود را ذخیره کنید، گفتگوها را از همان‌جا که رها کرده‌اید ادامه دهید و پیشنهادهایی متناسب با خودتان دریافت کنید.",
+      "emailLabel": "ایمیل",
+      "passwordLabel": "رمز عبور",
+      "confirmPasswordLabel": "تکرار رمز عبور",
+      "submit": "ایجاد حساب کاربری",
+      "submitting": "در حال ایجاد حساب…",
+      "successTitle": "حساب کاربری ایجاد شد.",
+      "successSubtitle": "حساب اطلس شما آماده است.",
+      "genericError": "در حال حاضر امکان ایجاد حساب کاربری وجود ندارد. لطفاً دوباره تلاش کنید.",
+      "alreadyHaveAccount": "قبلاً حساب کاربری دارید؟",
+      "logIn": "ورود"
+    },
+    "validation": {
+      "emailRequired": "وارد کردن ایمیل الزامی است.",
+      "emailInvalid": "لطفاً یک نشانی ایمیل معتبر وارد کنید.",
+      "passwordRequired": "وارد کردن رمز عبور الزامی است.",
+      "passwordTooShort": "رمز عبور باید حداقل {min} نویسه باشد.",
+      "confirmPasswordRequired": "لطفاً رمز عبور را تکرار کنید.",
+      "passwordsMismatch": "رمزهای عبور مطابقت ندارند."
+    }
   }
 }

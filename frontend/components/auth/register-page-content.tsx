@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { RegisterForm } from "@/components/auth/register-form";
 import type { RegisterFormValues } from "@/lib/validation/auth-schema";
 
@@ -22,14 +23,15 @@ async function handleRegister(values: RegisterFormValues): Promise<void> {
 }
 
 export function RegisterPageContent() {
+  const t = useTranslations("Auth.register");
+
   return (
     <div>
       <h1 className="text-2xl font-bold leading-tight text-text-primary">
-        Create your account
+        {t("title")}
       </h1>
       <p className="mt-2 text-sm leading-normal text-text-secondary">
-        Save trips, pick up conversations where you left off, and get
-        recommendations tailored to you.
+        {t("subtitle")}
       </p>
 
       <div className="mt-6">
@@ -37,12 +39,12 @@ export function RegisterPageContent() {
       </div>
 
       <p className="mt-6 text-center text-sm text-text-secondary">
-        Already have an account?{" "}
+        {t("alreadyHaveAccount")}{" "}
         <Link
           href="/login"
           className="font-medium text-primary underline-offset-2 hover:underline"
         >
-          Log in
+          {t("logIn")}
         </Link>
       </p>
     </div>

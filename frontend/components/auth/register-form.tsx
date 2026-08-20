@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "framer-motion";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -10,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/components/ui/form-error";
 import {
-  registerSchema,
-  REGISTER_FIELD_LABELS,
+  createRegisterSchema,
+  MIN_PASSWORD_LENGTH,
   type RegisterFormValues,
 } from "@/lib/validation/auth-schema";
 import { DURATION, SPRING_GENTLE } from "@/lib/tokens/motion";
@@ -31,8 +32,29 @@ export interface RegisterFormProps {
 
 export function RegisterForm({ onSubmit }: RegisterFormProps) {
   const prefersReducedMotion = useReducedMotion();
+  const t = useTranslations("Auth.register");
+  const tValidation = useTranslations("Auth.validation");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Localization fix (AUTH-01 audit): the schema previously hardcoded
+  // English validation messages regardless of locale. Rebuilt here
+  // with next-intl's live translator so /fa and /de show real
+  // localized errors, not English ones under an RTL layout.
+  const localizedSchema = useMemo(
+    () =>
+      createRegisterSchema({
+        emailRequired: tValidation("emailRequired"),
+        emailInvalid: tValidation("emailInvalid"),
+        passwordRequired: tValidation("passwordRequired"),
+        passwordTooShort: tValidation("passwordTooShort", {
+          min: MIN_PASSWORD_LENGTH,
+        }),
+        confirmPasswordRequired: tValidation("confirmPasswordRequired"),
+        passwordsMismatch: tValidation("passwordsMismatch"),
+      }),
+    [tValidation],
+  );
 
   const {
     register,
@@ -40,7 +62,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
     setFocus,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(localizedSchema),
     mode: "onBlur", // ACCESSIBILITY.md §Forms: "Validation happens: On blur and On submit"
     reValidateMode: "onChange",
   });
@@ -57,9 +79,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       setIsSuccess(true);
     } catch (error) {
       setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "We couldn't create your account right now. Please try again.",
+        error instanceof Error ? error.message : t("genericError"),
       );
     }
   };
@@ -87,10 +107,10 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
           aria-hidden="true"
         />
         <p className="text-lg font-semibold text-text-primary">
-          Account created.
+          {t("successTitle")}
         </p>
         <p className="text-sm text-text-secondary">
-          Your Atlas account is ready.
+          {t("successSubtitle")}
         </p>
       </motion.div>
     );
@@ -104,7 +124,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
     >
       <div>
         <Label htmlFor="email" required>
-          {REGISTER_FIELD_LABELS.email}
+          {t("emailLabel")}
         </Label>
         <Input
           id="email"
@@ -120,7 +140,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
 
       <div>
         <Label htmlFor="password" required>
-          {REGISTER_FIELD_LABELS.password}
+          {t("passwordLabel")}
         </Label>
         <Input
           id="password"
@@ -136,7 +156,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
 
       <div>
         <Label htmlFor="confirmPassword" required>
-          {REGISTER_FIELD_LABELS.confirmPassword}
+          {t("confirmPasswordLabel")}
         </Label>
         <Input
           id="confirmPassword"
@@ -170,7 +190,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       ) : null}
 
       <Button type="submit" isLoading={isSubmitting} className="mt-1 w-full">
-        {isSubmitting ? "Creating account…" : "Create Account"}
+        {isSubmitting ? t("submitting") : t("submit")}
       </Button>
     </form>
   );
