@@ -99,6 +99,7 @@ built, and verified work rather than a pending proposal.
     - Required docs: INDEX.md §AUTH
     - Priority: High | Complexity: M | Context: M
     - Acceptance: real-time validation, accessible labels (no placeholder-only), per 09 §Forms
+    - Status: **Done** (2026-07-24); **audited 2026-08-19** (non-WBS session `ATLAS-AUTH01-AUDIT-RTL-01`) — found and fixed zero-localization + RTL bugs across every AUTH-01 file, plus a regressed sitewide `app/layout.tsx` nested-`<html>` bug outside AUTH-01's own boundary. Acceptance criteria above were never in question (validation/labels were already correct); only localization was gap. Full detail: `.ai/PROJECT_STATE.md`, `.ai/TASK_BOARD.md`.
   - Task `ATLAS-P1-AUTH-02` — Registration backend endpoint + secure password storage
     - Dependencies: none (parallel with AUTH-01)
     - Priority: High | Complexity: M | Context: M

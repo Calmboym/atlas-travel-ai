@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-08-16 (Governance Reconciliation session — second session this date, following the DESIGNSYS-04 implementation session earlier the same day)
+**Last updated:** 2026-08-19 (AUTH-01 Audit & Bug Fix session — Localization/RTL)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -59,6 +59,71 @@ to `MASTER_RULES.md` (§25–29), `SESSION_PROMPT.md`, and
 Modified This Session (Governance Reconciliation)" below for the full
 file list.
 
+**AUTH-01 Audit & Bug Fix — Localization/RTL (2026-08-19, this session):**
+not a WBS task — an ad hoc audit-and-fix pass on AUTH-01's already-Done
+deliverable, requested directly (not a `.ai/` governance edit like the
+Governance Reconciliation above). Read AUTH-01's real files from the
+supplied repository ZIP (not from memory — several sessions have
+fabricated status before; ground truth only), ran the full verification
+toolchain, and found five real bugs, one of them a severe, sitewide
+regression:
+
+1. **CRITICAL — `frontend/app/layout.tsx` had reappeared**, duplicating
+   `app/[locale]/layout.tsx`. This is the exact nested-`<html>` bug the
+   Bootstrap Reconciliation session already found, root-caused, and
+   deleted (2026-08-13, `ATLAS-BOOTSTRAP-IMPLEMENTATION-REPORT.md` §3.2)
+   — confirmed regressed via a real production build + live standalone
+   server: `curl /fa/register` returned two `<html>` elements, with the
+   outer, canonical one permanently `lang="en"` and no `dir` attribute
+   at all. This silently broke RTL for every `/fa/*` route sitewide,
+   not just AUTH-01's. Fixed by deleting the file again (nothing else
+   depended on it — no route exists outside `app/[locale]/...`). This
+   is outside AUTH-01's own file boundary (DESIGNSYS/root-layout
+   territory); flagged here explicitly rather than folded silently into
+   "AUTH-01 polish."
+2. AuthLayout (`app/[locale]/(auth)/layout.tsx`) imported plain
+   `next/link` instead of the locale-aware `Link` from
+   `i18n/navigation.ts` — self-documented as a known, deferred issue in
+   `i18n/navigation.ts`'s own header comment ("out of scope to change
+   here since AuthLayout is AUTH-01's file"). Clicking the logo or
+   Privacy/Terms from `/fa/register` dropped the user out of `fa` back
+   to the default locale. Fixed.
+3. **Every user-facing string in AUTH-01 was hardcoded English** — zero
+   `next-intl` usage anywhere in `RegisterForm`, `RegisterPageContent`,
+   the Zod schema's validation messages, or the page's
+   `<title>`/description metadata. `/fa/register` and `/de/register`
+   showed a correctly-directioned (once #1 was fixed) but entirely
+   English form. Fixed: added a real `Auth` namespace (not placeholder
+   English) to `messages/{en,fa,de}.json`; converted the Zod schema to
+   a `createRegisterSchema(messages)` factory so validation errors are
+   locale-aware; wired `RegisterForm`/`RegisterPageContent` to
+   `useTranslations`; converted the register page's static `metadata`
+   export to `generateMetadata` + `getTranslations` (next-intl's
+   documented per-locale metadata pattern).
+4. `components/ui/label.tsx`'s required-field asterisk used physical
+   `ml-0.5` instead of logical `ms-0.5` — RESPONSIVE_SYSTEM.md §RTL
+   Support: "Spacing logic must use logical CSS properties whenever
+   possible." Under `dir="rtl"` the asterisk sat on the wrong side of
+   the label. Fixed.
+5. (Adjacent, NOT fixed — out of AUTH-01's scope) `components/layout/
+   footer.tsx` (DESIGNSYS-03, consumed only by `MarketingLayout`, not
+   AuthLayout) has the identical hardcoded-English pattern for its own
+   "Privacy"/"Terms" labels. Not touched — different owning task, flagged
+   for whichever session next touches `Footer` or ships real LAND-01
+   content.
+
+All fixes empirically verified against a real production build and a
+real standalone server (not `next start`, which this Next.js version's
+own output warns is incompatible with `output: "standalone"` — used
+`node .next/standalone/server.js`, matching how the project's own
+Dockerfile actually runs it): `/en`, `/fa`, `/de` each now return
+exactly one correct `<html lang dir>`; `/fa/register` and `/de/register`
+render real Persian/German copy (title tag, labels, buttons, footer
+text) with locale-preserving internal links (`href="/fa"`, not
+`href="/"`). Full detail in this session's chat handoff (no new
+standalone report file, per `MASTER_RULES.md` §14). See "Files Modified
+This Session (AUTH-01 Audit)" below for the full file list.
+
 **Last Completed (WBS task):** `ATLAS-P1-DESIGNSYS-04` — 2026-08-16. Glass system
 (`GlassSurface`/`GlassCard`, exactly 4 levels, formalizing the
 pre-existing `.atlas-glass-N` CSS utilities into typed components
@@ -100,6 +165,21 @@ for them.
 | Backend | Untouched this session |
 
 **Independently re-verified, Governance Reconciliation session (2026-08-16, same day, separate pass):** all six rows above re-run from a clean `pnpm install` against the supplied baseline — identical results. This reconciliation session changed no application logic (only two doc-only source comments — see below — plus `ci.yml` and a replaced `docs/` image), so no functional re-verification beyond confirming nothing regressed was expected or needed.
+
+---
+
+## Verification Results (2026-08-19, AUTH-01 Audit & Bug Fix — actually run, not asserted)
+
+| Check | Result |
+|---|---|
+| Frontend typecheck (`tsc --noEmit`) | ✅ clean (after clearing a stale `.next/` type-validator artifact left over from the pre-fix build, which referenced the just-deleted `app/layout.tsx`) |
+| Frontend lint (`eslint .`) | ✅ 0 errors, 0 warnings |
+| Frontend unit/component tests (`vitest run`) | ✅ 155/155 passing, 24/24 files — identical count to the DESIGNSYS-04 baseline; `tests/register-form.test.tsx` (10 tests) switched from plain RTL `render` to the project's existing `renderWithProviders` helper (aliased as `render`) since `RegisterForm` now calls `useTranslations`; `tests/auth-schema.test.ts` (6 tests) needed zero changes — `registerSchema`'s default English export stayed byte-identical |
+| Frontend production build (`next build`) | ✅ succeeds |
+| Real standalone-server smoke test (`node .next/standalone/server.js` — `next start` doesn't work with `output: "standalone"`, confirmed by this Next.js version's own runtime warning) | ✅ `/en`, `/fa`, `/de` each return exactly one `<html lang dir>` (previously `/fa` returned two, outer one wrongly `lang="en"` with no `dir`); `/fa/register` and `/de/register` `<title>` tags, form labels, buttons, and footer copy all render in real Persian/German; internal links on both pages resolve locale-prefixed (`href="/fa"` / `href="/de"`, not bare `/`) |
+| Backend | Untouched this session |
+
+**Root-cause bug independently confirmed via source inspection AND live HTTP, not asserted from either alone:** the nested-`<html>` regression (Finding #1) was first spotted by noticing `app/layout.tsx` existed at all (it shouldn't, per `app/[locale]/layout.tsx`'s own header comment describing its removal), then reproduced empirically via a real build + real server response before any fix was applied, then re-verified the same way after the fix.
 
 **Bug found and fixed mid-session (not asserted away):** Framer
 Motion 11.18.2's own exported `useReducedMotion()` hook does not
@@ -175,12 +255,41 @@ prop is physical not logical (RTL gap, DESIGNSYS-03).
   entirely within `MotionProvider`; no Design Bible or architecture
   implication, noted here only for provenance.
 
+**Resolved this session (AUTH-01 Audit, 2026-08-19):**
+- ~~`app/layout.tsx` nested-`<html>` regression~~ — deleted again; see
+  narrative above. Recommend a lightweight guard (e.g. a CI/lint check
+  or a comment-level convention) so this specific file doesn't
+  reappear a third time — not implemented here (would be new tooling
+  outside this session's audit scope), flagged for the project owner.
+- ~~AuthLayout's plain `next/link`~~ — switched to `i18n/navigation`'s
+  locale-aware `Link`, closing the gap `i18n/navigation.ts`'s own
+  header comment had been flagging since DESIGNSYS-03.
+- ~~AUTH-01 had zero localization~~ — `RegisterForm`,
+  `RegisterPageContent`, the Zod schema, and the register page's
+  metadata all now use real `next-intl` translations (`Auth` namespace
+  in `messages/{en,fa,de}.json`), not placeholder or hardcoded English.
+- ~~Label required-asterisk physical `ml-0.5`~~ — now logical `ms-0.5`.
+
+**Newly found this session, NOT fixed (outside AUTH-01's own file
+boundary, flagged for the owning task):**
+- `components/layout/footer.tsx` (DESIGNSYS-03, consumed by
+  `MarketingLayout` only) has the same hardcoded-English pattern for
+  its own "Privacy"/"Terms" `LEGAL_LINKS` labels that AuthLayout had.
+  Whoever next touches `Footer` or ships real `LAND-01` content should
+  localize it the same way this session localized AuthLayout's copy.
+- The pre-existing `Navigation`/`HomePage` placeholder-English gap in
+  `messages/fa.json`/`messages/de.json` (logged since the Bootstrap
+  Reconciliation, `MISSING_INFORMATION.md`) is unchanged — deliberately
+  not touched, since it belongs to DESIGNSYS-03/LAND-01, not AUTH-01.
+
 ## Known Issues
 
-None outstanding from DESIGNSYS-04. Historical known issues (pnpm
-build-script approval requirement, TypeScript 7.x incompatibility,
-Sidebar tooltip RTL side) remain environment/scope characteristics,
-unchanged.
+None outstanding from AUTH-01's own scope after this session. Historical
+known issues (pnpm build-script approval requirement, TypeScript 7.x
+incompatibility, Sidebar tooltip RTL `side` prop) remain environment/
+scope characteristics, unchanged. The `Footer` localization gap and the
+broader `Navigation`/`HomePage` translation gap noted just above remain
+open, owned by other tasks.
 
 ## Files Modified This Session (2026-08-16, DESIGNSYS-04)
 
@@ -211,6 +320,62 @@ which has been built and in active use since DESIGNSYS-01).
 **Deleted:** `docs/ChatGPT Image Jul 17, 2026, 10_58_23 AM.png` (unreferenced, replaced per Q5).
 **No application logic, component behavior, route, or test was changed.**
 
+## Files Modified This Session (2026-08-19, AUTH-01 Audit & Bug Fix)
+
+**Deleted:** `frontend/app/layout.tsx` (Finding #1 — redundant duplicate
+of `app/[locale]/layout.tsx`, reintroducing the already-fixed nested-
+`<html>` regression; outside AUTH-01's own file boundary, see narrative
+above).
+
+**Modified (AUTH-01's own files):**
+- `frontend/app/[locale]/(auth)/layout.tsx` — locale-aware `Link`
+  (Finding #2); localized Privacy/Terms + logo `aria-label` (Finding
+  #3); converted to `async` + `getTranslations` from `next-intl/server`
+  to stay a Server Component (no existing precedent in this codebase
+  used `getTranslations` — every prior `useTranslations` consumer was a
+  Client Component — chosen over adding `"use client"` here since
+  ARCHITECTURE.md §4 defaults to Server Components and this layout has
+  no interactivity requiring a client boundary).
+- `frontend/app/[locale]/(auth)/register/page.tsx` — static `metadata`
+  export replaced with `generateMetadata` + `getTranslations` (Finding
+  #3; the static export has no access to the request locale at all).
+- `frontend/components/auth/register-form.tsx` — `useTranslations`
+  wired for every label/button/success/error string; Zod schema now
+  built live via `createRegisterSchema(...)` with translated messages
+  (Finding #3).
+- `frontend/components/auth/register-page-content.tsx` — locale-aware
+  `Link` (Finding #2); localized heading/subtitle/login-link text
+  (Finding #3).
+- `frontend/components/ui/label.tsx` — `ml-0.5` → `ms-0.5`, logical
+  property fix for the required-field asterisk under RTL (Finding #4).
+- `frontend/lib/validation/auth-schema.ts` — `registerSchema` (a fixed
+  const) refactored into `createRegisterSchema(messages)` (a factory)
+  plus a `registerSchema = createRegisterSchema(DEFAULT_EN_MESSAGES)`
+  default export kept byte-identical to the prior hardcoded English, so
+  `tests/auth-schema.test.ts` needed zero changes. `REGISTER_FIELD_LABELS`
+  removed (dead after the JSX switched to `t()` calls directly;
+  confirmed unused elsewhere via repo-wide grep before removal).
+- `frontend/messages/en.json`, `frontend/messages/fa.json`,
+  `frontend/messages/de.json` — new `Auth` namespace (`layout`,
+  `register`, `validation` keys) added to all three; English kept
+  byte-identical to the strings the test suite already asserted on; fa/de
+  are real, natural translations, not placeholder English (validated:
+  JSON parses cleanly, real Persian/German text confirmed present in
+  live server responses — see Verification Results above).
+- `frontend/tests/register-form.test.tsx` — `render` import switched
+  from `@testing-library/react` to the project's own
+  `renderWithProviders` (aliased `as render`, so none of the 10
+  individual call sites needed touching) — required once `RegisterForm`
+  started calling `useTranslations`; the file's own test assertions
+  and behavior are otherwise unchanged.
+
+**Not modified, deliberately (see Findings above):**
+`components/layout/footer.tsx` (adjacent bug, different owning task);
+`components/ui/typography.tsx`'s generic `Link` (Foundation primitive,
+ambiguous internal/external usage by design, not a bug);
+`components/ui/button.tsx` (already RTL-safe via flexbox's automatic
+row-reversal under `dir="rtl"`, confirmed by inspection, no fix needed).
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -219,12 +384,36 @@ undercounted its own coverage by roughly 24 components. Check it before
 building anything that looks like it might already exist; the honest
 answer is now usually "it does." `INFRASTRUCTURE_BASELINE.md` is new —
 read it before touching routing, providers, i18n, test setup, CI, or
-backend scaffolding. Recommended next task: `ATLAS-P1-AUTH-02`.
+backend scaffolding.
+
+`AUTH-01` has now been through a real audit against the live repository
+(not memory/documentation) and had five real bugs found, four fixed —
+see the 2026-08-19 narrative above. Its own files
+(`register-form.tsx`, `register-page-content.tsx`,
+`app/[locale]/(auth)/layout.tsx`, `register/page.tsx`, `auth-schema.ts`,
+`label.tsx`) are now genuinely locale-correct and RTL-correct, verified
+against a real running server across en/fa/de — not just asserted.
+`i18n/navigation.ts`'s header comment flagging AuthLayout's plain
+`next/link` as a known, deferred issue can now be removed or updated
+the next time that file is touched (not done in this session — it's a
+comment inside a file this task didn't otherwise need to modify, and
+touching an unrelated file for a comment-only change felt like
+overreach beyond this audit's actual scope).
+
+**If a future session works on AUTH-05 (Login UI)**: it will reuse this
+session's now-localized `AuthLayout` — the `Auth.layout` message
+namespace (`logoAriaLabel`/`privacy`/`terms`) is already there and
+correct; only `Auth.login`-shaped keys need adding alongside the
+existing `Auth.register`/`Auth.validation` ones, following the same
+pattern.
+
+Recommended next task: `ATLAS-P1-AUTH-02`.
 
 ---
 
 **LOCK STATUS:** LIVING — baseline approved 2026-07-22, updated
 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation),
 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete;
-Governance Reconciliation, same date, second session).
+Governance Reconciliation, same date, second session), 2026-08-19
+(AUTH-01 Audit & Bug Fix — Localization/RTL).
 Future changes only via `MASTER_RULES.md` §21.

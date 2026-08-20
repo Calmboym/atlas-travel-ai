@@ -1,6 +1,6 @@
 # TASK_BOARD.md
 
-**Last updated:** 2026-08-16 (Governance Reconciliation — second session this date)
+**Last updated:** 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL)
 **Document tier:** Living — updated every session via `MASTER_RULES.md` §21.
 
 Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every card cites its WBS ID and required documentation set so it can be picked up without re-deriving context. **Governance Sessions** (below) are a separate, non-WBS category — documentation/process work, not product implementation; see `MASTER_RULES.md` §3 Scope Control for why these never carry a WBS ID.
@@ -42,6 +42,17 @@ Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every
 | Task ID | Title | Priority | Docs Used | Completed |
 |---|---|---|---|---|
 | ATLAS-P1-AUTH-01 | Registration UI (form + validation) | High | INDEX.md §AUTH, PRD.md §6, `APPLICATION_LAYOUT_GUIDE.md` §Authentication Layout, `ACCESSIBILITY.md` §Forms, `DESIGN_TOKENS.md` Part 6 | 2026-07-24 |
+
+**Audit note (2026-08-19, non-WBS — see Governance Sessions below):**
+AUTH-01's own files were audited against the live repository and found
+to have zero `next-intl` usage anywhere (every string hardcoded
+English) plus a locale-dropping `next/link` and one physical-CSS RTL
+bug in the required-field asterisk. All four fixed and verified live
+across en/fa/de (see `PROJECT_STATE.md`, 2026-08-19 entry). AUTH-01's
+own Status stays **Done** — this was a bug-fix pass on an already-
+shipped deliverable, not new scope, and its original acceptance
+criteria (real-time validation, accessible labels) were never in
+question, only its localization.
 | ATLAS-P1-DESIGNSYS-01 | Design Token → CSS/Tailwind wiring + ThemeProvider | High | `DESIGN_TOKENS.md` Parts 1–5, `DESIGN_SYSTEM.md` | 2026-07-29 |
 | ATLAS-P1-DESIGNSYS-02 | Core UI primitives (27 components) | High | `COMPONENT_OWNERSHIP_MATRIX.md`, `COMPONENT_INVENTORY.md`, `DESIGN_TOKENS.md` Part 6, `ACCESSIBILITY.md` | 2026-07-29 |
 | ATLAS-P1-DESIGNSYS-03 | Layout shells (MarketingLayout/ApplicationLayout/FocusLayout) + navigation shell (Navbar/Sidebar/MobileBottomNav/MobileNavDrawer/Footer/LanguageSwitcher/ThemeSwitcher/SkipLink) | High | `APPLICATION_LAYOUT_GUIDE.md`, `RESPONSIVE_SYSTEM.md`, `COMPONENT_OWNERSHIP_MATRIX.md` | 2026-08-15 |
@@ -59,6 +70,7 @@ Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every
 |---|---|---|---|
 | ATLAS-BOOTSTRAP-RECONCILE | Bootstrap Reconciliation: repo-level audit, 6 real infrastructure bugs fixed (all verified), real `.ai/` folder created, Amendments 004/005/006 approved | This session — see `.ai/ATLAS-BOOTSTRAP-IMPLEMENTATION-REPORT.md` (archival) | 2026-08-13 |
 | ATLAS-GOVERNANCE-RECONCILE-02 | Governance Reconciliation: `COMPONENT_OWNERSHIP_MATRIX.md` Foundation table fully corrected (~24 stale rows), `INDEX.md` DESIGNSYS status corrected, `INFRASTRUCTURE_BASELINE.md` created, Sidebar-width and `/settings`-route conflicts closed (Amendments 007/008), CI test step added, incremental-output/dependency-resolution/parallel-execution governance added (Amendment 009), two Bootstrap-era report files relabeled archival | This session — see `.ai/PROJECT_STATE.md` "Files Modified This Session (Governance Reconciliation)" | 2026-08-16 |
+| ATLAS-AUTH01-AUDIT-RTL-01 | AUTH-01 Audit & Bug Fix (Localization/RTL): found and fixed a regressed sitewide nested-`<html>` bug (`app/layout.tsx`), a locale-dropping `next/link` in AuthLayout, zero `next-intl` usage across all of AUTH-01's UI/validation/metadata, and one physical-CSS RTL bug in `Label`'s required asterisk. Verified end-to-end (typecheck, lint, 155/155 tests, production build, live standalone-server smoke test across en/fa/de) | This session — see `.ai/PROJECT_STATE.md` "Files Modified This Session (2026-08-19, AUTH-01 Audit & Bug Fix)" | 2026-08-19 |
 
 ---
 
@@ -120,4 +132,4 @@ Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
