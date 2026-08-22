@@ -1,6 +1,6 @@
 # TASK_BOARD.md
 
-**Last updated:** 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL)
+**Last updated:** 2026-08-22 (AUTH-02 through AUTH-05)
 **Document tier:** Living — updated every session via `MASTER_RULES.md` §21.
 
 Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every card cites its WBS ID and required documentation set so it can be picked up without re-deriving context. **Governance Sessions** (below) are a separate, non-WBS category — documentation/process work, not product implementation; see `MASTER_RULES.md` §3 Scope Control for why these never carry a WBS ID.
@@ -57,10 +57,16 @@ question, only its localization.
 | ATLAS-P1-DESIGNSYS-02 | Core UI primitives (27 components) | High | `COMPONENT_OWNERSHIP_MATRIX.md`, `COMPONENT_INVENTORY.md`, `DESIGN_TOKENS.md` Part 6, `ACCESSIBILITY.md` | 2026-07-29 |
 | ATLAS-P1-DESIGNSYS-03 | Layout shells (MarketingLayout/ApplicationLayout/FocusLayout) + navigation shell (Navbar/Sidebar/MobileBottomNav/MobileNavDrawer/Footer/LanguageSwitcher/ThemeSwitcher/SkipLink) | High | `APPLICATION_LAYOUT_GUIDE.md`, `RESPONSIVE_SYSTEM.md`, `COMPONENT_OWNERSHIP_MATRIX.md` | 2026-08-15 |
 | ATLAS-P1-DESIGNSYS-04 | Glass system (GlassSurface/GlassCard) + AnimationWrappers (FadeIn/SlideIn/ScaleIn/ScrollReveal) + MotionProvider + BackgroundSystem | Medium | `DESIGN_TOKENS.md` §Atlas Glass Design Language, `MOTION_SYSTEM.md`, `PREMIUM_MICROINTERACTIONS.md`, `ACCESSIBILITY.md` §Motion Accessibility | 2026-08-16 |
+| ATLAS-P1-AUTH-02 | Registration backend endpoint + secure password storage | High | INDEX.md §AUTH, `ARCHITECTURE.md` §12, `GUIDELINES.md` §11, `INFRASTRUCTURE_BASELINE.md` §8 | 2026-08-22 |
+| ATLAS-P1-AUTH-03 | OAuth button scaffolding (Google/Apple) — **stubbed handshake, reported per acceptance criteria** | Medium | INDEX.md §AUTH, `COMPONENT_OWNERSHIP_MATRIX.md` | 2026-08-22 |
+| ATLAS-P1-AUTH-04 | Email verification flow — **email delivery stubbed** (no SMTP provider documented anywhere) | Medium | INDEX.md §AUTH | 2026-08-22 |
+| ATLAS-P1-AUTH-05 | Login UI + backend endpoint | High | INDEX.md §AUTH, `COMPONENT_OWNERSHIP_MATRIX.md`, `ARCHITECTURE.md` §4 | 2026-08-22 |
 
 **Verification status (DESIGNSYS-03, 2026-08-15 — actually executed, not asserted):** typecheck clean · lint 0 errors/0 warnings (2 real `react-hooks/set-state-in-effect` violations found and fixed at the root, not suppressed) · 129/129 tests passing across 20/20 files (98 pre-existing + 31 new) · production build succeeds, including the two new orphan route-group layouts with zero pages under them yet · RTL confirmed correct for en/fa/de via live HTTP requests against the real standalone server, with header/footer/nav landmarks confirmed present in the actual rendered HTML · `/en/register` (AUTH-01) confirmed still working, untouched.
 
 **Verification status (DESIGNSYS-04, 2026-08-16 — actually executed, not asserted):** typecheck clean · lint 0 errors/0 warnings · 155/155 tests passing across 24/24 files (129 pre-existing + 26 new) · production build succeeds · RTL confirmed correct for en/fa/de via live HTTP requests against the real standalone server, with the new `atlas-noise` BackgroundSystem layer confirmed present in the actual rendered HTML · `/en/register` and DESIGNSYS-03's nav/layout shell confirmed still working, untouched. One real bug found and fixed mid-session (not asserted away): Framer Motion 11.18.2's own exported `useReducedMotion()` hook does not actually re-render on a live OS preference change despite its docstring claiming it does (confirmed by reading the installed library source) — `MotionProvider` was built on `useSyncExternalStore` instead, mirroring `ThemeProvider`'s already-proven pattern for the equivalent `prefers-color-scheme` case, and is covered by a test that verifies live updates, not just initial-mount reads.
+
+**Verification status (AUTH-02 through AUTH-05, 2026-08-22 — actually executed against real infrastructure, not asserted):** `backend/app/` held zero application code before this session (confirmed: only `.gitkeep`) — first real backend implementation in the repository. No Docker daemon available, so PostgreSQL 16 and Redis 7 (matching `docker-compose.yml`'s own pinned versions) were installed and run directly via apt for genuine verification rather than mocks. Backend: mypy strict clean (32 files) · 45/45 pytest passing (register, login, verify-email/resend, security unit tests, rate-limiter unit tests, OAuth-stub tests) · a real `alembic downgrade base` → `upgrade head` roundtrip · a full live-server curl smoke test covering register/login/duplicate-email/wrong-password/nonexistent-user/weak-password/verify-email(valid+reused+expired)/resend(anti-enumeration)/OAuth-stub/rate-limiting-at-exactly-the-configured-threshold. Frontend: typecheck clean · lint 0 errors/0 warnings · 180/180 tests passing across 28/28 files (155 pre-existing + 25 new) · production build succeeds (14 static/dynamic routes, including new `/login` and `/verify-email`) · RTL confirmed correct for en/fa/de via a live standalone-server smoke test, with real German/Persian translations (not placeholder English) rendering for the new pages. Two real bugs found and fixed mid-session (not asserted away): (1) `pytest-asyncio`'s default function-scoped event loop invalidated the module-level-cached SQLAlchemy engine and Redis client between tests (`RuntimeError: Event loop is closed`) — fixed via `asyncio_default_fixture_loop_scope = "session"` / `asyncio_default_test_loop_scope = "session"`, matching how these singletons are actually used in the running app; (2) a real `react-hooks/set-state-in-effect` violation in `VerifyEmailContent` (calling `setState` synchronously for a value already known at render time) — fixed by making the "missing token" case a plain render-time branch instead of effect-driven state, not suppressed. Full detail, including the flagged Python file-naming convention gap (MASTER_RULES.md §15's "lowercase-with-hyphens" is not valid for importable Python modules — snake_case used instead, necessarily) and every other scope decision: `.ai/PROJECT_STATE.md`.
 
 ---
 
@@ -78,12 +84,8 @@ question, only its localization.
 
 | Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
 |---|---|---|---|---|---|
-| ATLAS-P1-AUTH-02 | Registration backend endpoint + password hashing | High | none | INDEX.md §AUTH | M |
-| ATLAS-P1-AUTH-03 | OAuth button scaffolding (Google/Apple) | Medium | AUTH-01 ✅ | INDEX.md §AUTH | S |
-| ATLAS-P1-AUTH-04 | Email verification flow | Medium | AUTH-02 | INDEX.md §AUTH | S |
-| ATLAS-P1-AUTH-05 | Login UI + backend endpoint | High | AUTH-02 | INDEX.md §AUTH | M |
-| ATLAS-P1-AUTH-06 | Forgot-password flow | Medium | AUTH-05 | INDEX.md §AUTH | S |
-| ATLAS-P1-AUTH-07 | Session/token handling + rate limiting | High | AUTH-02, AUTH-05 | INDEX.md §AUTH | M |
+| ATLAS-P1-AUTH-06 | Forgot-password flow | Medium | AUTH-05 ✅ | INDEX.md §AUTH | S |
+| ATLAS-P1-AUTH-07 | Session/token handling + rate limiting | High | AUTH-02 ✅, AUTH-05 ✅ | INDEX.md §AUTH | M |
 | ATLAS-P1-AUTH-08 | Route guards (frontend) + RBAC scaffold (backend) | Medium | AUTH-07 | INDEX.md §AUTH | M |
 | ATLAS-P1-PROF-01 | Progressive profile-collection UI | Medium | AUTH-07 | INDEX.md §PROF | M |
 | ATLAS-P1-PROF-02 | User Profile Service (backend CRUD) | Medium | AUTH-07 | INDEX.md §PROF | S |
@@ -132,4 +134,4 @@ question, only its localization.
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

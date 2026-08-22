@@ -3,7 +3,7 @@
 **Project:** Atlas — AI Travel Platform
 **Date:** 2026-07-22
 **Document tier:** Living — Phase 1 is fully elaborated now; Phases 2–7 are elaborated to Task level in their own bootstrap pass, just before each starts (rolling wave — see below). This is the approved 2026-07-22 baseline; changes only via `MASTER_RULES.md` §21.
-**Status note:** Q1–Q4 approved 2026-07-22 — see `PROJECT_STATE.md` and `DESIGN_BIBLE_AMENDMENTS.md`. **Phase 1 implementation is authorized and underway** — `ATLAS-P1-AUTH-01`, `ATLAS-P1-DESIGNSYS-01`, and `ATLAS-P1-DESIGNSYS-02` are done; see `.ai/PROJECT_STATE.md` → "Implementation Status." Updated 2026-08-13 (Bootstrap Reconciliation) to add the `DESIGNSYS` module, which existed as a real task board entry and real code since 2026-07-29 but had never been merged into this document.
+**Status note:** Q1–Q4 approved 2026-07-22 — see `PROJECT_STATE.md` and `DESIGN_BIBLE_AMENDMENTS.md`. **Phase 1 implementation is authorized and underway** — `ATLAS-P1-AUTH-01`, `ATLAS-P1-AUTH-02`, `ATLAS-P1-AUTH-03`, `ATLAS-P1-AUTH-04`, `ATLAS-P1-AUTH-05`, `ATLAS-P1-DESIGNSYS-01`, `ATLAS-P1-DESIGNSYS-02`, `ATLAS-P1-DESIGNSYS-03`, and `ATLAS-P1-DESIGNSYS-04` are done; see `.ai/PROJECT_STATE.md` → "Implementation Status." Updated 2026-08-22 (AUTH-02 through AUTH-05 session) to record those four tasks' completion — first real `backend/app/` code in the repository; see that session's entry in `.ai/PROJECT_STATE.md` for the backend-scaffolding-as-byproduct note, mirroring how AUTH-01 pre-built Foundation components DESIGNSYS-02 later reconciled with.
 **Hierarchy:** Project → Phase → Milestone → Module → Feature → Epic → Task → Subtask
 
 ## PHASE −1 — Bootstrap — ✅ DONE (2026-07-22)
@@ -104,18 +104,22 @@ built, and verified work rather than a pending proposal.
     - Dependencies: none (parallel with AUTH-01)
     - Priority: High | Complexity: M | Context: M
     - Acceptance: passwords hashed per GUIDELINES §11; rate-limited per ARCHITECTURE §12
+    - Status: **Done** (2026-08-22) — `backend/app/` had zero application code before this task (confirmed empty except `.gitkeep`; `INFRASTRUCTURE_BASELINE.md` §8 had named this exact task as where that would end); first real FastAPI app, async SQLAlchemy engine, `users` table + Alembic migration, bcrypt hashing, Redis-backed rate limiter all delivered here as an unavoidable byproduct of being the first backend task. Verified against real local PostgreSQL 16 + Redis 7 (apt-installed in-session, matching `docker-compose.yml`'s pinned versions — no Docker daemon available), not mocks: 45/45 pytest passing, mypy strict clean, live curl smoke test, and a real `alembic downgrade base` → `upgrade head` roundtrip. Full detail: `.ai/PROJECT_STATE.md`.
   - Task `ATLAS-P1-AUTH-03` — OAuth button scaffolding (Google, Apple)
     - Dependencies: AUTH-01
     - Priority: Medium | Complexity: S | Context: S
     - Acceptance: UI + routing only — full OAuth handshake may complete in this task or be stubbed if provider credentials aren't yet available; report which if stubbed
+    - Status: **Done** (2026-08-22) — **stubbed, as reported below per this task's own acceptance criteria**: no Google or Apple OAuth client credentials exist anywhere in this repository's env files or documentation, so the handshake itself (`GET /api/v1/auth/oauth/{provider}`) returns `501 Not Implemented` with a clear message rather than a fabricated integration. UI buttons ship real, wired to that real (stubbed) endpoint — not fake client-only buttons. `OAuthButtons` is a new Feature Component (owned by this task, see `COMPONENT_OWNERSHIP_MATRIX.md` §5), consumed by both `RegisterPageContent` (AUTH-01) and `LoginPageContent` (AUTH-05).
   - Task `ATLAS-P1-AUTH-04` — Email verification flow
     - Dependencies: AUTH-02
     - Priority: Medium | Complexity: S | Context: S
+    - Status: **Done** (2026-08-22) — token generation/hashing/single-use/expiry and the `/verify-email` confirmation page all real and tested; email **delivery** is stubbed (logged server-side) since no SMTP/email provider is named anywhere in `ARCHITECTURE.md`'s External Providers list — flagged to the project owner before implementation, not silently invented.
 
 **Feature: Login**
   - Task `ATLAS-P1-AUTH-05` — Login UI + backend endpoint
     - Dependencies: AUTH-02
     - Priority: High | Complexity: M | Context: M
+    - Status: **Done** (2026-08-22) — unlike Register (AUTH-01/02 deliberately split UI-only + backend), Login was scoped as one task and shipped wired end-to-end: `LoginForm` calls the real `POST /api/v1/auth/login`, which issues a short-lived JWT (also set as an httpOnly cookie). Full Redis-backed session lifecycle (revocation, refresh) is explicitly AUTH-07's scope, not built here — flagged as a scope boundary, not silently expanded. First frontend→backend network call in the repository; introduced a minimal `lib/api/` fetch wrapper rather than TanStack Query (declared in ARCHITECTURE.md §4 but not yet installed) for a single mutation — see `.ai/PROJECT_STATE.md` for the full rationale.
   - Task `ATLAS-P1-AUTH-06` — Forgot-password flow (UI + backend)
     - Dependencies: AUTH-05
     - Priority: Medium | Complexity: S | Context: S

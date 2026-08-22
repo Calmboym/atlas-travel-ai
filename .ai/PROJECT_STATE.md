@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-08-19 (AUTH-01 Audit & Bug Fix session — Localization/RTL)
+**Last updated:** 2026-08-22 (AUTH-02 through AUTH-05 session — first real `backend/app/` code)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -32,15 +32,16 @@ record, not because it changes anything about what's actually built.
 ## Implementation Status: **AUTHORIZED — Phase 1 underway**
 
 `AUTH-01` (2026-07-24), `DESIGNSYS-01` (2026-07-29), `DESIGNSYS-02`
-(2026-07-29), `DESIGNSYS-03` (2026-08-15), and `DESIGNSYS-04`
-(2026-08-16) are done — genuinely verified as done, not just
-re-asserted (see Verification Results below).
+(2026-07-29), `DESIGNSYS-03` (2026-08-15), `DESIGNSYS-04` (2026-08-16),
+`AUTH-02`, `AUTH-03`, `AUTH-04`, and `AUTH-05` (all 2026-08-22) are
+done — genuinely verified as done, not just re-asserted (see
+Verification Results below).
 
 ---
 
 **Current Phase:** Phase 1 — Core Platform MVP (underway)
 **Current Milestone:** M1
-**Current Module:** none active — `DESIGNSYS` (01–04) is complete and closed
+**Current Module:** none active — `DESIGNSYS` (01–04) and `AUTH-02/03/04/05` are complete and closed
 **Current WBS ID:** none active
 **Current Task:** none — awaiting next task authorization
 
@@ -124,7 +125,145 @@ text) with locale-preserving internal links (`href="/fa"`, not
 standalone report file, per `MASTER_RULES.md` §14). See "Files Modified
 This Session (AUTH-01 Audit)" below for the full file list.
 
-**Last Completed (WBS task):** `ATLAS-P1-DESIGNSYS-04` — 2026-08-16. Glass system
+**AUTH-02 through AUTH-05 (2026-08-22, this session):** the requested
+task group's own execution order, resolved from `WORK_BREAKDOWN_
+STRUCTURE.md`'s declared dependencies (not the listed order — AUTH-03
+depends only on AUTH-01 ✅, not AUTH-02, so it could have run anytime;
+AUTH-04 and AUTH-05 both genuinely need AUTH-02 first): **AUTH-02 →
+AUTH-03 → AUTH-04 → AUTH-05**, each kept as its own scoped deliverable,
+not merged.
+
+`backend/app/` held zero application code before this session —
+confirmed empty except `.gitkeep`, exactly as `INFRASTRUCTURE_
+BASELINE.md` §8 and `MISSING_INFORMATION.md` already logged. `DEBUG_
+LOG.md`'s M0 record describes a health endpoint and a rate-limit/
+validation/injection-sanitizer scaffold as already delivered — that
+description does not match the actual repository (a known, pre-existing
+documentation-vs-reality gap from the original Phase 0 reconstruction,
+not a new conflict this session found) and was treated as confirming,
+not contradicting, `INFRASTRUCTURE_BASELINE.md`'s own note that real
+backend code was "expected starting with AUTH-02." Everything under
+`backend/app/` in this delivery is new.
+
+**AUTH-02 — Registration backend endpoint + secure password storage.**
+`POST /api/v1/auth/register`. First real FastAPI app (`app/main.py`),
+async SQLAlchemy engine/session (`app/db/session.py`), `users` table +
+Alembic migration (async template, `sys.path` inserted in `env.py` for
+reliable `app...` imports, `DATABASE_URL` read from `Settings` — never
+hardcoded), bcrypt password hashing, and a Redis-backed fixed-window
+rate limiter (`RateLimiter`, INCR+EXPIRE — the exact mechanism `DEBUG_
+LOG.md`'s own Architecture Decisions table described as the M0-era
+intent, never previously built) — all necessarily delivered together as
+a byproduct of being the first backend task, the same relationship
+AUTH-01 had to DESIGNSYS-02's later Foundation components.
+`[tool.uv] package = false` removed from `pyproject.toml` per
+`INFRASTRUCTURE_BASELINE.md` §8's own instruction, replaced with
+`[tool.hatch.build.targets.wheel] packages = ["app"]`.
+
+**AUTH-03 — OAuth button scaffolding (Google, Apple).** **Stubbed, and
+reported here per this task's own acceptance criteria**: no Google or
+Apple OAuth client credentials exist anywhere in this repository's env
+files or documentation — `ARCHITECTURE.md`'s External Providers list
+names Maps/Weather/Currency/Flight/Hotel/Translation providers, no
+identity provider. `GET /api/v1/auth/oauth/{provider}` is a real,
+deployed route that returns `501 Not Implemented` with a clear message
+rather than a fabricated handshake. `OAuthButtons` (new Feature
+Component, `COMPONENT_OWNERSHIP_MATRIX.md` §5) is deliberately
+text-only, no bespoke Google/Apple logo glyph — reproducing either
+company's trademarked mark without their real, licensed brand assets
+(unavailable in this environment) risked an inaccurate imitation,
+which `ICONOGRAPHY_AND_ILLUSTRATION.md`'s licensing rule counsels
+against. Consumed by both `RegisterPageContent` (AUTH-01 — modifying
+that file is squarely within AUTH-03's own declared scope, "Dependencies:
+AUTH-01") and the new `LoginPageContent` (AUTH-05).
+
+**AUTH-04 — Email verification flow.** Token generation (`secrets.
+token_urlsafe(32)`), single-use, expiring, and stored only as a SHA-256
+hash (never the raw value — the same principle GUIDELINES.md §11
+applies to passwords, extended here to bearer verification links: a DB
+leak must not let an attacker verify arbitrary accounts). New
+`/verify-email` page reads `?token=` and confirms it against the
+backend. **Email delivery is stubbed** (logged server-side, not sent) —
+no SMTP/email provider is documented anywhere in `ARCHITECTURE.md`, so
+none was invented; flagged before implementation began, not discovered
+after the fact.
+
+**AUTH-05 — Login UI + backend endpoint.** Unlike Register (AUTH-01/02
+deliberately split into a UI-only pass plus a separate backend task),
+Login was scoped as ONE task, so it ships wired end-to-end: `LoginForm`
+(mirrors `RegisterForm`'s structure exactly) calls the real
+`POST /api/v1/auth/login`, which authenticates against the bcrypt hash
+and issues a short-lived JWT (`PyJWT`, chosen over `python-jose` for
+maintenance cadence) — returned in the JSON body and also set as an
+httpOnly, `sameSite=lax` cookie (mitigates the "Sensitive local
+storage" XSS risk `FRONTEND_IMPLEMENTATION_GUIDELINES.md` §Security
+flags). Full Redis-backed session lifecycle (revocation, refresh) is
+explicitly `AUTH-07`'s scope — not built here, a scope boundary stated
+before implementation, not discovered as a gap afterward. This is the
+repository's first frontend → backend network call (`lib/api/client.ts`,
+`lib/api/auth.ts`): a plain `fetch` wrapper, not TanStack Query
+(`ARCHITECTURE.md` §4 names it as the intended server-state layer, but
+it isn't installed, and pulling it in for one mutation would be the
+"unnecessary abstraction" `GUIDELINES.md` warns against — a reasonable
+future addition once a task needs actual query caching, e.g. Dashboard
+data). No redirect to a dashboard/authenticated area is attempted on
+success: neither `DASH-01` nor route guards (`AUTH-08`) exist yet, so
+there's nowhere real to send the user — the same "no dead ends"
+reasoning `RegisterForm`'s own success state already follows.
+
+**Anti-enumeration, applied consistently across all three new
+endpoints:** login returns an identical 401 + message for "no such
+user" and "wrong password" (with a real, cached dummy bcrypt hash
+comparison burned even when no user exists, so response latency can't
+leak which case it was); `resend-verification` returns an identical 202
++ message whether or not the email exists or is already verified.
+
+**Real infrastructure, not mocks — the explicit instruction for this
+session.** No Docker daemon is available in this sandbox, but
+PostgreSQL 16 and Redis 7 (matching `docker-compose.yml`'s own pinned
+versions) install and run directly via `apt` for genuine verification:
+real `alembic upgrade head` against a real database, a full live-server
+curl session (register → duplicate-email 409 → login → wrong-password
+401 → nonexistent-user 401 identical-to-wrong-password → weak-password
+422 → verify-email valid/reused/expired → resend anti-enumeration →
+OAuth 501 stub → rate limiting tripping at exactly the configured
+threshold), then a real 45-test pytest suite covering the same ground
+repeatably. Two real bugs found and fixed mid-session, neither asserted
+away:
+
+1. **`pytest-asyncio`'s default per-test event loop invalidated
+   module-level-cached async resources.** `app/db/session.py`'s engine
+   and `app/core/redis.py`'s client are created once, at import — the
+   same pattern the real running app uses. A fresh event loop per test
+   function meant every test after the first threw `RuntimeError:
+   Event loop is closed` trying to reuse connections bound to a now-dead
+   loop. Fixed via `asyncio_default_fixture_loop_scope = "session"` /
+   `asyncio_default_test_loop_scope = "session"` in `pyproject.toml`,
+   not by ripping out the caching that mirrors production.
+2. **A real `react-hooks/set-state-in-effect` violation** in
+   `VerifyEmailContent`: the "missing token" case was originally set via
+   `setState` synchronously at the top of a `useEffect` body, even
+   though it's fully known at render time from `searchParams` — no
+   async work needed. Fixed at the root (same standard `DESIGNSYS-03`
+   already established for this exact rule): the missing-token case is
+   now a plain conditional render branch; the effect only calls
+   `setState` from inside the verification promise's own `.then()`/
+   `.catch()` callbacks.
+
+**Flagged, not silently resolved:** `MASTER_RULES.md` §15's file-naming
+convention ("lowercase-with-hyphens", example given as
+`destination-service.py`) is not valid for importable Python modules —
+`import destination-service` is a syntax error; Python's own ecosystem
+convention (PEP 8) is snake_case. Every new backend `.py` file in this
+delivery uses snake_case (`rate_limit.py`, `auth_service.py`, etc.) of
+necessity, not preference. No existing Python code existed to establish
+precedent either way before this session.
+
+Full verification detail: see "Verification Results" below. Full file
+list: see "Files Modified This Session (2026-08-22, AUTH-02 through
+AUTH-05)" below.
+
+ Glass system
 (`GlassSurface`/`GlassCard`, exactly 4 levels, formalizing the
 pre-existing `.atlas-glass-N` CSS utilities into typed components
 without replacing their existing usages in Navbar/Sidebar/Card),
@@ -139,16 +278,26 @@ BackgroundSystem renders and DESIGNSYS-03's shell is unaffected). Full
 writeup in this session's chat handoff (no new standalone report file
 created, per `MASTER_RULES.md` §14).
 
-**Next Task (recommended, not yet authorized):** No DESIGNSYS work
-remains queued — `DESIGNSYS-01` through `04` are all done.
-`ATLAS-P1-AUTH-02` (registration backend, password hashing) is the
-next backend task with no unmet dependencies. On the frontend,
-`ATLAS-P1-LAND-01` (Marketing Layout content — Hero/Content
-Sections/CTA inside the now-real `MarketingLayout`), `ATLAS-P1-CHAT-01`,
-and `ATLAS-P1-PROF-03` / `ATLAS-P1-DASH-01` are all unblocked and can
-now additionally use `GlassCard`/`GlassSurface` and the four
-AnimationWrappers from this session wherever their own screens call
-for them.
+**Last Completed (WBS task):** `ATLAS-P1-AUTH-05` — 2026-08-22 (last of
+this session's four; see full narrative above). Chronologically prior
+in this same session: `AUTH-02`, `AUTH-03`, `AUTH-04` (all 2026-08-22).
+Before this session: `ATLAS-P1-DESIGNSYS-04` — 2026-08-16.
+
+**Next Task (recommended, not yet authorized):** No DESIGNSYS or AUTH
+registration/login work remains queued — `DESIGNSYS-01` through `04`
+and `AUTH-01` through `05` are all done. `ATLAS-P1-AUTH-07`
+(session/token handling, Redis-backed — the full lifecycle AUTH-05's
+JWT deliberately left out) and `ATLAS-P1-AUTH-06` (forgot-password) are
+both newly unblocked (`AUTH-02` and `AUTH-05` are now ✅). `AUTH-07` is
+recommended first: `AUTH-08` (route guards/RBAC) depends on it, and
+`PROF-01`/`PROF-02`/`MEM-02`/`DASH-01` all depend on it too — it's the
+next real bottleneck in the dependency graph, same reasoning that put
+Authentication ahead of Landing/Chat in the original sequencing
+rationale (`MASTER_IMPLEMENTATION_ROADMAP.md`). On the frontend,
+`ATLAS-P1-LAND-01`, `ATLAS-P1-CHAT-01`, and `ATLAS-P1-PROF-03` remain
+independently unblocked and can use the full Foundation layer plus
+`LoginForm`/`OAuthButtons` patterns as additional reference now
+available.
 
 ---
 
@@ -197,31 +346,70 @@ is still used as designed.
 
 ---
 
+## Verification Results (2026-08-22, AUTH-02 through AUTH-05 — actually run against real infrastructure, not asserted)
+
+**Backend (new this session — no prior baseline to compare against):**
+
+| Check | Result |
+|---|---|
+| `mypy --ignore-missing-imports .` (strict mode, matching CI exactly) | ✅ clean, 32 source files |
+| `pytest` (real PostgreSQL 16 + Redis 7, apt-installed locally — no Docker daemon available) | ✅ 45/45 passing |
+| `alembic downgrade base` → `upgrade head` roundtrip | ✅ succeeds, `\dt` confirms both tables recreated correctly |
+| Live server smoke test (`uvicorn`, real curl) | ✅ register/duplicate-409/login/wrong-password-401/nonexistent-401-identical/weak-password-422/verify-email(valid+reused-400+expired-400)/resend(anti-enumeration, byte-identical response)/OAuth-501-stub/OAuth-404-unknown-provider all confirmed |
+| Rate limiting, live | ✅ exactly the 11th request in a 10-max/15-min window on `/login` returned 429 with a `Retry-After` header; register (5/hour) and resend-verification (10/hour) confirmed independently |
+
+**Frontend:**
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings (1 real `react-hooks/set-state-in-effect` violation found and fixed at the root — see narrative above) |
+| `vitest run` | ✅ 180/180 passing, 28/28 files (155 pre-existing + 25 new: `login-schema.test.ts`, `login-form.test.tsx`, `oauth-buttons.test.tsx`, `verify-email-content.test.tsx`) |
+| `next build` | ✅ succeeds — 14 routes, including new `/login` and `/verify-email` |
+| Live standalone-server smoke test (`node .next/standalone/server.js`, real HTTP, en/fa/de) | ✅ `/en/login`, `/fa/login` (`dir="rtl"` confirmed), `/de/login` (real "Willkommen zurück", not placeholder) all 200; `/en/verify-email` renders correctly; `/en/register` still 200 with both OAuth buttons now present, confirming AUTH-01 untouched |
+
+**Real bugs found and fixed mid-session (not asserted away):** both described in full in the AUTH-02–05 narrative above — (1) `pytest-asyncio`'s default per-test event loop invalidating module-level-cached SQLAlchemy engine/Redis client, fixed via session-scoped event loop config; (2) the `VerifyEmailContent` `set-state-in-effect` violation, fixed by making the missing-token case a render-time branch.
+
+**One test-only bug found and fixed (not a production bug):** an early draft of `test_resend_verification_already_verified_user_issues_no_usable_token` reused one `db_session` fixture across both a direct service call and an HTTP client call (which uses its own, separate request-scoped session) — the identity-mapped `User` object from the first call didn't reflect the second session's committed `is_verified` change. Fixed by opening a fresh session for the post-HTTP-call assertion, which also more accurately mirrors how every real request actually gets its own session in production.
+
+---
+
 ## Relevant Documentation (for whichever next task is chosen)
 
-`AUTH-02`: `PRD.md` §6-7/§13.13, `ARCHITECTURE.md` §12, `GUIDELINES.md`
-§11, `INFRASTRUCTURE_BASELINE.md` §8 (backend baseline — no real
-`backend/app/` code exists yet). `LAND-01`: `docs/APPLICATION_LAYOUT_GUIDE.md` §Marketing Layout
-(now real — `frontend/components/layout/marketing-layout.tsx`),
-`docs/TRIP_PLANNING_EXPERIENCE.md` §Step 1. Any screen work: check
-`COMPONENT_OWNERSHIP_MATRIX.md` first — as of this session's
-reconciliation it accurately lists all 33 built Foundation component
-groups, including `GlassCard`/`GlassSurface` and the four
-AnimationWrappers, with real source file paths for each.
+`AUTH-07` (recommended next): `ARCHITECTURE.md` §12 (Rate Limiting,
+already partially satisfied by AUTH-02's `RateLimiter` — AUTH-07 is
+about session storage/revocation, not a second limiter), `GUIDELINES.md`
+§11 ("Session protection"), `INFRASTRUCTURE_BASELINE.md` §8. The JWT
+issued by AUTH-05's `POST /auth/login` (`app/core/security.py`
+`create_access_token`/`decode_access_token`) is the starting point —
+AUTH-07 adds the Redis-backed store around it, not a replacement
+mechanism. `AUTH-06` (forgot-password): mirrors AUTH-04's token
+pattern closely (`EmailVerificationToken`/`resend_verification_token`
+in `app/services/auth_service.py` is the template to follow, with a
+new `PasswordResetToken` model). Any screen work: check
+`COMPONENT_OWNERSHIP_MATRIX.md` first — `Label`/`Input`/`Button`/
+`FormError`/`AuthLayout` now have a second, real consumer (`LoginForm`)
+confirming they generalize past Register.
 
 ## Relevant Files
 
-`frontend/components/ui/*` (30 files: 27 from DESIGNSYS-02 + `glass.tsx`,
-`background-system.tsx` new this session, `motion-wrappers.tsx` extended
-this session), `frontend/components/layout/*` (13 files, DESIGNSYS-03,
-unchanged), `frontend/components/providers/*` (`theme-provider.tsx`
-DESIGNSYS-01, `motion-provider.tsx` new this session), `frontend/app/
-[locale]/layout.tsx` (modified: mounts `MotionProvider` +
-`BackgroundSystem`), `frontend/app/globals.css` (modified: adds the
-`.atlas-noise` utility), `frontend/vitest.setup.ts` (modified: adds an
-`IntersectionObserver` polyfill, required for Framer Motion's
-`whileInView` — used by the new AnimationWrappers — to be testable in
-JSDOM, which does not implement it at all).
+`backend/app/**` (all new this session — `main.py`, `core/{config,
+security,redis,rate_limit}.py`, `db/{base,session}.py`, `models/{user,
+email_verification_token}.py`, `schemas/auth.py`, `services/
+auth_service.py`, `api/v1/{router,auth,oauth}.py`), `backend/alembic/**`
+(new — async template, one migration), `backend/tests/**` (new — 6
+files, 45 tests), `backend/pyproject.toml` (modified — deps added,
+`package = false` removed), `.env.example` (modified — `SECRET_KEY`/
+`CORS_ALLOWED_ORIGINS` added), `frontend/lib/validation/login-schema.ts`
+(new), `frontend/lib/api/{client,auth}.ts` (new — first frontend→backend
+API layer), `frontend/components/auth/{login-form,login-page-content,
+oauth-buttons,verify-email-content}.tsx` (new), `frontend/components/
+auth/register-page-content.tsx` (modified — `OAuthButtons` added,
+AUTH-03's own file boundary), `frontend/app/[locale]/(auth)/{login,
+verify-email}/page.tsx` (new), `frontend/messages/{en,fa,de}.json`
+(modified — `Auth.login`/`Auth.oauth`/`Auth.verifyEmail` namespaces
+added, real translations not placeholders), `frontend/tests/{login-
+schema,login-form,oauth-buttons,verify-email-content}.test.tsx` (new).
 
 ## Findings Requiring Project Owner Decision
 
@@ -282,6 +470,35 @@ boundary, flagged for the owning task):**
   Reconciliation, `MISSING_INFORMATION.md`) is unchanged — deliberately
   not touched, since it belongs to DESIGNSYS-03/LAND-01, not AUTH-01.
 
+**Resolved this session (AUTH-02 through AUTH-05, 2026-08-22):** none
+of these were open "findings" before this session — they're new scope
+decisions made and flagged during implementation, listed here for
+visibility rather than under "Resolved":
+- Password hashing library: `bcrypt` directly, not `passlib` (known
+  compatibility gaps with recent bcrypt releases).
+- AUTH-05's token: stateless JWT, not the full Redis session AUTH-07
+  will add — see narrative above.
+- AUTH-02 stayed backend-only; `register-page-content.tsx`'s stub
+  `handleRegister` (AUTH-01's own documented decision) was not wired to
+  the live endpoint, since that would cross AUTH-02's declared
+  backend-only scope. Login, by contrast, WAS wired end-to-end, since
+  AUTH-05 was scoped as one combined task from the start. **Open
+  question for the project owner:** should a small follow-up task wire
+  `register-page-content.tsx` to the now-real `POST /auth/register`
+  endpoint? Not done here without direction, to avoid silently
+  expanding AUTH-02's scope.
+- `/api/v1/health` still does not exist. `ATLAS-P0-HEALTH` is marked
+  Done in `TASK_BOARD.md`'s Phase 0 table despite no such code
+  existing anywhere in the repository (same historical gap as the
+  rate-limiter/security-scaffold claims in `DEBUG_LOG.md`'s M0 record —
+  pre-existing, not newly introduced). `docker-compose.yml`'s backend
+  healthcheck will report unhealthy until a task actually builds this.
+  Not built here (different task ID, out of this group's declared
+  scope) — flagged, not silently fixed or silently left unmentioned.
+- Python file-naming convention gap (`MASTER_RULES.md` §15) — see the
+  AUTH-02–05 narrative above for the full explanation; snake_case used
+  of necessity for every new `.py` file.
+
 ## Known Issues
 
 None outstanding from AUTH-01's own scope after this session. Historical
@@ -289,7 +506,13 @@ known issues (pnpm build-script approval requirement, TypeScript 7.x
 incompatibility, Sidebar tooltip RTL `side` prop) remain environment/
 scope characteristics, unchanged. The `Footer` localization gap and the
 broader `Navigation`/`HomePage` translation gap noted just above remain
-open, owned by other tasks.
+open, owned by other tasks. New from this session: `/api/v1/health`
+still doesn't exist (see finding above); `register-page-content.tsx`'s
+`handleRegister` remains an intentional stub pending a decision on
+whether to wire it now that the endpoint is real; OAuth (`AUTH-03`) and
+email delivery (`AUTH-04`) remain stubbed pending real provider
+credentials — neither is a defect, both were explicitly permitted or
+necessitated by their own task's scope.
 
 ## Files Modified This Session (2026-08-16, DESIGNSYS-04)
 
@@ -376,6 +599,65 @@ ambiguous internal/external usage by design, not a bug);
 `components/ui/button.tsx` (already RTL-safe via flexbox's automatic
 row-reversal under `dir="rtl"`, confirmed by inspection, no fix needed).
 
+## Files Modified This Session (2026-08-22, AUTH-02 through AUTH-05)
+
+**New (backend, all of it — first real `backend/app/` code):**
+`backend/app/main.py`, `backend/app/core/{config,security,redis,
+rate_limit}.py`, `backend/app/db/{base,session}.py`, `backend/app/
+models/{user,email_verification_token}.py`, `backend/app/schemas/
+auth.py`, `backend/app/services/auth_service.py`, `backend/app/api/v1/
+{router,auth,oauth}.py`, plus `__init__.py` in every new package
+directory (9 files). `backend/alembic/` (full async-template scaffold:
+`env.py` customized, `script.py.mako`, one migration under `versions/`).
+`backend/tests/` (`conftest.py`, `test_auth_register.py`,
+`test_auth_login.py`, `test_auth_verify_email.py`, `test_security.py`,
+`test_rate_limit.py`, `test_oauth_stub.py`, `__init__.py` — 8 files, 45
+tests).
+
+**New (frontend):** `frontend/lib/validation/login-schema.ts`,
+`frontend/lib/api/client.ts`, `frontend/lib/api/auth.ts`,
+`frontend/components/auth/login-form.tsx`, `frontend/components/auth/
+login-page-content.tsx`, `frontend/components/auth/oauth-buttons.tsx`,
+`frontend/components/auth/verify-email-content.tsx`, `frontend/app/
+[locale]/(auth)/login/page.tsx`, `frontend/app/[locale]/(auth)/
+verify-email/page.tsx`, `frontend/tests/login-schema.test.ts`,
+`frontend/tests/login-form.test.tsx`, `frontend/tests/
+oauth-buttons.test.tsx`, `frontend/tests/verify-email-content.test.tsx`
+(13 files).
+
+**Modified:** `backend/pyproject.toml` (deps added: `bcrypt`, `pyjwt`,
+`email-validator` + dev `pytest-asyncio`/`httpx`; `[tool.uv] package =
+false` removed; `[tool.hatch.build.targets.wheel]`/`[tool.pytest.ini_
+options]` added), `backend/alembic.ini` (placeholder URL comment only —
+real URL set in `env.py` from `Settings`), `.env.example` (`SECRET_KEY`,
+`CORS_ALLOWED_ORIGINS` added), `frontend/components/auth/
+register-page-content.tsx` (`OAuthButtons` added — AUTH-03's own
+declared scope; `RegisterForm`/`handleRegister` themselves untouched),
+`frontend/messages/{en,fa,de}.json` (`Auth.login`/`Auth.oauth`/
+`Auth.verifyEmail` namespaces added; fa/de are real translations, not
+placeholder English).
+
+**Deleted:** none.
+
+**`.ai/` governance files also updated this session:**
+`PROJECT_STATE.md` (this file), `TASK_BOARD.md` (AUTH-02–05 moved to
+Done with verification note, removed from Todo, AUTH-06/07's
+dependency notation updated to ✅), `WORK_BREAKDOWN_STRUCTURE.md`
+(Status lines added to the four completed tasks' own entries, top
+status note updated — scope/acceptance text of each task definition
+left untouched, since nothing about their definitions changed),
+`COMPONENT_OWNERSHIP_MATRIX.md` (§5 Feature Component Matrix extended
+with `LoginForm`/`LoginPageContent`/`VerifyEmailContent`/`OAuthButtons`
+— no Foundation or Shared row touched).
+
+**Backend infrastructure used for verification (not part of the
+repository — this sandbox's own environment, not committed):**
+PostgreSQL 16 and Redis 7 installed via `apt` and run locally, since no
+Docker daemon is available here. A real developer machine or CI runner
+with Docker would instead use the existing `docker-compose.yml`
+services — nothing about the application code assumes this session's
+specific local-install verification method.
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -405,9 +687,23 @@ session's now-localized `AuthLayout` — the `Auth.layout` message
 namespace (`logoAriaLabel`/`privacy`/`terms`) is already there and
 correct; only `Auth.login`-shaped keys need adding alongside the
 existing `Auth.register`/`Auth.validation` ones, following the same
-pattern.
+pattern. **Update, 2026-08-22: this happened this session — see the
+AUTH-02–05 narrative above.** `Auth.login`/`Auth.oauth`/
+`Auth.verifyEmail` are now real namespaces in all three locale files.
 
-Recommended next task: `ATLAS-P1-AUTH-02`.
+`AUTH-02` through `AUTH-05` are now done — `backend/app/` holds real,
+tested code for the first time (register, login, email verification,
+OAuth-stub). If a future session works on `AUTH-06` (forgot-password),
+`app/services/auth_service.py`'s `EmailVerificationToken`/
+`resend_verification_token` pattern (hash-only storage, single-use,
+expiring, anti-enumeration on the response) is the direct template for
+a new `PasswordResetToken`. If a future session works on `AUTH-07`
+(session/token handling), `app/core/security.py`'s `create_access_
+token`/`decode_access_token` and the httpOnly cookie `POST /auth/login`
+already sets are the starting point, not something to redesign — AUTH-07
+adds the Redis-backed store (revocation, refresh) around them.
+
+Recommended next task: `ATLAS-P1-AUTH-07`.
 
 ---
 
@@ -415,5 +711,6 @@ Recommended next task: `ATLAS-P1-AUTH-02`.
 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation),
 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete;
 Governance Reconciliation, same date, second session), 2026-08-19
-(AUTH-01 Audit & Bug Fix — Localization/RTL).
+(AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02
+through AUTH-05 complete — first real `backend/app/` code).
 Future changes only via `MASTER_RULES.md` §21.
