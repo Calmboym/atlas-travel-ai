@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { RegisterForm } from "@/components/auth/register-form";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import type { RegisterFormValues } from "@/lib/validation/auth-schema";
 
 /**
@@ -36,6 +37,15 @@ export function RegisterPageContent() {
 
       <div className="mt-6">
         <RegisterForm onSubmit={handleRegister} />
+      </div>
+
+      {/* ADDED — ATLAS-P1-AUTH-03. RegisterForm itself and
+          handleRegister above are untouched (still AUTH-01's UI-only
+          scope) — this only adds the OAuth entry points alongside it,
+          which is exactly what AUTH-03's own WBS scope ("OAuth button
+          scaffolding ... Dependencies: AUTH-01") anticipates. */}
+      <div className="mt-6">
+        <OAuthButtons />
       </div>
 
       <p className="mt-6 text-center text-sm text-text-secondary">

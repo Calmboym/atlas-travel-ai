@@ -16,14 +16,24 @@
 #   openai                 RECONSTRUCTED — implied by DEBUG_LOG.md's "OpenAIProvider
 #                          implementation" and the documented OPENAI_API_KEY env var;
 #                          the SDK package name itself is not stated verbatim.
+#   bcrypt                 ADDED — ATLAS-P1-AUTH-02. GUIDELINES.md §11 requires
+#                          "Secure password storage" without naming an algorithm.
+#                          bcrypt used directly (not the passlib wrapper — passlib's
+#                          bcrypt backend has known compatibility gaps with recent
+#                          bcrypt releases; this was flagged to the project owner
+#                          before implementation, see PROJECT_STATE.md).
+#   pyjwt                  ADDED — ATLAS-P1-AUTH-05. Issues the short-lived access
+#                          token returned by POST /auth/login. Chosen over
+#                          python-jose (older, slower maintenance cadence).
+#   email-validator        ADDED — ATLAS-P1-AUTH-02. Required by Pydantic's
+#                          EmailStr for real RFC-shape validation on register/login
+#                          request schemas (Pydantic raises ImportError without it).
 #
-# NOT included (see .ai/MISSING_INFORMATION.md for why): pytest (test
-# framework name not confirmed), mypy (confirmed as used in CI, but as
-# a dev-only/CI dependency — listed in [dependency-groups.dev] below,
-# not main deps), uvicorn (RECONSTRUCTED — the ASGI server needed to
-# actually run FastAPI; not named verbatim in any Atlas document, but
-# omitting it would make the documented Dockerfile CMD non-functional,
-# so it is included as a framework-necessary reconstruction).
+# NOT included (see .ai/MISSING_INFORMATION.md for why): uvicorn
+# (RECONSTRUCTED — the ASGI server needed to actually run FastAPI; not
+# named verbatim in any Atlas document, but omitting it would make the
+# documented Dockerfile CMD non-functional, so it is included as a
+# framework-necessary reconstruction).
 #
 # Version numbers: NOT documented anywhere for any package. No
 # specific version pins are invented below — see
@@ -45,6 +55,9 @@ dependencies = [
     "structlog",
     "pydantic-settings",
     "openai",
+    "bcrypt",
+    "pyjwt",
+    "email-validator",
 ]
 
 [dependency-groups]
@@ -53,14 +66,21 @@ dev = [
     # flag untyped external packages ... CI runs mypy with
     # --ignore-missing-imports".
     "mypy",
-    # RECONSTRUCTED — GUIDELINES.md §14 requires "Unit tests,
-    # Integration tests" for the backend but does not name a specific
-    # framework. pytest is the conventional choice for this stack but
-    # is NOT independently confirmed — see .ai/MISSING_INFORMATION.md.
-    # Included here, flagged, rather than silently omitted, since the
-    # requirement for *some* test framework is documented even though
-    # the specific one is not.
+    # RECONSTRUCTED (previous session) — GUIDELINES.md §14 requires
+    # "Unit tests, Integration tests" for the backend but does not name
+    # a specific framework. pytest is the conventional choice for this
+    # stack; still not independently named by any Design Bible document,
+    # but is now the CONFIRMED framework this task's real test suite
+    # uses — see .ai/MISSING_INFORMATION.md for the historical flag.
     "pytest",
+    # ADDED — ATLAS-P1-AUTH-02. Required for `async def test_*` functions
+    # (FastAPI's SQLAlchemy async session + async route handlers can't be
+    # exercised with sync pytest alone).
+    "pytest-asyncio",
+    # ADDED — ATLAS-P1-AUTH-02. ASGI-transport test client
+    # (`httpx.AsyncClient(transport=ASGITransport(...))`) — FastAPI's own
+    # documented pattern for testing async apps without a running server.
+    "httpx",
 ]
 
 [tool.mypy]
@@ -68,23 +88,34 @@ dev = [
 strict = true
 ignore_missing_imports = true
 
+[tool.pytest.ini_options]
+# ADDED — ATLAS-P1-AUTH-02. "auto" avoids requiring an
+# `@pytest.mark.asyncio` decorator on every async test function.
+asyncio_mode = "auto"
+# Session-scoped (not the default function-scoped) event loop: several
+# app-level resources are cached module-level singletons bound to
+# whichever event loop is running when they're first created
+# (SQLAlchemy's async engine in app/db/session.py, the Redis client in
+# app/core/redis.py) — exactly how they're used in the real running
+# app. A fresh event loop per test function would invalidate those
+# connections mid-suite ("RuntimeError: Event loop is closed"),
+# discovered by actually running the suite, not assumed.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+
 [build-system]
 # RECONSTRUCTED — conventional for uv-managed projects; not
 # independently specified by Atlas documentation.
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-# app/ currently contains no Python source (see .ai/MISSING_INFORMATION.md
-# and REPORT.md: writing real application code was explicitly out of
-# scope for scaffold reconstruction). `uv sync` otherwise tries to
-# build this project itself as an installable wheel via Hatchling,
-# which fails with "Unable to determine which files to ship inside the
-# wheel" once there's no package content matching the project name —
-# confirmed by actually running `uv sync` against the empty scaffold.
-# `package = false` tells uv this pyproject.toml exists to declare
-# dependencies for a venv, not to be built/installed as a package
-# itself — the standard uv mechanism for this exact pre-application-code
-# stage. Remove this once app/ has real importable content (expected
-# when AUTH-02 and later backend tasks add it).
-package = false
+[tool.hatch.build.targets.wheel]
+# ADDED — ATLAS-P1-AUTH-02. Real application code now exists under
+# app/ (see removal of [tool.uv] package = false below, and
+# .ai/INFRASTRUCTURE_BASELINE.md §8, which named this exact task as
+# where that removal was expected). Hatchling's default wheel-packaging
+# heuristic looks for a directory matching the distribution name
+# ("atlas_backend"), which does not exist — this tells it explicitly
+# that "app" is the package to ship instead.
+packages = ["app"]

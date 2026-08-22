@@ -47,6 +47,40 @@
       "passwordTooShort": "Password must be at least {min} characters.",
       "confirmPasswordRequired": "Please confirm your password.",
       "passwordsMismatch": "Passwords do not match."
+    },
+    "login": {
+      "metaTitle": "Log in — Atlas",
+      "metaDescription": "Log in to your Atlas account to continue planning your trips.",
+      "title": "Welcome back",
+      "subtitle": "Log in to pick up your trips and conversations right where you left off.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Log In",
+      "submitting": "Logging in…",
+      "successTitle": "You're logged in.",
+      "successSubtitle": "Welcome back to Atlas.",
+      "genericError": "We couldn't log you in right now. Please try again.",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "oauth": {
+      "dividerLabel": "Or continue with",
+      "continueWithGoogle": "Continue with Google",
+      "continueWithApple": "Continue with Apple",
+      "connecting": "Connecting…",
+      "genericError": "That sign-in method isn't available yet. Please use email and password for now."
+    },
+    "verifyEmail": {
+      "metaTitle": "Verify your email — Atlas",
+      "metaDescription": "Confirm your email address to finish setting up your Atlas account.",
+      "verifying": "Verifying your email…",
+      "successTitle": "Email verified.",
+      "successSubtitle": "Your Atlas account is fully set up.",
+      "continueToLogin": "Continue to log in",
+      "errorTitle": "We couldn't verify your email.",
+      "missingToken": "This verification link is missing its token. Please use the link from your email.",
+      "genericError": "This verification link is invalid or has expired.",
+      "backToLogin": "Back to log in"
     }
   }
 }

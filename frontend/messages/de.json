@@ -47,6 +47,40 @@
       "passwordTooShort": "Das Passwort muss mindestens {min} Zeichen lang sein.",
       "confirmPasswordRequired": "Bitte bestätigen Sie Ihr Passwort.",
       "passwordsMismatch": "Die Passwörter stimmen nicht überein."
+    },
+    "login": {
+      "metaTitle": "Anmelden — Atlas",
+      "metaDescription": "Melden Sie sich bei Ihrem Atlas-Konto an, um Ihre Reiseplanung fortzusetzen.",
+      "title": "Willkommen zurück",
+      "subtitle": "Melden Sie sich an, um Ihre Reisen und Unterhaltungen dort fortzusetzen, wo Sie aufgehört haben.",
+      "emailLabel": "E-Mail",
+      "passwordLabel": "Passwort",
+      "submit": "Anmelden",
+      "submitting": "Anmeldung läuft…",
+      "successTitle": "Sie sind angemeldet.",
+      "successSubtitle": "Willkommen zurück bei Atlas.",
+      "genericError": "Die Anmeldung war gerade nicht möglich. Bitte versuchen Sie es erneut.",
+      "noAccount": "Sie haben noch kein Konto?",
+      "signUp": "Registrieren"
+    },
+    "oauth": {
+      "dividerLabel": "Oder weiter mit",
+      "continueWithGoogle": "Weiter mit Google",
+      "continueWithApple": "Weiter mit Apple",
+      "connecting": "Verbindung wird hergestellt…",
+      "genericError": "Diese Anmeldemethode ist noch nicht verfügbar. Bitte verwenden Sie vorerst E-Mail und Passwort."
+    },
+    "verifyEmail": {
+      "metaTitle": "E-Mail bestätigen — Atlas",
+      "metaDescription": "Bestätigen Sie Ihre E-Mail-Adresse, um die Einrichtung Ihres Atlas-Kontos abzuschließen.",
+      "verifying": "Ihre E-Mail wird bestätigt…",
+      "successTitle": "E-Mail bestätigt.",
+      "successSubtitle": "Ihr Atlas-Konto ist vollständig eingerichtet.",
+      "continueToLogin": "Weiter zur Anmeldung",
+      "errorTitle": "Ihre E-Mail konnte nicht bestätigt werden.",
+      "missingToken": "Diesem Bestätigungslink fehlt das Token. Bitte verwenden Sie den Link aus Ihrer E-Mail.",
+      "genericError": "Dieser Bestätigungslink ist ungültig oder abgelaufen.",
+      "backToLogin": "Zurück zur Anmeldung"
     }
   }
 }
