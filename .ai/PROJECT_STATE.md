@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-08-22 (AUTH-02 through AUTH-05 session — first real `backend/app/` code)
+**Last updated:** 2026-08-24 (AUTH-06 through AUTH-08 session — password reset, Redis-backed sessions, RBAC scaffold + frontend route guard)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -33,15 +33,16 @@ record, not because it changes anything about what's actually built.
 
 `AUTH-01` (2026-07-24), `DESIGNSYS-01` (2026-07-29), `DESIGNSYS-02`
 (2026-07-29), `DESIGNSYS-03` (2026-08-15), `DESIGNSYS-04` (2026-08-16),
-`AUTH-02`, `AUTH-03`, `AUTH-04`, and `AUTH-05` (all 2026-08-22) are
-done — genuinely verified as done, not just re-asserted (see
-Verification Results below).
+`AUTH-02` through `AUTH-05` (2026-08-22), and `AUTH-06` through
+`AUTH-08` (2026-08-24) are done — genuinely verified as done, not just
+re-asserted (see Verification Results below). **All eight AUTH tasks
+are now complete; the AUTH module is closed.**
 
 ---
 
 **Current Phase:** Phase 1 — Core Platform MVP (underway)
 **Current Milestone:** M1
-**Current Module:** none active — `DESIGNSYS` (01–04) and `AUTH-02/03/04/05` are complete and closed
+**Current Module:** none active — `DESIGNSYS` (01–04) and `AUTH` (01–08, all of it) are complete and closed
 **Current WBS ID:** none active
 **Current Task:** none — awaiting next task authorization
 
@@ -263,6 +264,162 @@ Full verification detail: see "Verification Results" below. Full file
 list: see "Files Modified This Session (2026-08-22, AUTH-02 through
 AUTH-05)" below.
 
+**AUTH-06 through AUTH-08 (2026-08-24, this session):** requested as a
+task group; execution order resolved from `WORK_BREAKDOWN_STRUCTURE.md`
+(not the listed order) as **AUTH-07 → AUTH-06 → AUTH-08**. AUTH-06 and
+AUTH-07 declare no dependency on each other — either could have gone
+first — but AUTH-07 was sequenced first so AUTH-06's password-reset
+could revoke sessions through AUTH-07's own store rather than the
+reverse (AUTH-06 building a revocation mechanism AUTH-07 would then
+have to adopt). AUTH-08 depends on AUTH-07 regardless. Each kept its
+own scope and file boundaries, not merged.
+
+**AUTH-07 — Session/token handling.** AUTH-05's JWT was, by its own
+stated design, purely stateless — valid until its own `exp`, with no
+way to revoke it early. This task adds exactly that: `app/core/
+security.py`'s `create_access_token`/`decode_access_token` now carry a
+`jti` claim (a breaking return-shape change, `AccessTokenPayload`
+instead of a bare `UUID` — all three call sites, including
+`test_security.py`, updated together). A new `app/core/session_store.py`
+is the actual Redis-backed store: `session:{jti} → user_id` (TTL =
+refresh-token lifetime, not access-token lifetime, so a session
+survives across many short-lived access-token refreshes), a parallel
+`refresh:{sha256(token)} → jti` mapping (the refresh token itself is
+never persisted raw — same hash-only principle `EmailVerificationToken`
+already established), and `user_sessions:{user_id}` as a Redis SET
+enabling `revoke_all_sessions_for_user` (AUTH-06's own integration
+point). `app/core/deps.py` (new) provides `get_current_user` — checks
+BOTH JWT validity AND live Redis session state, which is what makes
+revocation actually work rather than merely clearing a cookie the old,
+still-signature-valid token would satisfy. Three new endpoints:
+`POST /refresh` (re-signs a new access token for the same session,
+slides both TTLs forward — sliding-expiration, not fixed), `POST
+/logout` (idempotent — always 204, always clears both cookies, revokes
+server-side only if a real session was found), `GET /me` (the one real
+protected endpoint this task group ships, also doubles as the
+frontend's "am I logged in" check). Login itself was modified (in
+scope — this is precisely what "adds the Redis-backed store around
+[AUTH-05's mechanism]" means) to register a session and set a second,
+narrowly-scoped (`Path=/api/v1/auth`) refresh-token cookie alongside
+the existing access-token one.
+
+**AUTH-06 — Forgot-password flow.** Backend mirrors AUTH-04's
+`EmailVerificationToken` pattern exactly, as flagged as the direct
+template in this file's own prior "Notes for Next Session": new
+`PasswordResetToken` model (hash-only storage, single-use, expiring —
+kept as its own table rather than reusing `EmailVerificationToken`,
+since the two serve different security contexts with different expiry
+policies and conflating them would let a future change to one silently
+affect the other), `POST /forgot-password` (anti-enumeration — identical
+202 response whether or not the email exists) and `POST /reset-password`.
+A successful reset calls AUTH-07's `revoke_all_sessions_for_user` — the
+concrete reason for this session's chosen task order. Email delivery is
+stubbed (logged server-side), same precedent and same reason as AUTH-04
+(no SMTP provider documented anywhere). Frontend: `ForgotPasswordForm`
+mirrors `LoginForm`'s structure; `ResetPasswordContent` reads `?token=`
+from the URL like `VerifyEmailContent` did, but — unlike verify-email,
+which needs no user input — renders a form and waits for submission
+rather than auto-submitting on mount, since a new password has to be
+typed first. A "Forgot password?" link was added to `LoginPageContent`
+(AUTH-05's file; in scope for AUTH-06 as the flow's natural entry
+point, per `INFORMATION_ARCHITECTURE.md`'s documented `/forgot-password`
+route).
+
+**AUTH-08 — Route guards (frontend) + RBAC scaffold (backend).**
+Backend: `role` column on `User` (native Postgres enum, values `user`/
+`admin`/`system` — `ARCHITECTURE.md` §12's own list verbatim, not an
+invented taxonomy), `require_role(*roles)` dependency factory layered
+on `get_current_user` via FastAPI's own `Depends()` chaining. **No
+protected endpoint exists to wire it onto** — no admin-only feature is
+in scope anywhere in Phase 1 — so `require_role` is exercised directly
+as a plain function in `tests/test_rbac.py` (the same "test the
+function, don't fabricate a route" approach `test_security.py` already
+used for `create_access_token`), not bolted onto a manufactured route
+purely to have an integration test. Frontend: `proxy.ts` (next-intl's
+own required middleware, previously pure locale-routing plumbing) now
+also redirects an unauthenticated request for a protected path straight
+to `/login?redirect=<path>`, before locale resolution runs. This is a
+**presence-only check** (does the access-token cookie exist), not a
+validity check (is the session still live in Redis) — deliberately:
+the latter would mean an Edge-runtime network call to the backend on
+every single navigation, a materially heavier architecture decision
+than "route guards" was scoped for. `get_current_user` remains the
+authoritative check, applied whenever a page actually calls a protected
+API endpoint. The guarded path list
+(`lib/auth/protected-routes.ts`) is derived from `components/layout/
+nav-items.ts`'s already-shipped `APP_NAV_ITEMS` (DESIGNSYS-03) minus two
+deliberate exclusions: `/chat`, because guest-mode AI Chat is explicit,
+locked product scope (`ONBOARDING_EXPERIENCE.md` §Guest Experience,
+`USER_FLOWS.md` Flow 02 — no registration wall before value is
+demonstrated), and `/help`, because it isn't in `INFORMATION_
+ARCHITECTURE.md`'s route table at all and public Help/FAQ content is
+the safer default absent a stated requirement to gate it. **No real
+protected page exists yet** to fully demonstrate the redirect against
+(`DASH-01`/`PROF-03`/etc. haven't shipped) — verified instead against
+`proxy.ts`'s actual exported function directly, using `next/server`'s
+real `NextRequest`/`NextResponse` (confirmed working in this Vitest
+environment empirically before relying on it, not assumed), which is a
+genuine test of the real code path, just without a live page on the
+other end of the redirect yet.
+
+**Three real bugs found and fixed mid-session, none asserted away:**
+
+1. **`sa.Enum(UserRole, ...)` without `values_callable` stores the
+   Python enum's member *names* (`"USER"`) as the Postgres enum's
+   labels, not its `.value`s (`"user"`)** — silently incompatible with
+   `server_default=UserRole.USER.value` (a lowercase string that
+   wouldn't even be a valid label of the resulting type). Caught by
+   inspecting the autogenerated migration before applying it, not by
+   assuming autogenerate got it right. Fixed with an explicit
+   `values_callable=lambda enum_cls: [m.value for m in enum_cls]` on
+   the model's `SQLEnum(...)`, then the migration was regenerated
+   clean.
+2. **Alembic's `op.add_column` with a native Postgres enum does not
+   auto-emit `CREATE TYPE`** the way `op.create_table` does (which
+   handles it as part of table DDL). The first real `alembic upgrade
+   head` attempt failed with `type "user_role" does not exist` — this
+   is a distinct bug from #1, only surfaced by actually running the
+   migration against a real database, not by reading the generated
+   file. Fixed with an explicit `postgresql.ENUM(...).create(op.get_bind(),
+   checkfirst=True)` / `.drop(..., checkfirst=True)` pair in the
+   migration itself.
+3. **A content bug, not a logic bug:** `Auth.resetPassword.genericError`
+   was mistakenly authored with token-specific text ("This reset link
+   is invalid or has expired") instead of a generic retry message — the
+   component code correctly fell back to this key for non-`ApiError`
+   failures (e.g. a real network failure), but the key's own *value*
+   was wrong, so a network-failure test asserting the literal displayed
+   text caught it. This also surfaced a real (if minor) pre-existing
+   pattern gap: `LoginForm`/`RegisterForm`'s `error instanceof Error ?
+   error.message : t("genericError")` fallback would let a raw
+   `TypeError("Failed to fetch")` reach the user verbatim on a network
+   failure, violating `AI_EXPERIENCE.md` §Error Recovery's "Never
+   display raw system errors." Not fixed in those two files (AUTH-01/
+   AUTH-05's own files, out of this task group's scope) — flagged here
+   for whoever next touches them — but `ForgotPasswordPageContent`/
+   `ResetPasswordContent` (this session's own new files) were written
+   to normalize *every* non-`ApiError` failure to a translated generic
+   message before it ever reaches the form, matching `VerifyEmailContent`'s
+   already-correct, safer pattern instead.
+
+**Real infrastructure, not mocks — same standard as the prior session.**
+PostgreSQL 16 + Redis 7 installed via `apt` (no Docker daemon available
+here), a real `alembic downgrade base → upgrade head` roundtrip run
+twice (once per new migration), and a full live-server curl session
+tying AUTH-06 and AUTH-07 together end to end: register → login → `/me`
+(role visible) → forgot-password → reset-password with the actual
+emailed (stub-logged) token → **the pre-reset session cookie confirmed
+rejected (401) against the live server** (not merely in pytest) → old
+password rejected → new password accepted → new session's `/me`
+confirmed working. Then a real 88-test pytest suite and a real 241-test
+Vitest suite covering the same ground repeatably, plus a real
+`pnpm run build` (20 static pages, `/forgot-password` and
+`/reset-password` both compiling, Proxy/Middleware recognized).
+
+Full verification detail: see "Verification Results" below. Full file
+list: see "Files Modified This Session (2026-08-24, AUTH-06 through
+AUTH-08)" below.
+
  Glass system
 (`GlassSurface`/`GlassCard`, exactly 4 levels, formalizing the
 pre-existing `.atlas-glass-N` CSS utilities into typed components
@@ -278,26 +435,24 @@ BackgroundSystem renders and DESIGNSYS-03's shell is unaffected). Full
 writeup in this session's chat handoff (no new standalone report file
 created, per `MASTER_RULES.md` §14).
 
-**Last Completed (WBS task):** `ATLAS-P1-AUTH-05` — 2026-08-22 (last of
-this session's four; see full narrative above). Chronologically prior
-in this same session: `AUTH-02`, `AUTH-03`, `AUTH-04` (all 2026-08-22).
-Before this session: `ATLAS-P1-DESIGNSYS-04` — 2026-08-16.
+**Last Completed (WBS task):** `ATLAS-P1-AUTH-08` — 2026-08-24 (last of
+this session's three; see full narrative above). Chronologically prior
+in this same session: `AUTH-07`, `AUTH-06` (both 2026-08-24). Before
+this session: `ATLAS-P1-AUTH-05` — 2026-08-22.
 
-**Next Task (recommended, not yet authorized):** No DESIGNSYS or AUTH
-registration/login work remains queued — `DESIGNSYS-01` through `04`
-and `AUTH-01` through `05` are all done. `ATLAS-P1-AUTH-07`
-(session/token handling, Redis-backed — the full lifecycle AUTH-05's
-JWT deliberately left out) and `ATLAS-P1-AUTH-06` (forgot-password) are
-both newly unblocked (`AUTH-02` and `AUTH-05` are now ✅). `AUTH-07` is
-recommended first: `AUTH-08` (route guards/RBAC) depends on it, and
-`PROF-01`/`PROF-02`/`MEM-02`/`DASH-01` all depend on it too — it's the
-next real bottleneck in the dependency graph, same reasoning that put
-Authentication ahead of Landing/Chat in the original sequencing
-rationale (`MASTER_IMPLEMENTATION_ROADMAP.md`). On the frontend,
-`ATLAS-P1-LAND-01`, `ATLAS-P1-CHAT-01`, and `ATLAS-P1-PROF-03` remain
-independently unblocked and can use the full Foundation layer plus
-`LoginForm`/`OAuthButtons` patterns as additional reference now
-available.
+**Next Task (recommended, not yet authorized):** All eight AUTH tasks
+are done — the AUTH module is closed. `ATLAS-P1-PROF-01` (progressive
+profile-collection UI) and `ATLAS-P1-PROF-02` (User Profile Service
+backend CRUD) are newly unblocked (`AUTH-07` ✅), same for
+`ATLAS-P1-MEM-02` (authenticated preference storage) and half of
+`ATLAS-P1-DASH-01` (Dashboard also still needs `CHAT-03`).
+`ATLAS-P1-LAND-01`, `ATLAS-P1-CHAT-01`, and `ATLAS-P1-CHAT-03` remain
+independently available with no dependencies at all, same as before
+this session. No single task is a hard bottleneck the way `AUTH-07` was
+for this session's own three — the next choice is a genuine product
+sequencing decision (profile completion vs. landing page vs. chat
+backend) rather than a dependency-graph necessity, so no single
+recommendation is asserted here beyond naming the unblocked set.
 
 ---
 
@@ -374,42 +529,79 @@ is still used as designed.
 
 ---
 
+## Verification Results (2026-08-24, AUTH-06 through AUTH-08 — actually run against real infrastructure, not asserted)
+
+**Backend:**
+
+| Check | Result |
+|---|---|
+| `mypy --ignore-missing-imports .` (strict mode, matching CI exactly) | ✅ clean, 36 source files |
+| `pytest` (real PostgreSQL 16 + Redis 7, apt-installed locally — no Docker daemon available) | ✅ 88/88 passing (45 pre-existing + 43 new: 24 session/refresh/logout/`/me`, 12 forgot/reset-password, 5 direct `require_role` unit tests, 2 default-role/`/me`-role-exposure) |
+| `alembic downgrade base` → `upgrade head` roundtrip, ×2 (once per new migration) | ✅ both succeed; enum type + column confirmed correctly created/dropped via `\d users` and a direct `pg_enum` label query |
+| Live server smoke test (`uvicorn`, real curl) — AUTH-07 alone | ✅ login sets both cookies with correct `Path`/`Max-Age`; `/me`, `/refresh`, `/logout` all behave correctly; **a captured pre-logout refresh token replayed directly after logout returns 401** (proves server-side revocation, not just a cleared client cookie) — Redis confirmed empty (`KEYS session:*`/`refresh:*`/`user_sessions:*`) after logout |
+| Live server smoke test — full AUTH-06 + AUTH-07 chain | ✅ register (role="user") → login → `/me` (role visible) → forgot-password → reset-password with the real stub-logged token → **pre-reset session cookie confirmed rejected (401) live** → old password rejected (401) → new password accepted (200) → new session's `/me` confirmed working |
+
+**Frontend:**
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ 241/241 passing, 35/35 files (214 pre-existing + 27 new: `forgot-password-form.test.tsx`, `reset-password-form.test.tsx`, `reset-password-content.test.tsx`, `forgot-password-schema.test.ts`, `reset-password-schema.test.ts`, `protected-routes.test.ts`, `proxy.test.ts` — the last two including a real test of `proxy.ts`'s actual exported middleware function using `next/server`'s genuine `NextRequest`/`NextResponse`, confirmed working in this environment before relying on it rather than assumed) |
+| `next build` | ✅ succeeds — 20 static pages, `/forgot-password` and `/reset-password` both compiling, Proxy (Middleware) recognized |
+
+**Three real bugs found and fixed mid-session (not asserted away):** all three described in full in the AUTH-06–08 narrative above — (1) `sa.Enum` without `values_callable` storing Python enum member names instead of `.value`s as Postgres labels, silently incompatible with `server_default`; (2) `op.add_column` with a native enum not auto-creating the Postgres type the way `op.create_table` does; (3) `Auth.resetPassword.genericError` authored with the wrong (token-specific, not generic-retry) text, which also surfaced a real, un-fixed (out of scope) raw-error-leak pattern in `LoginForm`/`RegisterForm`.
+
+---
+
 ## Relevant Documentation (for whichever next task is chosen)
 
-`AUTH-07` (recommended next): `ARCHITECTURE.md` §12 (Rate Limiting,
-already partially satisfied by AUTH-02's `RateLimiter` — AUTH-07 is
-about session storage/revocation, not a second limiter), `GUIDELINES.md`
-§11 ("Session protection"), `INFRASTRUCTURE_BASELINE.md` §8. The JWT
-issued by AUTH-05's `POST /auth/login` (`app/core/security.py`
-`create_access_token`/`decode_access_token`) is the starting point —
-AUTH-07 adds the Redis-backed store around it, not a replacement
-mechanism. `AUTH-06` (forgot-password): mirrors AUTH-04's token
-pattern closely (`EmailVerificationToken`/`resend_verification_token`
-in `app/services/auth_service.py` is the template to follow, with a
-new `PasswordResetToken` model). Any screen work: check
-`COMPONENT_OWNERSHIP_MATRIX.md` first — `Label`/`Input`/`Button`/
-`FormError`/`AuthLayout` now have a second, real consumer (`LoginForm`)
-confirming they generalize past Register.
+The AUTH module (all eight tasks) is closed — nothing further to read
+there unless revisiting it. For the newly-unblocked candidates:
+
+`PROF-01`/`PROF-02`: `USER_FLOWS.md` Flow 03, `16_ONBOARDING_
+EXPERIENCE.md` §Progressive Profile Collection, `26_APPLICATION_
+LAYOUT_GUIDE.md` §Profile Page/§Profile Sections. `app/core/deps.
+get_current_user` (AUTH-07) is the dependency any authenticated
+backend route now uses — check `COMPONENT_OWNERSHIP_MATRIX.md` first
+for any screen work, same as always. `MEM-02`: `17_AI_EXPERIENCE.md`
+§Memory, `PRD.md` §7.13 — also consumes `get_current_user`. `LAND-01`:
+`01_BRAND_GUIDELINES.md`, `02_PRODUCT_VISION.md`,
+`26_APPLICATION_LAYOUT_GUIDE.md` §Marketing Layout,
+`19_TRIP_PLANNING_EXPERIENCE.md` §Step 1 (Dream),
+`16_ONBOARDING_EXPERIENCE.md` §Guest Experience/§Landing CTA — note
+`/chat` is guest-accessible and deliberately NOT behind AUTH-08's route
+guard, so a "Continue as Guest" CTA linking there needs no auth wiring.
+`CHAT-01`/`CHAT-03`: `17_AI_EXPERIENCE.md` (Communication Style,
+Streaming, AI Response Structure sections for Phase 1),
+`26_APPLICATION_LAYOUT_GUIDE.md` §AI Chat, `09_ACCESSIBILITY.md` §AI
+Chat Accessibility — remember `/chat` is intentionally ungated; a
+future task adding real authenticated features to Chat (saved
+conversation history, etc.) is what would need to reconsider that,
+not this pair.
 
 ## Relevant Files
 
-`backend/app/**` (all new this session — `main.py`, `core/{config,
-security,redis,rate_limit}.py`, `db/{base,session}.py`, `models/{user,
-email_verification_token}.py`, `schemas/auth.py`, `services/
-auth_service.py`, `api/v1/{router,auth,oauth}.py`), `backend/alembic/**`
-(new — async template, one migration), `backend/tests/**` (new — 6
-files, 45 tests), `backend/pyproject.toml` (modified — deps added,
-`package = false` removed), `.env.example` (modified — `SECRET_KEY`/
-`CORS_ALLOWED_ORIGINS` added), `frontend/lib/validation/login-schema.ts`
-(new), `frontend/lib/api/{client,auth}.ts` (new — first frontend→backend
-API layer), `frontend/components/auth/{login-form,login-page-content,
-oauth-buttons,verify-email-content}.tsx` (new), `frontend/components/
-auth/register-page-content.tsx` (modified — `OAuthButtons` added,
-AUTH-03's own file boundary), `frontend/app/[locale]/(auth)/{login,
-verify-email}/page.tsx` (new), `frontend/messages/{en,fa,de}.json`
-(modified — `Auth.login`/`Auth.oauth`/`Auth.verifyEmail` namespaces
-added, real translations not placeholders), `frontend/tests/{login-
-schema,login-form,oauth-buttons,verify-email-content}.test.tsx` (new).
+`backend/app/core/{security,session_store,deps,config}.py` (session/RBAC
+infrastructure — session_store.py and deps.py are new, others
+extended), `backend/app/models/{user,password_reset_token}.py`,
+`backend/app/schemas/auth.py`, `backend/app/api/v1/auth.py`,
+`backend/app/services/auth_service.py`, `backend/alembic/versions/
+{c1f834af0629,95eb9436f15e}_*.py` (two new migrations), `backend/
+alembic/env.py` (model import list extended), `backend/tests/
+{test_auth_session,test_auth_forgot_reset_password,test_rbac}.py`
+(new) and `test_security.py`/`test_auth_login.py` (extended).
+`frontend/lib/validation/{forgot-password,reset-password}-schema.ts`,
+`frontend/lib/api/auth.ts` (extended), `frontend/lib/auth/
+protected-routes.ts` (new), `frontend/components/auth/{forgot-password-
+form,forgot-password-page-content,reset-password-form,reset-password-
+content}.tsx` (new), `frontend/components/auth/login-page-content.tsx`
+(extended — "Forgot password?" link), `frontend/app/[locale]/(auth)/
+{forgot-password,reset-password}/page.tsx` (new), `frontend/proxy.ts`
+(extended — route guard), `frontend/messages/{en,fa,de}.json`
+(extended — `Auth.forgotPassword`/`Auth.resetPassword`/
+`Auth.login.forgotPassword`), `frontend/tests/**` (7 new files listed
+in Verification Results above).
 
 ## Findings Requiring Project Owner Decision
 
@@ -658,6 +850,78 @@ with Docker would instead use the existing `docker-compose.yml`
 services — nothing about the application code assumes this session's
 specific local-install verification method.
 
+## Files Modified This Session (2026-08-24, AUTH-06 through AUTH-08)
+
+**New (backend):** `backend/app/core/session_store.py`,
+`backend/app/core/deps.py`, `backend/app/models/password_reset_token.py`,
+`backend/alembic/versions/c1f834af0629_create_password_reset_tokens_table.py`,
+`backend/alembic/versions/95eb9436f15e_add_role_column_to_users.py`,
+`backend/tests/test_auth_session.py`,
+`backend/tests/test_auth_forgot_reset_password.py`,
+`backend/tests/test_rbac.py` (8 files, 43 new tests).
+
+**New (frontend):** `frontend/lib/validation/forgot-password-schema.ts`,
+`frontend/lib/validation/reset-password-schema.ts`,
+`frontend/lib/auth/protected-routes.ts`,
+`frontend/components/auth/forgot-password-form.tsx`,
+`frontend/components/auth/forgot-password-page-content.tsx`,
+`frontend/components/auth/reset-password-form.tsx`,
+`frontend/components/auth/reset-password-content.tsx`,
+`frontend/app/[locale]/(auth)/forgot-password/page.tsx`,
+`frontend/app/[locale]/(auth)/reset-password/page.tsx`,
+`frontend/tests/forgot-password-form.test.tsx`,
+`frontend/tests/reset-password-form.test.tsx`,
+`frontend/tests/reset-password-content.test.tsx`,
+`frontend/tests/forgot-password-schema.test.ts`,
+`frontend/tests/reset-password-schema.test.ts`,
+`frontend/tests/protected-routes.test.ts`,
+`frontend/tests/proxy.test.ts` (16 files, 27 new tests).
+
+**Modified (backend):** `backend/app/core/security.py` (`jti` support,
+`AccessTokenPayload`, extracted cookie-name constants),
+`backend/app/core/config.py` (refresh-token lifetime, new rate-limit
+settings), `backend/app/schemas/auth.py` (`RefreshResponse`,
+`ForgotPasswordRequest`, `ResetPasswordRequest`, `ResetPasswordResponse`,
+`UserResponse.role`), `backend/app/api/v1/auth.py` (login now registers
+a session; added `/refresh`, `/logout`, `/me`, `/forgot-password`,
+`/reset-password`), `backend/app/services/auth_service.py`
+(`request_password_reset`, `reset_password`), `backend/app/models/user.py`
+(`UserRole` enum, `role` column), `backend/alembic/env.py`
+(`password_reset_token` added to the model-import list),
+`backend/tests/test_security.py` (updated for the `AccessTokenPayload`
+return-shape change), `backend/tests/test_auth_login.py` (updated for
+the same change, plus new refresh-token-cookie coverage).
+`backend/app/core/redis.py` was touched mid-session (an attempted
+`Redis[str]` type parameterization, reverted once this redis-py
+version's stubs turned out not to support it — see narrative above) but
+its final content is byte-identical to the AUTH-02–05 baseline, so it
+is not a net modification.
+
+**Modified (frontend):** `frontend/lib/api/auth.ts`
+(`forgotPasswordRequest`, `resetPasswordRequest`),
+`frontend/components/auth/login-page-content.tsx` ("Forgot password?"
+link), `frontend/proxy.ts` (route guard, wired before next-intl's own
+middleware), `frontend/messages/{en,fa,de}.json`
+(`Auth.forgotPassword`, `Auth.resetPassword`, `Auth.login.forgotPassword`
+— fa/de are real translations, not placeholder English).
+
+**Deleted:** none.
+
+**`.ai/` governance files also updated this session:**
+`PROJECT_STATE.md` (this file), `TASK_BOARD.md` (AUTH-06/07/08 moved
+to Done with verification note, removed from Todo; PROF-01/PROF-02/
+MEM-02/DASH-01's AUTH-07 dependency marked ✅), `COMPONENT_OWNERSHIP_
+MATRIX.md` (§5 Feature Component Matrix extended with
+`ForgotPasswordForm`/`ForgotPasswordPageContent`/`ResetPasswordForm`/
+`ResetPasswordContent`; header metadata line extended — no Foundation
+or Shared row touched; AUTH-07/AUTH-08 introduced no new UI components).
+`WORK_BREAKDOWN_STRUCTURE.md` not touched — no task's own scope or
+acceptance criteria changed from what was already defined there.
+
+**Backend infrastructure used for verification (same method as the
+prior session, not part of the repository):** PostgreSQL 16 and Redis 7
+via `apt`, no Docker daemon available here.
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -702,8 +966,46 @@ a new `PasswordResetToken`. If a future session works on `AUTH-07`
 token`/`decode_access_token` and the httpOnly cookie `POST /auth/login`
 already sets are the starting point, not something to redesign — AUTH-07
 adds the Redis-backed store (revocation, refresh) around them.
+**Update, 2026-08-24: both of the above happened this session — see the
+AUTH-06–08 narrative above.** `PasswordResetToken` and the Redis-backed
+session store both exist and are tested.
 
-Recommended next task: `ATLAS-P1-AUTH-07`.
+**All eight AUTH tasks are now done — the module is closed.** Every
+authenticated backend route now has `app/core/deps.get_current_user`
+available as a dependency (checks live Redis session state, not just
+JWT signature — see AUTH-07's narrative for why that distinction
+matters), and `app/core/deps.require_role(*roles)` for anything that
+needs to go further and restrict by role — no route uses the latter
+yet, by design (no admin-only feature exists anywhere in Phase 1 scope
+to protect). On the frontend, `proxy.ts` now guards `/dashboard`,
+`/trips`, `/saved`, `/notifications`, `/profile`, `/settings` — a
+future session shipping a real page under any of those paths (`DASH-01`,
+`PROF-03`, etc.) gets the guard for free, no further wiring needed.
+`/chat` is deliberately NOT guarded (guest-mode AI Chat is locked
+product scope) — if a future task ever needs to gate some *part* of
+Chat while keeping the rest guest-accessible, that's a page-level
+decision (e.g. checking `get_current_user`'s result inside the chat
+page itself for a specific authenticated-only feature), not something
+to solve by adding `"chat"` to `PROTECTED_PATH_SEGMENTS`.
+
+**One real, if minor, gap flagged but not fixed (out of this session's
+scope):** `LoginForm`/`RegisterForm`'s error-handling fallback
+(`error instanceof Error ? error.message : t("genericError")`) will let
+a raw `TypeError` message (e.g. `"Failed to fetch"` on a real network
+failure) reach the user verbatim, since the page-content wrapper around
+each rethrows non-`ApiError` failures unchanged rather than normalizing
+them first. `VerifyEmailContent`'s pattern (explicit `instanceof
+ApiError` check, translated generic fallback for everything else) is
+safer and is what this session's own new components
+(`ForgotPasswordPageContent`, `ResetPasswordContent`) were written to
+follow instead. Neither `LoginForm` nor `RegisterForm` was touched —
+both are AUTH-01/AUTH-05's own files, outside this task group's
+boundary — but whoever next touches either should apply the same fix.
+
+Recommended next task: none singularly recommended — see "Next Task"
+above for the full unblocked set (`PROF-01`, `PROF-02`, `MEM-02`,
+`LAND-01`, `CHAT-01`, `CHAT-03`); this is a genuine product-sequencing
+choice, not a dependency-graph necessity.
 
 ---
 
@@ -712,5 +1014,6 @@ Recommended next task: `ATLAS-P1-AUTH-07`.
 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete;
 Governance Reconciliation, same date, second session), 2026-08-19
 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02
-through AUTH-05 complete — first real `backend/app/` code).
+through AUTH-05 complete — first real `backend/app/` code), 2026-08-24
+(AUTH-06 through AUTH-08 complete — the AUTH module is closed).
 Future changes only via `MASTER_RULES.md` §21.

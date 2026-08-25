@@ -2,7 +2,8 @@
  * Typed wrappers around the backend's /api/v1/auth/* endpoints.
  *
  * ADDED — ATLAS-P1-AUTH-05 (loginRequest), ATLAS-P1-AUTH-04
- * (verifyEmailRequest). Response shapes mirror
+ * (verifyEmailRequest), ATLAS-P1-AUTH-06 (forgotPasswordRequest,
+ * resetPasswordRequest). Response shapes mirror
  * backend/app/schemas/auth.py by hand — no OpenAPI client generation
  * step exists in this project yet.
  */
@@ -28,6 +29,11 @@ export interface VerifyEmailResponse {
   user: AuthUser;
 }
 
+export interface ResetPasswordResponse {
+  message: string;
+  user: AuthUser;
+}
+
 export function loginRequest(values: { email: string; password: string }): Promise<LoginResponse> {
   return apiFetch<LoginResponse>("/api/v1/auth/login", {
     method: "POST",
@@ -39,5 +45,22 @@ export function verifyEmailRequest(token: string): Promise<VerifyEmailResponse> 
   return apiFetch<VerifyEmailResponse>("/api/v1/auth/verify-email", {
     method: "POST",
     body: JSON.stringify({ token }),
+  });
+}
+
+export function forgotPasswordRequest(email: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/api/v1/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPasswordRequest(
+  token: string,
+  newPassword: string,
+): Promise<ResetPasswordResponse> {
+  return apiFetch<ResetPasswordResponse>("/api/v1/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, new_password: newPassword }),
   });
 }

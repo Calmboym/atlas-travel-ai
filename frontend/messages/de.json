@@ -61,7 +61,38 @@
       "successSubtitle": "Willkommen zurück bei Atlas.",
       "genericError": "Die Anmeldung war gerade nicht möglich. Bitte versuchen Sie es erneut.",
       "noAccount": "Sie haben noch kein Konto?",
-      "signUp": "Registrieren"
+      "signUp": "Registrieren",
+      "forgotPassword": "Passwort vergessen?"
+    },
+    "forgotPassword": {
+      "metaTitle": "Passwort zurücksetzen — Atlas",
+      "metaDescription": "Fordern Sie einen Link an, um das Passwort Ihres Atlas-Kontos zurückzusetzen.",
+      "title": "Passwort zurücksetzen",
+      "subtitle": "Geben Sie die E-Mail-Adresse Ihres Kontos ein, und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
+      "emailLabel": "E-Mail",
+      "submit": "Link senden",
+      "submitting": "Wird gesendet…",
+      "successTitle": "Prüfen Sie Ihre E-Mails.",
+      "successSubtitle": "Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir einen Link zum Zurücksetzen des Passworts gesendet.",
+      "genericError": "Der Link konnte gerade nicht gesendet werden. Bitte versuchen Sie es erneut.",
+      "backToLogin": "Zurück zur Anmeldung"
+    },
+    "resetPassword": {
+      "metaTitle": "Neues Passwort festlegen — Atlas",
+      "metaDescription": "Wählen Sie ein neues Passwort für Ihr Atlas-Konto.",
+      "title": "Neues Passwort festlegen",
+      "subtitle": "Wählen Sie ein neues Passwort für Ihr Konto.",
+      "newPasswordLabel": "Neues Passwort",
+      "confirmPasswordLabel": "Neues Passwort bestätigen",
+      "submit": "Passwort zurücksetzen",
+      "submitting": "Wird zurückgesetzt…",
+      "successTitle": "Passwort geändert.",
+      "successSubtitle": "Ihr Passwort wurde geändert. Bitte melden Sie sich erneut an.",
+      "continueToLogin": "Weiter zur Anmeldung",
+      "errorTitle": "Ihr Passwort konnte nicht zurückgesetzt werden.",
+      "missingToken": "Diesem Zurücksetzungslink fehlt das Token. Bitte verwenden Sie den Link aus Ihrer E-Mail.",
+      "requestNewLink": "Neuen Link anfordern",
+      "genericError": "Ihr Passwort konnte gerade nicht zurückgesetzt werden. Bitte versuchen Sie es erneut."
     },
     "oauth": {
       "dividerLabel": "Oder weiter mit",

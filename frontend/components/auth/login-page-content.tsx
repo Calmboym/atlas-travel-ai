@@ -19,6 +19,10 @@ import type { LoginFormValues } from "@/lib/validation/login-schema";
  * guards (AUTH-08) exist yet, so there is nowhere real to send the
  * user — the same "no dead ends" reasoning RegisterForm's own success
  * state already follows.
+ *
+ * EXTENDED — ATLAS-P1-AUTH-06: added the "Forgot password?" entry
+ * point to /forgot-password (INFORMATION_ARCHITECTURE.md's documented
+ * route).
  */
 async function handleLogin(values: LoginFormValues): Promise<void> {
   try {
@@ -42,6 +46,15 @@ export function LoginPageContent() {
       <div className="mt-6">
         <LoginForm onSubmit={handleLogin} />
       </div>
+
+      <p className="mt-3 text-center text-sm">
+        <Link
+          href="/forgot-password"
+          className="font-medium text-text-secondary underline-offset-2 hover:text-text-primary hover:underline"
+        >
+          {t("forgotPassword")}
+        </Link>
+      </p>
 
       <div className="mt-6">
         <OAuthButtons />

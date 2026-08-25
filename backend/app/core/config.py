@@ -52,9 +52,39 @@ class Settings(BaseSettings):
     rate_limit_login_window_seconds: int = 900
     rate_limit_verify_max: int = 10
     rate_limit_verify_window_seconds: int = 3600
+    # ADDED — ATLAS-P1-AUTH-07. Refresh is called far more often than
+    # login across a session's life (silently, in the background), so
+    # its limit is deliberately more generous than login's.
+    rate_limit_refresh_max: int = 30
+    rate_limit_refresh_window_seconds: int = 3600
+    # Logout is low-risk (only clears the caller's own session) but
+    # still rate-limited for consistency with GUIDELINES.md §11's
+    # blanket "Protect: Authentication endpoints."
+    rate_limit_logout_max: int = 30
+    rate_limit_logout_window_seconds: int = 3600
+    rate_limit_me_max: int = 60
+    rate_limit_me_window_seconds: int = 3600
+    # ADDED — ATLAS-P1-AUTH-06. Mirrors register's anti-abuse posture —
+    # forgot-password also triggers an email send and is a classic
+    # account-enumeration target.
+    rate_limit_forgot_password_max: int = 5
+    rate_limit_forgot_password_window_seconds: int = 3600
+    rate_limit_reset_password_max: int = 10
+    rate_limit_reset_password_window_seconds: int = 3600
 
     # --- Email verification (ATLAS-P1-AUTH-04) ---
     email_verification_token_expire_hours: int = 24
+
+    # --- Password reset (ATLAS-P1-AUTH-05 → AUTH-06) ---
+    password_reset_token_expire_hours: int = 1
+
+    # --- Refresh token (ATLAS-P1-AUTH-07) ---
+    # Deliberately longer-lived than the access token itself (30 min) —
+    # it exists specifically so a user isn't forced to re-enter their
+    # password every 30 minutes. Stored server-side (Redis) and only
+    # ever handed to the browser as an httpOnly cookie, never in a JSON
+    # response body — see POST /auth/login in app/api/v1/auth.py.
+    refresh_token_expire_days: int = 30
 
     @property
     def cors_origins_list(self) -> list[str]:

@@ -1,6 +1,8 @@
 """Unit tests for password hashing and JWT helpers.
 
 ADDED — ATLAS-P1-AUTH-02 (hashing), ATLAS-P1-AUTH-05 (JWT).
+EXTENDED — ATLAS-P1-AUTH-07: decode_access_token now returns
+AccessTokenPayload (user_id + jti) instead of a bare UUID.
 No HTTP layer, no database — pure function tests.
 """
 
@@ -34,13 +36,33 @@ def test_verify_password_malformed_hash_returns_false_not_raise() -> None:
 
 def test_create_and_decode_access_token_roundtrip() -> None:
     user_id = uuid.uuid4()
-    token = create_access_token(user_id)
-    assert decode_access_token(token) == user_id
+    token, jti = create_access_token(user_id)
+    payload = decode_access_token(token)
+    assert payload is not None
+    assert payload.user_id == user_id
+    assert payload.jti == jti
+
+
+def test_create_access_token_uses_supplied_jti_not_a_generated_one() -> None:
+    user_id = uuid.uuid4()
+    supplied_jti = uuid.uuid4()
+    token, returned_jti = create_access_token(user_id, jti=supplied_jti)
+    assert returned_jti == supplied_jti
+    payload = decode_access_token(token)
+    assert payload is not None
+    assert payload.jti == supplied_jti
+
+
+def test_create_access_token_without_jti_generates_a_random_one() -> None:
+    user_id = uuid.uuid4()
+    _token_one, jti_one = create_access_token(user_id)
+    _token_two, jti_two = create_access_token(user_id)
+    assert jti_one != jti_two
 
 
 def test_decode_expired_token_returns_none() -> None:
     user_id = uuid.uuid4()
-    token = create_access_token(user_id, expires_delta=timedelta(seconds=-1))
+    token, _jti = create_access_token(user_id, expires_delta=timedelta(seconds=-1))
     assert decode_access_token(token) is None
 
 

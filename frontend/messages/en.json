@@ -61,7 +61,38 @@
       "successSubtitle": "Welcome back to Atlas.",
       "genericError": "We couldn't log you in right now. Please try again.",
       "noAccount": "Don't have an account?",
-      "signUp": "Sign up"
+      "signUp": "Sign up",
+      "forgotPassword": "Forgot password?"
+    },
+    "forgotPassword": {
+      "metaTitle": "Reset your password — Atlas",
+      "metaDescription": "Request a link to reset your Atlas account password.",
+      "title": "Reset your password",
+      "subtitle": "Enter the email on your account and we'll send you a link to reset your password.",
+      "emailLabel": "Email",
+      "submit": "Send Reset Link",
+      "submitting": "Sending…",
+      "successTitle": "Check your email.",
+      "successSubtitle": "If an account with that email exists, we've sent a link to reset your password.",
+      "genericError": "We couldn't send the reset link right now. Please try again.",
+      "backToLogin": "Back to log in"
+    },
+    "resetPassword": {
+      "metaTitle": "Set a new password — Atlas",
+      "metaDescription": "Choose a new password for your Atlas account.",
+      "title": "Set a new password",
+      "subtitle": "Choose a new password for your account.",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "submit": "Reset Password",
+      "submitting": "Resetting…",
+      "successTitle": "Password changed.",
+      "successSubtitle": "Your password has been changed. Please log in again.",
+      "continueToLogin": "Continue to log in",
+      "errorTitle": "We couldn't reset your password.",
+      "missingToken": "This reset link is missing its token. Please use the link from your email.",
+      "requestNewLink": "Request a new link",
+      "genericError": "We couldn't reset your password right now. Please try again."
     },
     "oauth": {
       "dividerLabel": "Or continue with",

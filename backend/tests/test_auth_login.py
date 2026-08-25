@@ -1,6 +1,7 @@
 """Tests for POST /api/v1/auth/login.
 
-ADDED — ATLAS-P1-AUTH-05.
+ADDED — ATLAS-P1-AUTH-05. EXTENDED — ATLAS-P1-AUTH-07: login now also
+sets a refresh-token cookie and registers a Redis-backed session.
 """
 
 from httpx import AsyncClient, Response
@@ -27,6 +28,7 @@ async def test_login_success_returns_token_and_sets_cookie(client: AsyncClient) 
     assert body["user"]["email"] == _EMAIL
 
     assert "atlas_access_token" in response.cookies
+    assert "atlas_refresh_token" in response.cookies
     set_cookie_header = response.headers.get("set-cookie", "")
     assert "HttpOnly" in set_cookie_header
 
@@ -39,7 +41,17 @@ async def test_login_token_decodes_to_correct_user_id(client: AsyncClient) -> No
         "/api/v1/auth/login", json={"email": _EMAIL, "password": _PASSWORD}
     )
     token = login_response.json()["access_token"]
-    assert str(decode_access_token(token)) == user_id
+    payload = decode_access_token(token)
+    assert payload is not None
+    assert str(payload.user_id) == user_id
+
+
+async def test_login_refresh_token_cookie_is_scoped_to_auth_path(client: AsyncClient) -> None:
+    await _register(client)
+    response = await client.post("/api/v1/auth/login", json={"email": _EMAIL, "password": _PASSWORD})
+    set_cookie_headers = response.headers.get_list("set-cookie")
+    refresh_cookie = next(header for header in set_cookie_headers if "atlas_refresh_token" in header)
+    assert "Path=/api/v1/auth" in refresh_cookie
 
 
 async def test_login_succeeds_even_when_unverified(client: AsyncClient) -> None:
