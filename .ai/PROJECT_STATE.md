@@ -33,16 +33,19 @@ record, not because it changes anything about what's actually built.
 
 `AUTH-01` (2026-07-24), `DESIGNSYS-01` (2026-07-29), `DESIGNSYS-02`
 (2026-07-29), `DESIGNSYS-03` (2026-08-15), `DESIGNSYS-04` (2026-08-16),
-`AUTH-02` through `AUTH-05` (2026-08-22), and `AUTH-06` through
-`AUTH-08` (2026-08-24) are done — genuinely verified as done, not just
-re-asserted (see Verification Results below). **All eight AUTH tasks
-are now complete; the AUTH module is closed.**
+`AUTH-02` through `AUTH-05` (2026-08-22), `AUTH-06` through
+`AUTH-08` (2026-08-24), and `PROF-02`, `PROF-01`, `PROF-03`
+(2026-08-25, in that dependency order) are done — genuinely verified as
+done, not just re-asserted (see Verification Results below). **All eight
+AUTH tasks are complete and the AUTH module is closed. The PROF module
+(all three tasks) is now also complete and closed — `/profile` is the
+first real page in `(app)`/ApplicationLayout.**
 
 ---
 
 **Current Phase:** Phase 1 — Core Platform MVP (underway)
 **Current Milestone:** M1
-**Current Module:** none active — `DESIGNSYS` (01–04) and `AUTH` (01–08, all of it) are complete and closed
+**Current Module:** none active — `DESIGNSYS` (01–04), `AUTH` (01–08), and `PROF` (01–03) are complete and closed
 **Current WBS ID:** none active
 **Current Task:** none — awaiting next task authorization
 
@@ -554,21 +557,59 @@ is still used as designed.
 
 ---
 
+## Verification Results (2026-08-25, PROF-01 through PROF-03 — actually run against real infrastructure, not asserted)
+
+**Backend:**
+
+| Check | Result |
+|---|---|
+| `mypy --ignore-missing-imports .` (strict mode) | ✅ clean, 33 source files |
+| `pytest` (real PostgreSQL 16 + Redis 7, apt-installed) | ✅ 102/102 passing (88 pre-existing + 14 new in `test_profile.py`: auth gate, get-or-create-on-first-access, personal-info + enum-field updates, invalid-enum rejection (422), multi-select food-preference accept/reject/dedup, partial-update semantics — omitted-vs-explicit-null distinction — per-user profile isolation) |
+| `alembic upgrade head` → `downgrade -1` → `upgrade head` → `downgrade -1` → `upgrade head`, doubled roundtrip | ✅ now stable; the *first* single roundtrip failed with `DuplicateObjectError` — see bug (1) below |
+| Live server smoke test (`uvicorn`, real curl) | ✅ register → login → `GET /profile/me` (auto-creates empty profile) → `PATCH` (name + enums + food_preferences) → `GET` again (confirms persistence) → unauthenticated `GET` → 401 → invalid enum `PATCH` → 422 |
+| Live e2e smoke test, backend + frontend together | ✅ real registration/login against the live backend, then the **same session cookie** presented to the live frontend server: authenticated `GET /en/profile` → 200 (real page, not a redirect) |
+
+**Frontend:**
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ 277/277 passing, 39/39 files (241 pre-existing + 36 new: `step-indicator.test.tsx` (5), `profile-wizard.test.tsx` (10), `file-upload.test.tsx` (9), `profile-page-content.test.tsx` (10), plus 2 new cases added to the existing `form-controls.test.tsx` for `RadioGroupItem`'s `card` variant) |
+| `next build` | ✅ succeeds — `/profile` and `/profile/wizard` both compiling under `(app)` |
+| Route guard, both directions, live | ✅ unauthenticated `/en/profile` → redirects to `/en/login?redirect=%2Fen%2Fprofile`; unauthenticated `/en/profile/wizard` → 307; authenticated `/en/profile` (real cookie) → 200 |
+| RTL, live | ✅ `/fa/login` still renders `<html lang="fa" dir="rtl">` with the new routes present |
+
+**Four real bugs found and fixed mid-session (not asserted away):**
+
+1. **Alembic — orphaned enum types on downgrade.** `op.create_table` correctly auto-creates the 4 new Postgres enum types as part of table DDL (as expected — this is the case `95eb9436f15e`'s own comment already documented working correctly), but `op.drop_table` does **not** drop them back. A downgrade → re-upgrade failed live with `DuplicateObjectError: type "travel_preference" already exists`. Fixed with explicit, `checkfirst=True` enum `.drop()` calls in `downgrade()` — the same fix *shape* AUTH-08 used, but for the opposite (drop, not create) side of a fresh-table migration rather than an added column.
+2. **Copy-paste type error, caught by the compiler alone.** `PreferencesSection`'s `budget_level` dropdown needed a `"mid_range"` → `"midRange"` translation-key remap; that same ternary was copy-pasted into the `travel_preference` dropdown's loop, where `"mid_range"` can never occur. `tsc` correctly rejected it (`TS2367`, "no overlap") before any test ran.
+3. **Nested focusable elements — a real accessibility bug.** `FileUpload`'s first draft wrapped the real, visually-hidden `<input type="file">` in a `role="button"` `<div>` with its own `tabIndex`/keydown handling, leaving two independently-focusable elements for one logical control. Rewritten to a native `<label htmlFor>` association — less code, and the browser owns all the activation/focus/keyboard semantics instead of a hand-rolled reimplementation of them.
+4. **Accessible-name leak.** Even after fix (3), the hidden input's computed accessible name still resolved to the *entire* concatenated text content of its `<label>` — not just the intended label string, but also any hint text (`FileUpload`) or the avatar's fallback-initials text (`ImageUpload`) sharing that same label. Fixed with an explicit `aria-label={label}` on the input, which decouples the accessible name from whatever else visually shares the label. Fixing this also surfaced, via the test suite, that `@testing-library/user-event` v14 correctly honors `accept="image/*"` when simulating an upload (accurately mirroring real browser file-picker filtering, not a bug) — the "reject a non-image file" test was rewritten to use drag-and-drop instead, the actual path that bypasses `accept` filtering in both real browsers and this environment.
+
+**Scope decisions made and flagged, not silently assumed (full rationale in each component's own docstring):**
+- **Avatar upload has no storage backend.** `ImageUpload` is a real, fully working picker (drag/click, type/size validation, client-side preview) — but no object-storage endpoint exists anywhere in this repository (`ARCHITECTURE.md` §11's External Provider list has no image/file storage entry). The picked photo is previewed but never sent in a `PATCH /profile/me`; the UI says so plainly (`avatarStorageNotConnected` message) rather than pretending success. Same category of honest, documented gap as AUTH-03's OAuth stub and AUTH-04's email stub.
+- **Flow 03's "Travel Style" step has no document-defined value list of its own.** Mapped to the two closed, documented lists that most plausibly cover "how someone likes to travel" — Accommodation and Transportation (`APPLICATION_LAYOUT_GUIDE.md` §Profile Sections) — both shown on the wizard's third screen. Full reasoning in `lib/validation/profile-schema.ts`'s module docstring.
+- **`ProfileMenu` explicitly not built.** Per `COMPONENT_OWNERSHIP_MATRIX.md` §4, PROF-03 or DASH-01 could claim it; PROF-03 declined because it would need to link to `/trips`, `/saved`, `/dashboard` — none of which have real pages yet. `/profile` remains fully reachable via Sidebar/MobileBottomNav's existing entries regardless. See that document for the recorded deferral.
+- **Country/timezone are free-text, not Select dropdowns.** No document anywhere provides a country list (~195 entries) or IANA timezone list (~400 entries) to build a Select from; inventing one would assert scope no document calls for.
+- **`preferred_ui_language`/`preferred_travel_language` offer only en/fa/de** — the app's actual 3 implemented locales, not PRD.md §9's wider 8-language ambition (already Phase 4+ per the approved Q4 scope decision).
+- **`GET /api/v1/auth/me` had no frontend wrapper before this session** (PROF-03 needs the user's email, which lives on `User`, not `TravelerProfile`) — added `getMeRequest()` to `lib/api/auth.ts`, a small, natural extension of AUTH's own API layer, not a new module.
+
+---
+
 ## Relevant Documentation (for whichever next task is chosen)
 
-The AUTH module (all eight tasks) is closed — nothing further to read
-there unless revisiting it. For the newly-unblocked candidates:
+The AUTH module (all eight tasks) and the PROF module (all three
+tasks) are both closed — nothing further to read there unless
+revisiting either. For the newly-unblocked/still-available candidates:
 
-`PROF-01`/`PROF-02`: `USER_FLOWS.md` Flow 03, `16_ONBOARDING_
-EXPERIENCE.md` §Progressive Profile Collection, `26_APPLICATION_
-LAYOUT_GUIDE.md` §Profile Page/§Profile Sections. `app/core/deps.
-get_current_user` (AUTH-07) is the dependency any authenticated
-backend route now uses — check `COMPONENT_OWNERSHIP_MATRIX.md` first
-for any screen work, same as always. `MEM-02`: `17_AI_EXPERIENCE.md`
-§Memory, `PRD.md` §7.13 — also consumes `get_current_user`. `LAND-01`:
-`01_BRAND_GUIDELINES.md`, `02_PRODUCT_VISION.md`,
-`26_APPLICATION_LAYOUT_GUIDE.md` §Marketing Layout,
-`19_TRIP_PLANNING_EXPERIENCE.md` §Step 1 (Dream),
+`MEM-02`: `17_AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 — consumes
+`get_current_user`; note `TravelerProfile` (PROF-02) already covers
+durable *preference* fields — `MEM-02`'s own "basic authenticated
+preference storage" scope should be checked against that table first
+so the two don't overlap. `LAND-01`: `01_BRAND_GUIDELINES.md`,
+`02_PRODUCT_VISION.md`, `26_APPLICATION_LAYOUT_GUIDE.md` §Marketing
+Layout, `19_TRIP_PLANNING_EXPERIENCE.md` §Step 1 (Dream),
 `16_ONBOARDING_EXPERIENCE.md` §Guest Experience/§Landing CTA — note
 `/chat` is guest-accessible and deliberately NOT behind AUTH-08's route
 guard, so a "Continue as Guest" CTA linking there needs no auth wiring.
@@ -578,30 +619,36 @@ Streaming, AI Response Structure sections for Phase 1),
 Chat Accessibility — remember `/chat` is intentionally ungated; a
 future task adding real authenticated features to Chat (saved
 conversation history, etc.) is what would need to reconsider that,
-not this pair.
+not this pair. `DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
+`26_APPLICATION_LAYOUT_GUIDE.md` §Dashboard — still blocked on
+`CHAT-03`; when unblocked, check `COMPONENT_OWNERSHIP_MATRIX.md` §4
+first — `ProfileMenu` and `NotificationCenter` are both explicitly
+assigned to `DASH-01` now that PROF-03 declined the former (see that
+document's own note on why).
 
 ## Relevant Files
 
-`backend/app/core/{security,session_store,deps,config}.py` (session/RBAC
-infrastructure — session_store.py and deps.py are new, others
-extended), `backend/app/models/{user,password_reset_token}.py`,
+**AUTH infrastructure (unchanged since 2026-08-24):**
+`backend/app/core/{security,session_store,deps,config}.py`,
+`backend/app/models/{user,password_reset_token}.py`,
 `backend/app/schemas/auth.py`, `backend/app/api/v1/auth.py`,
-`backend/app/services/auth_service.py`, `backend/alembic/versions/
-{c1f834af0629,95eb9436f15e}_*.py` (two new migrations), `backend/
-alembic/env.py` (model import list extended), `backend/tests/
-{test_auth_session,test_auth_forgot_reset_password,test_rbac}.py`
-(new) and `test_security.py`/`test_auth_login.py` (extended).
-`frontend/lib/validation/{forgot-password,reset-password}-schema.ts`,
-`frontend/lib/api/auth.ts` (extended), `frontend/lib/auth/
-protected-routes.ts` (new), `frontend/components/auth/{forgot-password-
-form,forgot-password-page-content,reset-password-form,reset-password-
-content}.tsx` (new), `frontend/components/auth/login-page-content.tsx`
-(extended — "Forgot password?" link), `frontend/app/[locale]/(auth)/
-{forgot-password,reset-password}/page.tsx` (new), `frontend/proxy.ts`
-(extended — route guard), `frontend/messages/{en,fa,de}.json`
-(extended — `Auth.forgotPassword`/`Auth.resetPassword`/
-`Auth.login.forgotPassword`), `frontend/tests/**` (7 new files listed
-in Verification Results above).
+`backend/app/services/auth_service.py`.
+
+**PROF infrastructure (new this session, 2026-08-25) — the pattern any
+future authenticated-CRUD-with-a-settings-page task should follow:**
+`backend/app/models/traveler_profile.py`,
+`backend/app/schemas/profile.py`,
+`backend/app/services/profile_service.py`,
+`backend/app/api/v1/profile.py`, `backend/alembic/versions/
+47035b9239e4_create_traveler_profiles_table.py`,
+`frontend/lib/api/profile.ts`,
+`frontend/lib/validation/profile-schema.ts`,
+`frontend/components/profile/**`,
+`frontend/components/ui/{step-indicator,file-upload,image-upload}.tsx`
+(new Shared components), `frontend/components/ui/radio.tsx` (extended
+— `card` variant), `frontend/app/[locale]/(app)/profile/{page.tsx,
+wizard/page.tsx}`. Full list with New/Modified split: "Files Modified
+This Session (2026-08-25, PROF-01 through PROF-03)" below.
 
 ## Findings Requiring Project Owner Decision
 
@@ -922,6 +969,76 @@ acceptance criteria changed from what was already defined there.
 prior session, not part of the repository):** PostgreSQL 16 and Redis 7
 via `apt`, no Docker daemon available here.
 
+## Files Modified This Session (2026-08-25, PROF-01 through PROF-03)
+
+**New (backend):** `backend/app/models/traveler_profile.py`,
+`backend/app/schemas/profile.py`,
+`backend/app/services/profile_service.py`,
+`backend/app/api/v1/profile.py`,
+`backend/alembic/versions/47035b9239e4_create_traveler_profiles_table.py`,
+`backend/tests/test_profile.py` (6 files, 14 new tests).
+
+**New (frontend):** `frontend/lib/api/profile.ts`,
+`frontend/lib/validation/profile-schema.ts`,
+`frontend/components/ui/step-indicator.tsx`,
+`frontend/components/ui/file-upload.tsx`,
+`frontend/components/ui/image-upload.tsx`,
+`frontend/components/profile/profile-wizard.tsx`,
+`frontend/components/profile/profile-wizard-options.ts`,
+`frontend/components/profile/profile-page-content.tsx`,
+`frontend/components/profile/profile-personal-info-section.tsx`,
+`frontend/components/profile/profile-preferences-section.tsx`,
+`frontend/app/[locale]/(app)/profile/page.tsx`,
+`frontend/app/[locale]/(app)/profile/wizard/page.tsx`,
+`frontend/tests/step-indicator.test.tsx`,
+`frontend/tests/profile-wizard.test.tsx`,
+`frontend/tests/file-upload.test.tsx`,
+`frontend/tests/profile-page-content.test.tsx` (16 files, 34 new test
+cases, plus 2 more added to an existing file — see Modified below).
+
+**Modified (backend):** `backend/alembic/env.py` (`traveler_profile`
+added to the model-import list), `backend/app/api/v1/router.py`
+(`profile_router` registered), `backend/tests/conftest.py`
+(`traveler_profiles` added to the per-test `TRUNCATE` list — noted in
+passing, not fixed: `password_reset_tokens` was already missing from
+that same list before this session, pre-existing and out of scope).
+
+**Modified (frontend):** `frontend/components/ui/radio.tsx`
+(`RadioGroupItem` extended with a `variant="card"` prop — documented
+Extension per `COMPONENT_OWNERSHIP_MATRIX.md` §7's Lifecycle table,
+default `"circle"` behavior byte-identical to before),
+`frontend/lib/api/auth.ts` (`getMeRequest()` added — PROF-03 needed the
+user's email, which lives on `User`, not `TravelerProfile`),
+`frontend/tests/form-controls.test.tsx` (2 new cases for
+`RadioGroupItem`'s `card` variant, added to the existing `RadioGroup`
+`describe` block rather than a new file),
+`frontend/messages/{en,fa,de}.json` (`Profile.wizard`, `Profile.page`
+— both new namespaces; fa/de are real translations, not placeholder
+English, matching AUTH's own established convention).
+
+**Deleted:** none.
+
+**`.ai/` governance files also updated this session:**
+`PROJECT_STATE.md` (this file), `TASK_BOARD.md` (PROF-01/02/03 moved
+to Done with verification note, removed from Todo), `COMPONENT_
+OWNERSHIP_MATRIX.md` (§3: `RadioGroupItem`'s extension noted in place;
+§4: `StepIndicator`, `FileUpload`, `ImageUpload` marked Built;
+`ProfileMenu`'s deferral to `DASH-01` recorded with rationale;
+`Breadcrumb`/`Pagination`/`Tabs` split into their own row now that
+`StepIndicator` shipped separately; §5: `ProfileWizard`/
+`ProfilePageContent`/etc. added as new Feature Components; header
+metadata line extended). `WORK_BREAKDOWN_STRUCTURE.md` not touched —
+no task's own declared scope or acceptance criteria changed from what
+was already defined there.
+
+**Backend infrastructure used for verification:** PostgreSQL 16 and
+Redis 7 via `apt` (same method as every prior session). The sandbox
+environment restarted mid-session (Postgres/Redis processes stopped,
+files on disk unaffected) — both services were restarted and the full
+backend test suite (102/102) and the `traveler_profiles` table's
+presence were both re-confirmed afterward before continuing, not
+assumed to have survived.
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -1002,10 +1119,32 @@ follow instead. Neither `LoginForm` nor `RegisterForm` was touched —
 both are AUTH-01/AUTH-05's own files, outside this task group's
 boundary — but whoever next touches either should apply the same fix.
 
-Recommended next task: none singularly recommended — see "Next Task"
-above for the full unblocked set (`PROF-01`, `PROF-02`, `MEM-02`,
-`LAND-01`, `CHAT-01`, `CHAT-03`); this is a genuine product-sequencing
-choice, not a dependency-graph necessity.
+**PROF-01 through PROF-03 are now done — the PROF module is closed.**
+`/profile` is the first real page in `(app)`/ApplicationLayout, and
+`/profile/wizard` is the first genuinely wired multi-step form flow in
+the product. Any future authenticated-settings-style feature
+(Settings itself, once scoped) can follow `PersonalInfoSection`'s
+autosave-on-blur / `PreferencesSection`'s autosave-on-change pattern
+directly rather than re-deriving one. `TravelerProfile` now exists as
+a real table — a future `MEM-02` session should check it before adding
+a second, overlapping preference-storage mechanism (see "Relevant
+Documentation" above). Three new Shared components exist for reuse:
+`StepIndicator` (any future multi-step flow), `FileUpload`/
+`ImageUpload` (any future file-picking UI, including Trip Details'
+Documents feature — reuse `FileUpload` directly for that, not
+`ImageUpload`, which assumes an image preview). `RadioGroupItem` now
+has a `card` variant, useful for any future single-select-from-a-small-
+set UI (Phase 2 destination/hotel style pickers are a plausible future
+consumer).
+
+Recommended next task: **`LAND-01`** (Marketing layout shell) — High
+priority, no unmet dependencies, and the Landing page is the one major
+Phase 1 surface with zero real content so far (`app/[locale]/
+(marketing)/page.tsx` is still the placeholder from Bootstrap). `CHAT-01`
+and `CHAT-03` remain equally valid alternatives with no unmet
+dependencies either — this is a genuine product-sequencing choice, not
+a dependency-graph necessity, so treat this as a recommendation to
+confirm, not a decision already made on the project owner's behalf.
 
 ---
 
@@ -1015,5 +1154,7 @@ choice, not a dependency-graph necessity.
 Governance Reconciliation, same date, second session), 2026-08-19
 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02
 through AUTH-05 complete — first real `backend/app/` code), 2026-08-24
-(AUTH-06 through AUTH-08 complete — the AUTH module is closed).
+(AUTH-06 through AUTH-08 complete — the AUTH module is closed),
+2026-08-25 (PROF-01 through PROF-03 complete — the PROF module is
+closed).
 Future changes only via `MASTER_RULES.md` §21.

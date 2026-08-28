@@ -69,6 +69,43 @@ describe("RadioGroup", () => {
       "false",
     );
   });
+
+  it("'card' variant (ATLAS-P1-PROF-01 extension) renders content and remains a real radio", async () => {
+    const onValueChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <RadioGroup onValueChange={onValueChange} aria-label="Budget">
+        <RadioGroupItem variant="card" value="economy">
+          <span>Economy</span>
+        </RadioGroupItem>
+        <RadioGroupItem variant="card" value="premium">
+          <span>Premium</span>
+        </RadioGroupItem>
+      </RadioGroup>,
+    );
+
+    const economy = screen.getByRole("radio", { name: "Economy" });
+    expect(economy).toBeInTheDocument();
+
+    await user.click(economy);
+    expect(onValueChange).toHaveBeenCalledWith("economy");
+    expect(economy).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Premium" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("default variant is still 'circle' — the card extension doesn't change existing usage", () => {
+    render(
+      <RadioGroup aria-label="Default">
+        <RadioGroupItem value="a" aria-label="A" />
+      </RadioGroup>,
+    );
+    // A "circle" item has no visible text content of its own (unlike
+    // "card", which renders whatever children are passed).
+    expect(screen.getByRole("radio", { name: "A" })).toBeEmptyDOMElement();
+  });
 });
 
 describe("Select", () => {

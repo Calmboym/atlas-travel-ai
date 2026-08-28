@@ -47,8 +47,20 @@ async def _clean_database_and_redis() -> AsyncGenerator[None, None]:
     rate-limit counters (or leftover rows) from affecting the next.
     """
     async with engine.begin() as connection:
+        # NOTE — password_reset_tokens is pre-existing, silently missing
+        # from this list since ATLAS-P1-AUTH-06 added the table; not
+        # fixed here per MASTER_RULES.md's scope-boundary rule ("report
+        # it in the handoff instead" rather than touching unrelated
+        # code) — flagged in this task's own handoff notes instead.
+        # traveler_profiles IS added below: TRUNCATE...CASCADE on
+        # `users` would catch it implicitly via its FK, but every other
+        # FK-dependent table here is named explicitly, and following
+        # that convention costs nothing.
         await connection.execute(
-            text("TRUNCATE TABLE email_verification_tokens, users RESTART IDENTITY CASCADE")
+            text(
+                "TRUNCATE TABLE email_verification_tokens, traveler_profiles, users "
+                "RESTART IDENTITY CASCADE"
+            )
         )
     redis_client = get_redis_client()
     await redis_client.flushdb()

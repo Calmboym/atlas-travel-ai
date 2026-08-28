@@ -6,6 +6,12 @@
  * resetPasswordRequest). Response shapes mirror
  * backend/app/schemas/auth.py by hand — no OpenAPI client generation
  * step exists in this project yet.
+ * EXTENDED — ATLAS-P1-PROF-03 (getMeRequest): the backend's GET
+ * /auth/me endpoint existed since AUTH-07 but had no frontend wrapper
+ * yet — PROF-03's Personal Info section needs the user's email
+ * (TravelerProfile has no email field of its own; email lives on
+ * User, per APPLICATION_LAYOUT_GUIDE.md §Personal Information listing
+ * Email alongside profile-only fields like Phone/Country/Timezone).
  */
 
 import { apiFetch } from "@/lib/api/client";
@@ -63,4 +69,8 @@ export function resetPasswordRequest(
     method: "POST",
     body: JSON.stringify({ token, new_password: newPassword }),
   });
+}
+
+export function getMeRequest(): Promise<AuthUser> {
+  return apiFetch<AuthUser>("/api/v1/auth/me", { method: "GET" });
 }

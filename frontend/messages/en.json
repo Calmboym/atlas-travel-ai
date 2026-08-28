@@ -113,5 +113,107 @@
       "genericError": "This verification link is invalid or has expired.",
       "backToLogin": "Back to log in"
     }
+  },
+  "Profile": {
+    "wizard": {
+      "metaTitle": "Complete your profile — Atlas",
+      "metaDescription": "Tell Atlas a bit about how you like to travel so recommendations fit you better.",
+      "loading": "Loading your profile…",
+      "genericError": "We couldn't save that. Please try again.",
+      "back": "Back",
+      "continue": "Continue",
+      "saving": "Saving…",
+      "finish": "Finish",
+      "completeTitle": "You're all set.",
+      "completeSubtitle": "Your preferences are saved. You can update them anytime from your profile.",
+      "viewProfile": "View my profile",
+      "steps": {
+        "travelPreference": "Preferences",
+        "budget": "Budget",
+        "travelStyle": "Getting around"
+      },
+      "titles": {
+        "travelPreference": "How do you usually travel?",
+        "budgetLevel": "What's your usual budget?",
+        "accommodationPreference": "Where do you like to stay?",
+        "transportationPreference": "How do you like to get around?"
+      },
+      "descriptions": {
+        "travelPreference": "This helps Atlas tailor recommendations to how you travel.",
+        "budgetLevel": "We'll use this to suggest options that fit your budget.",
+        "accommodationPreference": "Choose the accommodation style you prefer most.",
+        "transportationPreference": "Choose how you'd rather get around once you arrive."
+      },
+      "options": {
+        "solo": "Solo",
+        "family": "Family",
+        "couple": "Couple",
+        "business": "Business",
+        "adventure": "Adventure",
+        "luxury": "Luxury",
+        "budget": "Budget",
+        "economy": "Economy",
+        "midRange": "Mid-range",
+        "premium": "Premium",
+        "hotel": "Hotel",
+        "apartment": "Apartment",
+        "hostel": "Hostel",
+        "resort": "Resort",
+        "flight": "Flight",
+        "train": "Train",
+        "car": "Car",
+        "walking": "Walking",
+        "vegetarian": "Vegetarian",
+        "vegan": "Vegan",
+        "halal": "Halal",
+        "kosher": "Kosher",
+        "allergies": "Allergies"
+      },
+      "validation": {
+        "travelPreferenceRequired": "Please choose the option that best describes this trip.",
+        "budgetLevelRequired": "Please choose a budget level.",
+        "accommodationPreferenceRequired": "Please choose an accommodation preference.",
+        "transportationPreferenceRequired": "Please choose a transportation preference."
+      }
+    },
+    "page": {
+      "metaTitle": "Your profile — Atlas",
+      "metaDescription": "Manage your personal information and travel preferences.",
+      "loading": "Loading your profile…",
+      "loadError": "We couldn't load your profile. Please try again.",
+      "changePhoto": "Change photo",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "saveError": "Couldn't save that change.",
+      "avatarStorageNotConnected": "Photo storage isn't connected yet, so this preview won't be saved.",
+      "personalInfo": {
+        "heading": "Personal information",
+        "email": "Email",
+        "fullName": "Full name",
+        "fullNamePlaceholder": "Ada Lovelace",
+        "phone": "Phone",
+        "phonePlaceholder": "+1 555 123 4567",
+        "country": "Country",
+        "countryPlaceholder": "United Kingdom",
+        "timezone": "Timezone",
+        "timezonePlaceholder": "Europe/London"
+      },
+      "preferences": {
+        "heading": "Travel preferences",
+        "notSet": "Not set",
+        "travelPreference": "Travel style",
+        "budgetLevel": "Budget",
+        "accommodationPreference": "Accommodation",
+        "transportationPreference": "Getting around",
+        "uiLanguage": "App language",
+        "travelLanguage": "Travel language",
+        "foodPreferences": "Food preferences"
+      },
+      "languages": {
+        "en": "English",
+        "fa": "فارسی",
+        "de": "Deutsch"
+      }
+    }
   }
 }

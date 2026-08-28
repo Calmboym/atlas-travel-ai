@@ -19,6 +19,7 @@ from app.db.base import Base  # noqa: E402
 from app.models import (  # noqa: E402,F401  (registers tables on Base.metadata)
     email_verification_token,
     password_reset_token,
+    traveler_profile,
     user,
 )
 

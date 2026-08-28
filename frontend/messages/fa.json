@@ -113,5 +113,107 @@
       "genericError": "این پیوند تأیید نامعتبر است یا منقضی شده است.",
       "backToLogin": "بازگشت به ورود"
     }
+  },
+  "Profile": {
+    "wizard": {
+      "metaTitle": "تکمیل نمایه — اطلس",
+      "metaDescription": "به اطلس بگویید چگونه سفر می‌کنید تا پیشنهادها را بهتر متناسب با شما تنظیم کند.",
+      "loading": "در حال بارگذاری نمایه شما…",
+      "genericError": "نتوانستیم این مورد را ذخیره کنیم. لطفاً دوباره تلاش کنید.",
+      "back": "بازگشت",
+      "continue": "ادامه",
+      "saving": "در حال ذخیره…",
+      "finish": "پایان",
+      "completeTitle": "همه‌چیز آماده است.",
+      "completeSubtitle": "ترجیحات شما ذخیره شد. هر زمان می‌توانید آن‌ها را از نمایه‌تان تغییر دهید.",
+      "viewProfile": "مشاهده نمایه من",
+      "steps": {
+        "travelPreference": "ترجیحات",
+        "budget": "بودجه",
+        "travelStyle": "جابه‌جایی"
+      },
+      "titles": {
+        "travelPreference": "معمولاً چگونه سفر می‌کنید؟",
+        "budgetLevel": "بودجه معمول شما چقدر است؟",
+        "accommodationPreference": "کجا را برای اقامت ترجیح می‌دهید؟",
+        "transportationPreference": "ترجیح می‌دهید چگونه جابه‌جا شوید؟"
+      },
+      "descriptions": {
+        "travelPreference": "این به اطلس کمک می‌کند پیشنهادها را متناسب با سبک سفر شما تنظیم کند.",
+        "budgetLevel": "از این برای پیشنهاد گزینه‌های متناسب با بودجه شما استفاده می‌کنیم.",
+        "accommodationPreference": "سبک اقامتی را که بیشتر می‌پسندید انتخاب کنید.",
+        "transportationPreference": "روش جابه‌جایی موردعلاقه‌تان پس از رسیدن را انتخاب کنید."
+      },
+      "options": {
+        "solo": "انفرادی",
+        "family": "خانوادگی",
+        "couple": "دونفره",
+        "business": "تجاری",
+        "adventure": "ماجراجویی",
+        "luxury": "لوکس",
+        "budget": "اقتصادی",
+        "economy": "اکونومی",
+        "midRange": "متوسط",
+        "premium": "ممتاز",
+        "hotel": "هتل",
+        "apartment": "آپارتمان",
+        "hostel": "هاستل",
+        "resort": "تفریحگاه",
+        "flight": "هواپیما",
+        "train": "قطار",
+        "car": "خودرو",
+        "walking": "پیاده‌روی",
+        "vegetarian": "گیاهخوار",
+        "vegan": "وگان",
+        "halal": "حلال",
+        "kosher": "کاشر",
+        "allergies": "حساسیت‌های غذایی"
+      },
+      "validation": {
+        "travelPreferenceRequired": "لطفاً گزینه‌ای را انتخاب کنید که این سفر را بهتر توصیف می‌کند.",
+        "budgetLevelRequired": "لطفاً یک سطح بودجه انتخاب کنید.",
+        "accommodationPreferenceRequired": "لطفاً نوع اقامت موردنظر را انتخاب کنید.",
+        "transportationPreferenceRequired": "لطفاً وسیله جابه‌جایی موردنظر را انتخاب کنید."
+      }
+    },
+    "page": {
+      "metaTitle": "نمایه شما — اطلس",
+      "metaDescription": "اطلاعات شخصی و ترجیحات سفر خود را مدیریت کنید.",
+      "loading": "در حال بارگذاری نمایه شما…",
+      "loadError": "نتوانستیم نمایه شما را بارگذاری کنیم. لطفاً دوباره تلاش کنید.",
+      "changePhoto": "تغییر عکس",
+      "saving": "در حال ذخیره…",
+      "saved": "ذخیره شد",
+      "saveError": "این تغییر ذخیره نشد.",
+      "avatarStorageNotConnected": "ذخیره‌سازی عکس هنوز متصل نشده است، بنابراین این پیش‌نمایش ذخیره نخواهد شد.",
+      "personalInfo": {
+        "heading": "اطلاعات شخصی",
+        "email": "ایمیل",
+        "fullName": "نام کامل",
+        "fullNamePlaceholder": "آدا لاولیس",
+        "phone": "تلفن",
+        "phonePlaceholder": "0912 345 6789",
+        "country": "کشور",
+        "countryPlaceholder": "ایران",
+        "timezone": "منطقه زمانی",
+        "timezonePlaceholder": "Asia/Tehran"
+      },
+      "preferences": {
+        "heading": "ترجیحات سفر",
+        "notSet": "تعیین‌نشده",
+        "travelPreference": "سبک سفر",
+        "budgetLevel": "بودجه",
+        "accommodationPreference": "اقامت",
+        "transportationPreference": "جابه‌جایی",
+        "uiLanguage": "زبان برنامه",
+        "travelLanguage": "زبان سفر",
+        "foodPreferences": "ترجیحات غذایی"
+      },
+      "languages": {
+        "en": "انگلیسی",
+        "fa": "فارسی",
+        "de": "آلمانی"
+      }
+    }
   }
 }

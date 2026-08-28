@@ -113,5 +113,107 @@
       "genericError": "Dieser Bestätigungslink ist ungültig oder abgelaufen.",
       "backToLogin": "Zurück zur Anmeldung"
     }
+  },
+  "Profile": {
+    "wizard": {
+      "metaTitle": "Profil vervollständigen — Atlas",
+      "metaDescription": "Erzähle Atlas, wie du gerne reist, damit Empfehlungen besser zu dir passen.",
+      "loading": "Dein Profil wird geladen…",
+      "genericError": "Das konnten wir nicht speichern. Bitte versuche es erneut.",
+      "back": "Zurück",
+      "continue": "Weiter",
+      "saving": "Wird gespeichert…",
+      "finish": "Fertig",
+      "completeTitle": "Alles bereit.",
+      "completeSubtitle": "Deine Einstellungen wurden gespeichert. Du kannst sie jederzeit in deinem Profil ändern.",
+      "viewProfile": "Mein Profil ansehen",
+      "steps": {
+        "travelPreference": "Präferenzen",
+        "budget": "Budget",
+        "travelStyle": "Unterwegs sein"
+      },
+      "titles": {
+        "travelPreference": "Wie reist du normalerweise?",
+        "budgetLevel": "Was ist dein übliches Budget?",
+        "accommodationPreference": "Wo übernachtest du am liebsten?",
+        "transportationPreference": "Wie bewegst du dich am liebsten fort?"
+      },
+      "descriptions": {
+        "travelPreference": "So kann Atlas Empfehlungen passend zu deiner Reiseart geben.",
+        "budgetLevel": "Damit schlagen wir dir Optionen vor, die zu deinem Budget passen.",
+        "accommodationPreference": "Wähle die Unterkunftsart, die du am meisten bevorzugst.",
+        "transportationPreference": "Wähle, wie du dich vor Ort am liebsten fortbewegst."
+      },
+      "options": {
+        "solo": "Alleinreisend",
+        "family": "Familie",
+        "couple": "Paar",
+        "business": "Geschäftlich",
+        "adventure": "Abenteuer",
+        "luxury": "Luxus",
+        "budget": "Sparsam",
+        "economy": "Economy",
+        "midRange": "Mittelklasse",
+        "premium": "Premium",
+        "hotel": "Hotel",
+        "apartment": "Apartment",
+        "hostel": "Hostel",
+        "resort": "Resort",
+        "flight": "Flugzeug",
+        "train": "Zug",
+        "car": "Auto",
+        "walking": "Zu Fuß",
+        "vegetarian": "Vegetarisch",
+        "vegan": "Vegan",
+        "halal": "Halal",
+        "kosher": "Koscher",
+        "allergies": "Allergien"
+      },
+      "validation": {
+        "travelPreferenceRequired": "Bitte wähle die Option, die diese Reise am besten beschreibt.",
+        "budgetLevelRequired": "Bitte wähle ein Budget.",
+        "accommodationPreferenceRequired": "Bitte wähle eine bevorzugte Unterkunftsart.",
+        "transportationPreferenceRequired": "Bitte wähle ein bevorzugtes Verkehrsmittel."
+      }
+    },
+    "page": {
+      "metaTitle": "Dein Profil — Atlas",
+      "metaDescription": "Verwalte deine persönlichen Angaben und Reisepräferenzen.",
+      "loading": "Dein Profil wird geladen…",
+      "loadError": "Wir konnten dein Profil nicht laden. Bitte versuche es erneut.",
+      "changePhoto": "Foto ändern",
+      "saving": "Wird gespeichert…",
+      "saved": "Gespeichert",
+      "saveError": "Diese Änderung konnte nicht gespeichert werden.",
+      "avatarStorageNotConnected": "Die Foto-Speicherung ist noch nicht angebunden, diese Vorschau wird nicht gespeichert.",
+      "personalInfo": {
+        "heading": "Persönliche Angaben",
+        "email": "E-Mail",
+        "fullName": "Vollständiger Name",
+        "fullNamePlaceholder": "Ada Lovelace",
+        "phone": "Telefon",
+        "phonePlaceholder": "+49 151 23456789",
+        "country": "Land",
+        "countryPlaceholder": "Deutschland",
+        "timezone": "Zeitzone",
+        "timezonePlaceholder": "Europe/Berlin"
+      },
+      "preferences": {
+        "heading": "Reisepräferenzen",
+        "notSet": "Nicht festgelegt",
+        "travelPreference": "Reisestil",
+        "budgetLevel": "Budget",
+        "accommodationPreference": "Unterkunft",
+        "transportationPreference": "Fortbewegung",
+        "uiLanguage": "App-Sprache",
+        "travelLanguage": "Reisesprache",
+        "foodPreferences": "Ernährungspräferenzen"
+      },
+      "languages": {
+        "en": "Englisch",
+        "fa": "Farsi",
+        "de": "Deutsch"
+      }
+    }
   }
 }
