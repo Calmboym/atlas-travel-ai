@@ -362,5 +362,47 @@
     },
     "copyrightPrefix": "© {year} Atlas.",
     "copyrightFull": "© {year} Atlas. Alle Rechte vorbehalten."
+  },
+  "Chat": {
+    "page": {
+      "metaTitle": "KI-Chat — Atlas",
+      "metaDescription": "Chatten Sie mit Atlas, um eine Reise zu planen, Ziele zu vergleichen und Empfehlungen klar erklärt zu bekommen.",
+      "heading": "KI-Chat",
+      "loading": "Chat wird geladen"
+    },
+    "sidebar": {
+      "title": "Unterhaltungen",
+      "newChat": "Neue Unterhaltung starten",
+      "untitledConversation": "Neue Unterhaltung",
+      "openConversations": "Unterhaltungen öffnen"
+    },
+    "composer": {
+      "label": "Nachricht an Atlas",
+      "placeholder": "Fragen Sie Atlas zu Ihrer Reise …",
+      "send": "Nachricht senden",
+      "hint": "Drücken Sie Enter zum Senden. Verwenden Sie Umschalt + Enter für eine neue Zeile."
+    },
+    "message": {
+      "you": "Sie",
+      "assistant": "Atlas",
+      "copy": "Nachricht kopieren",
+      "copied": "Kopiert",
+      "stopGenerating": "Antwort stoppen",
+      "regenerate": "Antwort neu erstellen",
+      "retry": "Erneut versuchen",
+      "thinking": "Atlas denkt nach …"
+    },
+    "emptyState": {
+      "title": "Planen Sie mit Atlas",
+      "description": "Fragen Sie nach Zielen, Budgets oder einer vollständigen Reiseroute. Atlas erklärt dabei jeden Gedankenschritt.",
+      "examplesLabel": "Beispiele zum Ausprobieren",
+      "examples": [
+        "Planen Sie eine fünftägige Reise nach Lissabon",
+        "Vergleichen Sie Tokio und Kyoto für einen ersten Besuch",
+        "Was sollte ich für Island im März einpacken?",
+        "Schlagen Sie eine entspannte dreitägige Route für Rom vor"
+      ]
+    },
+    "previewNotice": "Diese Vorschau zeigt, wie Antworten aussehen werden, sobald Atlas mit seinem KI-System verbunden ist. Echte Empfehlungen beruhen stets auf geprüften Informationen, niemals auf Vermutungen."
   }
 }

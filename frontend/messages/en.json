@@ -362,5 +362,47 @@
     },
     "copyrightPrefix": "© {year} Atlas.",
     "copyrightFull": "© {year} Atlas. All rights reserved."
+  },
+  "Chat": {
+    "page": {
+      "metaTitle": "AI Chat — Atlas",
+      "metaDescription": "Chat with Atlas to plan a trip, compare destinations, and get recommendations explained clearly.",
+      "heading": "AI Chat",
+      "loading": "Loading chat"
+    },
+    "sidebar": {
+      "title": "Conversations",
+      "newChat": "Start new chat",
+      "untitledConversation": "New conversation",
+      "openConversations": "Open conversations"
+    },
+    "composer": {
+      "label": "Message Atlas",
+      "placeholder": "Ask Atlas about your trip…",
+      "send": "Send message",
+      "hint": "Press Enter to send. Use Shift + Enter for a new line."
+    },
+    "message": {
+      "you": "You",
+      "assistant": "Atlas",
+      "copy": "Copy message",
+      "copied": "Copied",
+      "stopGenerating": "Stop generating",
+      "regenerate": "Regenerate response",
+      "retry": "Retry",
+      "thinking": "Thinking…"
+    },
+    "emptyState": {
+      "title": "Start planning with Atlas",
+      "description": "Ask about destinations, budgets, or a full itinerary. Atlas explains its thinking as it goes.",
+      "examplesLabel": "Try asking",
+      "examples": [
+        "Plan a 5-day trip to Lisbon",
+        "Compare Tokyo and Kyoto for a first visit",
+        "What should I pack for Iceland in March?",
+        "Suggest a relaxed 3-day itinerary in Rome"
+      ]
+    },
+    "previewNotice": "This preview shows how responses will look once Atlas connects to its AI backend. Real recommendations will be grounded in verified information, never guesses."
   }
 }

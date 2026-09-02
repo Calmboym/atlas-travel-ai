@@ -630,28 +630,82 @@ session.
 - **`AISearchBox` submission and `GuestEntryCta`'s link both target `/chat`**, which has no real page yet (`CHAT-01` not started) — the same "wire the entry point, the destination catches up" pattern already established for `AUTH-08`'s route guards and every `nav-items.ts` link to a not-yet-built page. `AISearchBox` passes the typed prompt via `?prompt=` so `CHAT-01` can pre-fill the first message rather than discarding it.
 - **`tests/layout-test-utils.tsx`'s `renderWithProviders` extended to wrap `MotionProvider`**, matching the real `app/[locale]/layout.tsx` provider order exactly (`INFRASTRUCTURE_BASELINE.md` §3) — missing until this task; no existing consumer of the helper had rendered a `FadeIn`/`SlideIn`/`ScaleIn`/`ScrollReveal` component before, so the gap had never surfaced. Purely additive (`MotionProvider` renders no DOM of its own), confirmed non-breaking by re-running the full pre-existing suite afterward.
 
+## Verification Results (2026-09-01, CHAT-01 through CHAT-02 — actually run against real infrastructure, not asserted)
+
+Frontend-only; no backend changes this session. `CHAT-03`/`04` (the
+Conversation Manager backend + streaming endpoint) are untouched — see
+scope notes below for how the send/streaming pipeline works without
+them.
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ 344/344 passing, 55/55 files (295 pre-existing + 49 new: `message-bubble`, `typing-indicator`, `use-chat-session`, `chat-composer`, `conversation-sidebar`, `chat-page-content`) |
+| `next build` | ✅ succeeds — `/[locale]/chat` compiles as a real route |
+| Live standalone-server + Playwright, desktop (1440px) and mobile (390px), en/fa/de | ✅ empty state, example-prompt send, full thinking→streaming→complete cycle, Stop mid-stream, Regenerate, Copy, mobile drawer, and a 4-turn conversation with auto-scroll all observed via real screenshots, not inferred from code |
+| Mobile composer vs. `MobileBottomNav` overlap | ✅ send button's bounding box confirmed fully inside the 844px viewport (`y + height = 711`) — the height math below actually checked, not just reasoned about |
+| Keyboard Tab order from the composer | ✅ confirmed correct — see bug note below on why the first attempt looked wrong |
+| `fa` locale | ✅ `dir="rtl"` confirmed; sidebar and composer send button both correctly mirror sides; Latin `Enter`/`Shift` key names inside Persian sentences render correctly, not reversed |
+
+**Height reservation (`components/chat/chat-page-content.tsx`):** this
+page's root claims `h-[calc(100dvh-9rem)] lg:h-[calc(100dvh-72px)]` —
+Navbar's own height (`4rem`/`72px`, matching `Sidebar`'s identical
+calc) plus, mobile-only, `MobileBottomNav`'s space (`ApplicationLayout`'s
+`<main>` already reserves this generally via `pb-20`; this page
+additionally subtracts it from its own height so the composer never
+sits underneath the fixed bottom nav). Desktop does not reserve space
+for the minimal `Footer` below `<main>` — it's still reachable by
+scrolling the outer page slightly further (confirmed: Tab from an
+empty composer correctly proceeds to Footer's Privacy/Terms links, not
+trapped), a reasonable trade-off for a workspace-style view rather than
+growing this page's height math to account for a footer it doesn't own.
+
+**Two real bugs found and fixed (neither caught by typecheck/lint/tests alone), one apparent bug that turned out correct on inspection:**
+
+1. **Duplicate heading, mobile drawer only.** `ConversationSidebar`'s own `<h2>Conversations</h2>` visibly duplicated `SheetContent`'s `title` prop (also "Conversations") once rendered inside the mobile drawer — invisible in the desktop `<aside>` usage, which has no other heading of its own. Found only by looking at the actual Playwright screenshot, not by any automated check. Fixed with a `showHeading` prop (default `true`; `chat-page-content.tsx` passes `false` for the Sheet usage).
+2. **`regenerateLastResponse` — a real state-timing bug, caught by its own unit test before any UI test ran.** The original implementation set a plain closure variable (`hadAssistantMessage`) from inside the `setConversations` updater function, then read that variable back immediately after calling `patchConversation`, to decide whether to call `runAssistantTurn`. This isn't reliably synchronous in React — the updater's side effect isn't guaranteed to have run by the time the very next line executes. `tests/use-chat-session.test.ts`'s regenerate test failed with "expected length 2, got 1" (the assistant turn was trimmed but never regenerated — the flag read as `false`), which is what surfaced it. Fixed by reading `activeConversation.messages` directly (already-current React state, no round-trip through the updater) to decide whether to proceed, before making any state change.
+3. **Not a bug — worth recording because it looked like one first.** An initial keyboard-Tab-order check found focus landing on a Footer link (`<a>`) instead of the composer's own Send button, which looked wrong. Root cause, confirmed by re-testing with the composer filled: the Send button is correctly `disabled` while the composer is empty (`!canSend`), and disabled form controls are natively excluded from Tab order — the browser was doing exactly the right thing. With text typed first, Tab correctly landed on Send. Recorded here specifically so a future session doesn't "fix" this non-bug.
+
+**One test-only fix, not a product bug:** `useSearchParams()`'s real Next.js return type (`ReadonlyURLSearchParams`) rejected the test file's plain `URLSearchParams` mock under `tsc` (invisible to `eslint` or to `vitest run` itself, which doesn't type-check at all) — fixed with the identical `as ReturnType<typeof useSearchParams>` cast pattern `reset-password-content.test.tsx` already established for this exact situation, not a new workaround.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **`CHAT-03`/`04` untouched, by design.** Sending a message runs entirely against `lib/chat/simulate-assistant-reply.ts` — a single, isolated, heavily-commented stub that times a "thinking" pause and a progressive text reveal, then delivers a fixed, transparent `Chat.previewNotice` string (translated in all three locales) explaining plainly that this is a preview and real recommendations will come from verified information once the backend connects. It never fabricates a travel answer to what the user actually asked (`BRAND_GUIDELINES.md` §13, `MASTER_RULES.md` §8). Every component in `components/chat/` only ever sees `ChatMessage`/`Conversation` (`lib/chat/types.ts`) and callback props — swapping this one module's internals for a real SSE client later shouldn't require touching any of them.
+- **`AIQuickAccess` and `ConnectionStatus`/`RetryCard` (Shared) still unclaimed.** `CHAT-01` was a listed candidate owner for both and didn't take either: `AIQuickAccess` would mean adding a slot to `Navbar` (DESIGNSYS-03 territory) beyond this task's own file boundaries; `ConnectionStatus` has no live connection to report on without `CHAT-03`/`04`. Left for whichever task next has a concrete reason to add either.
+- **Conversation state is React state only — no persistence.** Refreshing `/chat` currently loses the conversation. This is `MEM-01`'s explicitly separate, now-unblocked scope (declared dependency `CHAT-02`), not something to pre-build here.
+- **Copy-to-clipboard built inline in `MessageBubble`, not as a new Shared `CopyButton`** — none existed yet to consume or duplicate (`COMPONENT_OWNERSHIP_MATRIX.md` §4 lists it `TBD`).
+- **Naming vs. `COMPONENT_INVENTORY.md`:** `ConversationList`/`ConversationCard` ship as one `ConversationSidebar` component, not two; `StreamingBubble` ships as `export const StreamingBubble = MessageBubble` — a direct alias, not a parallel implementation, since `MessageBubble`'s own `status` field already fully covers the streaming visual and `aria-busy` treatment.
+- **Real EN/FA/DE translations for the new `Chat` namespace** (not placeholder English), matching the established per-namespace convention — verified live via screenshots in all three locales, not just present in the JSON. The pre-existing `Navigation.chat` label ("AI Chat," left untranslated in `fa`/`de`) was deliberately not used as a precedent to imitate; this task's new copy is translated on its own terms rather than mirroring an ambiguous, previously-unaudited choice.
+
 ## Relevant Documentation (for whichever next task is chosen)
 
 The AUTH module (all eight tasks), the PROF module (all three tasks),
-and the LAND module (all three tasks) are now closed — nothing further
-to read there unless revisiting one of them. For the remaining
-candidates:
+the LAND module (all three tasks), and now `CHAT-01`/`CHAT-02` (the
+CHAT module's frontend half) are closed — nothing further to read
+there unless revisiting one of them. For the remaining candidates:
 
+`MEM-01`: `17_AI_EXPERIENCE.md` §Memory ("Guest users: Session memory
+until browser close"), `lib/chat/use-chat-session.ts`'s own doc
+comment (states plainly what is and isn't its job). This task wraps
+or extends the CHAT-02 hook for persistence — it should not need to
+touch any `components/chat/*` file, since they only ever see plain
+data/callbacks from the hook.
 `MEM-02`: `17_AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 — consumes
 `get_current_user`; note `TravelerProfile` (PROF-02) already covers
 durable *preference* fields — `MEM-02`'s own "basic authenticated
 preference storage" scope should be checked against that table first
 so the two don't overlap.
-`CHAT-01`/`CHAT-03`: `17_AI_EXPERIENCE.md` (Communication Style,
-Streaming, AI Response Structure sections for Phase 1),
-`26_APPLICATION_LAYOUT_GUIDE.md` §AI Chat, `09_ACCESSIBILITY.md` §AI
-Chat Accessibility — remember `/chat` is intentionally ungated; a
-future task adding real authenticated features to Chat (saved
-conversation history, etc.) is what would need to reconsider that,
-not this pair. `CHAT-01` also inherits `AISearchBox`'s `?prompt=`
-query param (LAND-02) to pre-fill the first message, and is the
-natural next claimant for `AIQuickAccess` (Shared — see the finding
-above). `DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
+`CHAT-03`/`CHAT-04`: `ARCHITECTURE.md` §7 (AI Orchestration Service —
+"basic, non-orchestrated for Phase 1" per `INDEX.md` §CHAT),
+`GUIDELINES.md` §8 (AI Safety Rules — never fabricate, state
+uncertainty clearly) and §9 (Tool Usage Rules), `MASTER_BUILD_PROMPT.md`
+§10 (Data Reliability Rules). The frontend contract it needs to satisfy
+already exists and is fully built/tested: `lib/chat/types.ts`
+(`ChatMessage`/`Conversation` shapes) and the callback surface
+`use-chat-session.ts` currently fills with
+`lib/chat/simulate-assistant-reply.ts` — read that module's own doc
+comment first, since it explains exactly what it stands in for and
+why. `DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
 `26_APPLICATION_LAYOUT_GUIDE.md` §Dashboard — still blocked on
 `CHAT-03`; when unblocked, check `COMPONENT_OWNERSHIP_MATRIX.md` §4
 first — `ProfileMenu` and `NotificationCenter` are both explicitly
@@ -679,18 +733,27 @@ document's own note on why).
 `frontend/components/ui/radio.tsx` (`card` variant),
 `frontend/app/[locale]/(app)/profile/{page.tsx, wizard/page.tsx}`.
 
-**LAND infrastructure (new this session, 2026-08-29) — the pattern any
-future marketing-page or Feature-Component-heavy page task should
-follow:** `frontend/components/landing/**` (11 new Feature Components:
-`hero-section`, `ai-search-box`, `example-prompts`, `guest-entry-cta`,
+**LAND infrastructure (unchanged since 2026-08-29):**
+`frontend/components/landing/**` (11 Feature Components: `hero-section`,
+`ai-search-box`, `example-prompts`, `guest-entry-cta`,
 `animated-background`, `how-it-works`, `destination-carousel`,
 `ai-showcase`, `feature-highlights`, `faq-section`, `cta-section`),
-`frontend/app/[locale]/(marketing)/page.tsx` (rewritten),
-`frontend/components/layout/footer.tsx` (localized, Product column
-added), `frontend/messages/{en,fa,de}.json` (`HomePage`/`Footer`
-namespaces), `frontend/tests/mocks/next-intl-server.ts` (new shared
-test infrastructure). Full list with New/Modified/Deleted split:
-"Files Modified This Session (2026-08-29, LAND-01 through LAND-03)"
+`frontend/app/[locale]/(marketing)/page.tsx`,
+`frontend/components/layout/footer.tsx`,
+`frontend/tests/mocks/next-intl-server.ts`.
+
+**CHAT infrastructure (new this session, 2026-09-01) — the pattern any
+future page that consumes CHAT-02's message-state hook should follow:**
+`frontend/lib/chat/{types,use-chat-session,simulate-assistant-reply}.ts`
+(CHAT-02 — read `use-chat-session.ts`'s own doc comment before treating
+anything here as available for persistence; it explicitly isn't yet),
+`frontend/components/chat/{message-bubble,typing-indicator}.tsx`
+(CHAT-02), `frontend/app/[locale]/(app)/chat/page.tsx`,
+`frontend/components/chat/{chat-page-content,conversation-sidebar,
+chat-composer,conversation-panel}.tsx` (CHAT-01),
+`frontend/messages/{en,fa,de}.json` (`Chat` namespace, real
+translations, not placeholders). Full list with New/Modified split:
+"Files Modified This Session (2026-09-01, CHAT-01 through CHAT-02)"
 below.
 
 ## Findings Requiring Project Owner Decision
@@ -1159,6 +1222,66 @@ non-claim and why). `WORK_BREAKDOWN_STRUCTURE.md` not touched — no
 task's own declared scope or acceptance criteria changed from what was
 already defined there.
 
+## Files Modified This Session (2026-09-01, CHAT-01 through CHAT-02)
+
+Frontend-only — no backend files touched. File-by-file task ownership
+noted inline; see Verification Results above for why the split runs
+this way (ConversationPanel, CHAT-01, renders CHAT-02's message
+components — matching the WBS's own declared dependency direction).
+
+**New (`frontend/lib/chat/` — CHAT-02):** `types.ts`
+(`ChatMessage`/`Conversation`/`MessageRole`/`MessageStatus`),
+`simulate-assistant-reply.ts` (the documented CHAT-03/04 swap point),
+`use-chat-session.ts` (conversation/message state hook — send, stream,
+stop, regenerate/retry, new/select conversation; in-memory only, see
+its own doc comment on why).
+
+**New (`frontend/components/chat/` — CHAT-02):** `message-bubble.tsx`
+(`MessageBubble` + the `StreamingBubble` alias), `typing-indicator.tsx`.
+
+**New (`frontend/components/chat/` — CHAT-01):**
+`chat-page-content.tsx` (orchestrator — reads `?prompt=`, wires
+`useChatSession`, composes the responsive layout),
+`conversation-sidebar.tsx` (reused inline on desktop and inside the
+mobile `Sheet` drawer via its `showHeading` prop), `chat-composer.tsx`
+(auto-growing textarea, Enter-to-send), `conversation-panel.tsx`
+(scrollable message list, welcome/empty state, stick-to-bottom
+auto-scroll).
+
+**New (route — CHAT-01):** `frontend/app/[locale]/(app)/chat/page.tsx`
+(`generateMetadata` + a real loading skeleton in the required
+`useSearchParams` `Suspense` boundary, not `fallback={null}` — this
+page's layout is heavier than `reset-password`'s/`verify-email`'s
+small centered forms).
+
+**New (tests, one file per component above unless noted):**
+`frontend/tests/{message-bubble,typing-indicator}.test.tsx` (CHAT-02,
+14 cases), `frontend/tests/use-chat-session.test.ts` (CHAT-02, hook
+behavior via `renderHook` + fake timers, 12 cases),
+`frontend/tests/{chat-composer,conversation-sidebar}.test.tsx`
+(CHAT-01, 14 cases), `frontend/tests/chat-page-content.test.tsx`
+(CHAT-01, integration-level — empty state, `?prompt=` prefill, example
+prompts, full send/stream cycle, mobile drawer — 9 cases). 49 new tests
+total across 6 files.
+
+**Modified:** `frontend/messages/{en,fa,de}.json` (new `Chat`
+namespace — real, meaning-preserving Persian and German throughout,
+not placeholder English; see Verification Results above on why
+`Navigation.chat`'s untranslated "AI Chat" wasn't used as a precedent
+to copy).
+
+**`.ai/` governance files also updated this session:**
+`PROJECT_STATE.md` (this file), `TASK_BOARD.md` (CHAT-01/02 moved to
+Done with verification note, removed from Todo; Todo section's own
+explanatory note updated for the newly-unblocked set), `COMPONENT_
+OWNERSHIP_MATRIX.md` (§4: `AIQuickAccess` and `ConnectionStatus`/
+`RetryCard` rows annotated with this session's explicit non-claim and
+why; §5: the `Chat-specific` Feature row updated from planned to
+delivered, with real file paths and the `ConversationList`/
+`StreamingBubble` naming notes). `WORK_BREAKDOWN_STRUCTURE.md` not
+touched — no task's own declared scope or acceptance criteria changed
+from what was already defined there.
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -1278,15 +1401,51 @@ first time in this codebase (not yet applied to `AuthLayout`, which
 still has no test file — a reasonable pickup for whoever next touches
 it, not done here as it's outside LAND's own file boundary).
 
-Recommended next task: **`CHAT-01`** (streaming AI Chat layout, guest
-mode) — High priority per `MASTER_IMPLEMENTATION_ROADMAP.md`'s Phase 1
-module list, no unmet dependencies, and now the natural next step since
-both of Landing's entry points (`AISearchBox`, `GuestEntryCta`) already
-route to `/chat` and are waiting for a real destination. `MEM-02` and
-`DASH-01` remain valid alternatives (`DASH-01` still blocked on
-`CHAT-03` specifically, not `CHAT-01`) — this is a product-sequencing
-recommendation to confirm, not a dependency-graph necessity or a
-decision already made on the project owner's behalf.
+Recommended next task (as of the LAND session): **`CHAT-01`** (streaming
+AI Chat layout, guest mode) — High priority per
+`MASTER_IMPLEMENTATION_ROADMAP.md`'s Phase 1 module list, no unmet
+dependencies, and now the natural next step since both of Landing's
+entry points (`AISearchBox`, `GuestEntryCta`) already route to `/chat`
+and are waiting for a real destination. `MEM-02` and `DASH-01` remain
+valid alternatives (`DASH-01` still blocked on `CHAT-03` specifically,
+not `CHAT-01`) — this is a product-sequencing recommendation to
+confirm, not a dependency-graph necessity or a decision already made on
+the project owner's behalf.
+
+**CHAT-01 through CHAT-02 are now done — the CHAT module's frontend
+half is closed** (`CHAT-03`/`04`, the backend Conversation Manager + SSE
+endpoint, remain open and untouched). `/chat`
+(`app/[locale]/(app)/chat/page.tsx`) is the first real page inside
+`(app)`/ApplicationLayout beyond `/profile`, and the first to read
+`?prompt=` — `AISearchBox`'s handoff now has a real destination,
+pre-filling (never auto-sending) the composer. If a future session
+works on `CHAT-03`/`CHAT-04`: the entire send/streaming pipeline
+already exists and is fully wired end-to-end against
+`lib/chat/simulate-assistant-reply.ts`, a single, clearly-documented,
+isolated stub — swap that one module's internals for a real
+SSE-consuming client and every component in `components/chat/` should
+work unchanged, since they only ever see `ChatMessage`/`Conversation`
+(`lib/chat/types.ts`) and callback props, never the transport directly.
+`AIQuickAccess` and `ConnectionStatus`/`RetryCard` (Shared) remain
+unclaimed — `CHAT-01` had a clear opportunity to take either and
+didn't, see this session's verification note in `.ai/TASK_BOARD.md` for
+why. `MEM-01` (guest session memory) is now unblocked (declared
+dependency `CHAT-02` ✅) — currently, refreshing `/chat` loses the
+conversation entirely, which is correct, current, in-scope behavior for
+CHAT-01/02, not a bug, and is exactly the gap `MEM-01` closes.
+
+Recommended next task (current): three tasks are independently
+available with no unmet dependencies and no single one is a hard
+bottleneck — **`ATLAS-P1-MEM-01`** (guest session memory; the smallest,
+fastest win, client-side only, directly fixes the refresh-loses-your-
+conversation gap above), **`ATLAS-P1-CHAT-03`** (Conversation Manager
+backend; the bigger unlock — it's what `CHAT-04` and, jointly with
+`AUTH-07` ✅, `DASH-01` are both still waiting on), and
+**`ATLAS-P1-MEM-02`** (authenticated preference storage — has been
+available since the PROF session and hasn't been picked up yet, still
+valid). As in every prior instance of this note, this names the
+unblocked set rather than asserting a single choice on the project
+owner's behalf.
 
 ---
 
@@ -1299,5 +1458,8 @@ through AUTH-05 complete — first real `backend/app/` code), 2026-08-24
 (AUTH-06 through AUTH-08 complete — the AUTH module is closed),
 2026-08-25 (PROF-01 through PROF-03 complete — the PROF module is
 closed), 2026-08-29 (LAND-01 through LAND-03 complete — the LAND
-module is closed; the real Landing page ships for the first time).
+module is closed; the real Landing page ships for the first time),
+2026-09-01 (CHAT-01 through CHAT-02 complete — the CHAT module's
+frontend half is closed; `/chat` is a real, guest-accessible page for
+the first time).
 Future changes only via `MASTER_RULES.md` §21.

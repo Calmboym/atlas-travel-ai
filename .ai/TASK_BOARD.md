@@ -83,6 +83,11 @@ question, only its localization.
 
 **Verification status (LAND-01 through LAND-03, 2026-08-29 — actually executed, not asserted):** frontend-only, no backend changes. Execution order LAND-01 → LAND-02/LAND-03 (WBS declares both depend only on LAND-01, no dependency between them). Typecheck clean · lint 0 errors/0 warnings · 295/295 tests passing across 49/49 files (277 pre-existing + 18 new: one file per new Landing component plus new shared test infrastructure) · production build succeeds, confirmed via the actual `.next/server/app-paths-manifest.json` (not build success alone) that exactly one manifest entry now backs `/[locale]` · a live standalone-server smoke test across all three locales, plus an unrelated existing route (`/en/register`) re-confirmed unaffected · heading hierarchy (exactly one `<h1>`, no skipped levels) confirmed against the real rendered HTML. Three real bugs found and fixed, none caught by typecheck/lint/build alone: (1) a stray duplicate `app/[locale]/page.tsx` left over from DESIGNSYS-03's move to `(marketing)/page.tsx`, compiling into two separate manifest entries for the same route — found by inspecting the manifest directly, not assumed from a clean build; (2) `CTASection` calling `buttonVariants()` (exported from a `"use client"` file) directly from a Server Component — type-checks and builds cleanly, then crashes with a real 500 the moment the standalone server actually serves the page; caught only by starting it and requesting the page, fixed by marking the component `"use client"`, the same constraint `Navbar` already carries for the identical pattern; (3) `next-intl/server`'s `getTranslations` throws unconditionally under Vitest (jsdom triggers its "not supported in Client Components" guard regardless of the real component boundary) — tried the same async-Server-Component pattern AuthLayout uses for `Footer`, found it broke the pre-existing `tests/layouts.test.tsx` (which renders `MarketingLayout`/`ApplicationLayout` synchronously and cannot await a component nested inside them), built `tests/mocks/next-intl-server.ts` as a working alias-based mock either way (reusable for any future async Server Component test), but reverted `Footer` itself to a synchronous `"use client"` component using `useTranslations` since that has zero real cost here and avoids a recurring workaround for every future test touching a Footer-containing layout. Deliberate scope decisions, not oversights: no Testimonials/Statistics/PartnerLogos/Newsletter section (no real users, reviews, or partners exist yet to describe honestly — `BRAND_GUIDELINES.md` §8/§13); no GSAP or Three.js introduced as new dependencies (neither is currently installed; Framer Motion, already installed, covers this task's motion needs); `AIQuickAccess` (Shared) deliberately left unclaimed for `CHAT-01`, since it needs an actual chat surface to open that doesn't exist yet. Full detail: `.ai/PROJECT_STATE.md`.
 
+| ATLAS-P1-CHAT-01 | Chat page layout (sidebar/conversation/composer) | High | INDEX.md §CHAT, `AI_EXPERIENCE.md` §Communication Style/§Streaming, `APPLICATION_LAYOUT_GUIDE.md` §AI Chat, `ACCESSIBILITY.md` §AI Chat Accessibility | 2026-09-01 |
+| ATLAS-P1-CHAT-02 | Message components (MessageBubble/StreamingBubble/TypingIndicator) | High | Above, plus `PREMIUM_MICROINTERACTIONS.md` §AI Response Streaming/§AI Thinking State, `DESIGN_TOKENS.md` Part 6 §AI Chat Bubble | 2026-09-01 |
+
+**Verification status (CHAT-01 through CHAT-02, 2026-09-01 — actually executed, not asserted):** frontend-only, no backend changes; execution order CHAT-01 → CHAT-02 as WBS declares (CHAT-02 depends on CHAT-01). File-level split: `lib/chat/*` (types, `use-chat-session.ts`, `simulate-assistant-reply.ts`) and `components/chat/message-bubble.tsx`/`typing-indicator.tsx` are CHAT-02's; `app/[locale]/(app)/chat/page.tsx` and `components/chat/chat-page-content.tsx`/`conversation-sidebar.tsx`/`chat-composer.tsx`/`conversation-panel.tsx` are CHAT-01's — ConversationPanel (CHAT-01) renders CHAT-02's message components, matching the declared dependency direction. Typecheck clean · lint 0 errors/0 warnings · 344/344 tests passing across 55/55 files (295 pre-existing + 49 new: `message-bubble`, `typing-indicator`, `use-chat-session`, `chat-composer`, `conversation-sidebar`, `chat-page-content`) · production build succeeds, `/[locale]/chat` compiling. Live verification (standalone server + Playwright, not just component tests): desktop and mobile (390px) viewports across en/fa/de; full send → thinking → streaming (progressive reveal + blinking cursor) → complete cycle observed via screenshots, not just asserted from code; Stop mid-stream correctly finalizes with the partial text already revealed; Regenerate correctly replaces (not duplicates) the last assistant turn; Copy correctly writes the exact message content to the clipboard and swaps its icon/label for ~2s; keyboard Tab order confirmed correct (the composer's Send button is natively skipped while disabled — empty input — and correctly receives focus once enabled, verified as the *cause*, not assumed, after an initial run appeared to skip it); `fa` confirmed rendering `dir="rtl"` with correct mirroring (sidebar/composer send button both flip sides) and correct bidi handling of the Latin `Enter`/`Shift` key names embedded in Persian sentences; mobile confirmed the composer never renders behind the fixed `MobileBottomNav` (see height note below). Two real bugs found and fixed, neither caught by typecheck/lint/tests alone: (1) `ConversationSidebar`'s own `<h2>` heading visibly duplicated `SheetContent`'s `title` prop inside the mobile drawer — found only by looking at the actual screenshot, fixed with a `showHeading` prop (default `true`, `false` inside the Sheet); (2) `regenerateLastResponse` mutated a plain closure variable from inside a `setConversations` updater and read it back immediately after — not reliably synchronous in React, and this hook's own unit test caught it failing before any UI test did (expected 2 messages, got 1: the regenerate silently no-op'd); fixed by reading `activeConversation.messages` directly instead of round-tripping through the updater. One test-only fix, not a product bug: `useSearchParams()`'s real Next.js return type (`ReadonlyURLSearchParams`) rejected the test's plain `URLSearchParams` mock under `tsc` — invisible to lint or to Vitest itself, which doesn't type-check — fixed using the identical `as ReturnType<typeof useSearchParams>` cast `reset-password-content.test.tsx` already established for this exact situation. **Scope notes, stated plainly:** CHAT-03/04 (the real Conversation Manager backend + SSE endpoint) are untouched; sending a message runs against `lib/chat/simulate-assistant-reply.ts`, a single, isolated, clearly-documented stub that reveals a fixed, honest "this is a preview" notice (never a fabricated travel answer — `BRAND_GUIDELINES.md` §13, `MASTER_RULES.md` §8) with a real progressive-reveal timing model; swapping in CHAT-03/04 later means replacing that one module's internals, not any component. `AIQuickAccess` and `ConnectionStatus`/`RetryCard` (Shared) remain unclaimed — CHAT-01 had a clear opportunity to take either and didn't: `AIQuickAccess` would mean modifying `Navbar` (DESIGNSYS-03 territory) beyond CHAT-01/02's own file boundaries, and `ConnectionStatus` has no live connection to report on without CHAT-03/04. Conversation state is in-memory/React-state only, lost on refresh — `MEM-01`'s explicitly separate, now-unblocked scope (declared dependency: CHAT-02 ✅), not something CHAT-01/02 should pre-build. Copy-to-clipboard is implemented inline inside `MessageBubble` rather than as a new Shared `CopyButton` — none existed yet to consume or duplicate. `ConversationList`/`ConversationCard` (`COMPONENT_INVENTORY.md` naming) ship as one cohesive `ConversationSidebar` component, not separate list/item components; `StreamingBubble` (same document) ships as a direct alias — `export const StreamingBubble = MessageBubble` — since `MessageBubble`'s own `status` field already fully covers the streaming visual and `aria-busy` treatment, not a second implementation to keep in sync. Real, meaning-preserving (not placeholder) EN/FA/DE translations added for the new `Chat` namespace, matching the established per-namespace convention; the pre-existing `Navigation.chat` label ("AI Chat", left untranslated in fa/de) was not changed to match — this task's own new copy is fully translated on its own terms rather than mirroring an ambiguous, unaudited precedent. Full detail: `.ai/PROJECT_STATE.md`.
+
 ---
 
 ## Governance Sessions (non-WBS)
@@ -99,35 +104,31 @@ question, only its localization.
 
 | Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
 |---|---|---|---|---|---|
-| ATLAS-P1-CHAT-01 | Chat page layout (sidebar/conversation/composer) | High | none | INDEX.md §CHAT | M |
-| ATLAS-P1-CHAT-02 | Message components (Bubble/Streaming/Typing) | High | CHAT-01 | INDEX.md §CHAT | M |
 | ATLAS-P1-CHAT-03 | Conversation Manager (basic, single-model) backend | High | none | INDEX.md §CHAT | L |
 | ATLAS-P1-CHAT-04 | Streaming endpoint (SSE) | High | CHAT-03 | INDEX.md §CHAT | M |
-| ATLAS-P1-MEM-01 | Guest session memory (client-side, temporary) | Medium | CHAT-02 | INDEX.md §MEM | S |
+| ATLAS-P1-MEM-01 | Guest session memory (client-side, temporary) | Medium | CHAT-02 ✅ | INDEX.md §MEM | S |
 | ATLAS-P1-MEM-02 | Authenticated preference storage (basic) | Medium | AUTH-07 ✅ | INDEX.md §MEM | S |
 | ATLAS-P1-DASH-01 | Dashboard shell (opens to last conversation / Welcome) | Medium | CHAT-03, AUTH-07 ✅ | INDEX.md §DASH | M |
 
-*(LAND-01/02/03 are now Done — see above; the real Landing page ships
-with a working guest entry point. MEM-02 and DASH-01's AUTH-07
-dependency is satisfied. DASH-01 also still needs CHAT-03. CHAT-01
-and DASH-01 have a genuinely verified Foundation *and* layout/
-navigation shell available — Card, Button, Container, Stack,
-Typography, feedback shells, Overlays, MarketingLayout/
-ApplicationLayout/FocusLayout, and the full nav shell are ready to
-consume, plus PROF-01/03's new Shared components (StepIndicator,
-FileUpload, ImageUpload), RadioGroupItem's `card` variant, and LAND's
-own new `AISearchBox`/`GuestEntryCta` pattern (both already route to
-`/chat?prompt=...`, waiting for CHAT-01 to give that a real
-destination). `AIQuickAccess` (Shared, `COMPONENT_OWNERSHIP_MATRIX.md`
-§4) is explicitly available for CHAT-01 to claim — LAND-01 deliberately
-left it unbuilt, see LAND's verification note above. DASH-01 fills
-`Navbar`'s and `ApplicationLayout`'s `userSlot`/`notificationsSlot`
-props with its own ProfileMenu/NotificationCenter — PROF-03 explicitly
-deferred ProfileMenu to DASH-01, see `COMPONENT_OWNERSHIP_MATRIX.md`
-§4. Once DASH-01/CHAT-01 ship real pages under `/dashboard`, `/chat`,
-AUTH-08's route guard — already live in `proxy.ts` — starts protecting
-`/dashboard` with no further wiring needed; `/chat` is deliberately
-excluded from that guard, see AUTH-08's verification note above.)*
+*(LAND-01/02/03 and CHAT-01/02 are now Done — see above; the real
+Landing page ships with a working guest entry point, and `/chat` is
+now a real, guest-accessible page. MEM-01's CHAT-02 dependency is
+satisfied — it is now the natural next task if memory/persistence is
+prioritized. MEM-02 and DASH-01's AUTH-07 dependency is satisfied.
+DASH-01 and CHAT-04 still need CHAT-03 (the backend Conversation
+Manager) — CHAT-01/02 deliberately did not touch it; the chat UI's
+send/streaming pipeline runs against a documented, isolated stub
+(`lib/chat/simulate-assistant-reply.ts`) pending it. CHAT-03 itself has
+no declared dependency and is independently available now. `AIQuickAccess`
+and `ConnectionStatus`/`RetryCard` (Shared, `COMPONENT_OWNERSHIP_MATRIX.md`
+§4) remain unclaimed — CHAT-01 had a clear opportunity to claim either
+and deliberately did not, see CHAT-01/02's verification note above.
+Once DASH-01 ships a real page under `/dashboard`, AUTH-08's route
+guard — already live in `proxy.ts` — starts protecting it with no
+further wiring needed. DASH-01 still fills `Navbar`'s and
+`ApplicationLayout`'s `userSlot`/`notificationsSlot` props with its own
+ProfileMenu/NotificationCenter — PROF-03 explicitly deferred
+ProfileMenu to DASH-01, see `COMPONENT_OWNERSHIP_MATRIX.md` §4.)*
 
 ---
 
