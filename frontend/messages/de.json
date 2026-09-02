@@ -1,6 +1,134 @@
 {
   "HomePage": {
-    "title": "Atlas — bootstrap placeholder, not final copy"
+    "metaTitle": "Atlas — Ihr KI-Reisebegleiter",
+    "metaDescription": "Planen Sie Reisen mit einem KI-Reisebegleiter, der seine Empfehlungen erklärt, Ihre Vorlieben merkt und nie zum Buchen drängt.",
+    "hero": {
+      "eyebrow": "KI-Reisebegleiter",
+      "headline": "Planen Sie jede Reise mit einem Begleiter, der sich an Sie erinnert.",
+      "subheadline": "Sagen Sie Atlas, wovon Sie träumen. Erhalten Sie einen realistischen Plan, klar erklärt und beliebig anpassbar.",
+      "searchLabel": "Beschreiben Sie Ihre Reise",
+      "searchSubmit": "Planung starten",
+      "examplesLabel": "Beispielreisen",
+      "examplePrompts": [
+        "Ein romantisches Wochenende in Italien",
+        "Familienurlaub in Thailand",
+        "Günstige Reise ab Deutschland",
+        "7 Tage in Japan",
+        "Winterabenteuer",
+        "Strand mit Nachtleben",
+        "Alleine mit dem Rucksack reisen",
+        "Luxuriöse Flitterwochen"
+      ],
+      "guestCta": "Als Gast fortfahren",
+      "guestCtaHint": "Zum Entdecken ist kein Konto nötig."
+    },
+    "howItWorks": {
+      "title": "So funktioniert Atlas",
+      "steps": [
+        {
+          "title": "Erzählen Sie Atlas von Ihrer Reise",
+          "description": "Beschreiben Sie in eigenen Worten, wohin, wann oder wovon Sie träumen."
+        },
+        {
+          "title": "Erhalten Sie einen verlässlichen Plan",
+          "description": "Atlas erstellt einen realistischen Reiseplan und erklärt, warum jeder Teil zu Ihrer Reise passt."
+        },
+        {
+          "title": "Gemeinsam verfeinern",
+          "description": "Fordern Sie jederzeit Änderungen an. Atlas passt den Plan an, ohne von vorn zu beginnen."
+        }
+      ]
+    },
+    "discover": {
+      "title": "Orte, die Fernweh wecken",
+      "subtitle": "Ein paar Reiseziele als Inspiration — Atlas hilft Ihnen, eine Reise dorthin oder anderswohin zu planen.",
+      "destinations": [
+        {
+          "name": "Kyoto",
+          "region": "Japan",
+          "description": "Jahrhundertealte Tempel, Gärten und ruhige Gassen."
+        },
+        {
+          "name": "Reykjavík",
+          "region": "Island",
+          "description": "Gletscher, heiße Quellen und Nordlichter."
+        },
+        {
+          "name": "Lissabon",
+          "region": "Portugal",
+          "description": "Hügelige Gassen, Meereslicht und entspannte Esskultur."
+        },
+        {
+          "name": "Kapstadt",
+          "region": "Südafrika",
+          "description": "Berge, Küste und Weinregionen direkt nebeneinander."
+        },
+        {
+          "name": "Bali",
+          "region": "Indonesien",
+          "description": "Reisterrassen, Tempel und entspannte, warme Strände."
+        },
+        {
+          "name": "Queenstown",
+          "region": "Neuseeland",
+          "description": "Alpenseen und Outdoor-Abenteuer das ganze Jahr über."
+        }
+      ]
+    },
+    "aiShowcase": {
+      "title": "Empfehlungen, die Sie hinterfragen können",
+      "subtitle": "Atlas erklärt seine Überlegungen, damit Sie immer verstehen, warum etwas vorgeschlagen wurde.",
+      "exampleLabel": "Beispielgespräch",
+      "exampleQuestion": "Ich habe 6 Tage Zeit und liebe gutes Essen. Wohin soll ich reisen?",
+      "exampleAnswer": "Lissabon passt gut — 6 Tage reichen zum entspannten Erkunden, und außerhalb der Hochsaison sind die Restaurants ruhiger. Möchten Sie einen Tag-für-Tag-Plan?"
+    },
+    "features": {
+      "title": "Entwickelt, um Ihr Vertrauen zu verdienen",
+      "items": [
+        {
+          "title": "Erklärt, nicht nur generiert",
+          "description": "Jede Empfehlung erklärt, warum sie gemacht wurde und wovon sie ausgeht."
+        },
+        {
+          "title": "Auf Ihre Vorlieben abgestimmt",
+          "description": "Atlas lernt Ihren Reisestil mit der Zeit — Sie können jederzeit einsehen und bearbeiten, was gespeichert wurde."
+        },
+        {
+          "title": "Ehrlich bei Unsicherheiten",
+          "description": "Wenn etwas nicht bestätigt werden kann, sagt Atlas das, statt zu raten."
+        },
+        {
+          "title": "Kein Buchungsdruck",
+          "description": "Atlas empfiehlt. Sie entscheiden. Es gibt keinen Druck, etwas zu buchen."
+        }
+      ]
+    },
+    "faq": {
+      "title": "Häufige Fragen von Reisenden",
+      "items": [
+        {
+          "question": "Brauche ich ein Konto, um Atlas zu nutzen?",
+          "answer": "Nein. Sie können als Gast chatten und eine Reise planen — ein Konto ermöglicht lediglich, sie später zu speichern."
+        },
+        {
+          "question": "Welche Sprachen unterstützt Atlas?",
+          "answer": "Atlas unterstützt derzeit Englisch, Persisch und Deutsch, weitere Sprachen sind geplant."
+        },
+        {
+          "question": "Bleiben meine Daten privat?",
+          "answer": "Ja. Sie bestimmen, was Atlas sich merkt, und können es jederzeit bearbeiten oder löschen."
+        },
+        {
+          "question": "Kann Atlas Flüge oder Hotels für mich buchen?",
+          "answer": "Noch nicht. Atlas empfiehlt Optionen — die Buchung erfolgt bei Ihrem gewählten Anbieter."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Bereit, mit der Planung zu beginnen?",
+      "subtitle": "Beschreiben Sie Ihre nächste Reise und sehen Sie, was Atlas zusammenstellt.",
+      "primaryCta": "Planung starten"
+    }
   },
   "Navigation": {
     "dashboard": "Dashboard",
@@ -215,5 +343,24 @@
         "de": "Deutsch"
       }
     }
+  },
+  "Footer": {
+    "tagline": "Ihr intelligenter Reisebegleiter — vor, während und nach jeder Reise.",
+    "product": {
+      "title": "Produkt"
+    },
+    "company": {
+      "title": "Unternehmen",
+      "about": "Über uns",
+      "contact": "Kontakt"
+    },
+    "legal": {
+      "title": "Rechtliches",
+      "privacy": "Datenschutz",
+      "terms": "AGB",
+      "cookies": "Cookies"
+    },
+    "copyrightPrefix": "© {year} Atlas.",
+    "copyrightFull": "© {year} Atlas. Alle Rechte vorbehalten."
   }
 }

@@ -28,6 +28,13 @@
 // root-cause trace). This alias applies only within `test.include`'s
 // scope (Vitest config), never touching the real `next build`/`next
 // dev` resolution used by the actual running app.
+//
+// ATLAS-P1-LAND-01 addition: the "next-intl/server" alias. Real
+// `getTranslations` throws unconditionally under jsdom ("not
+// supported in Client Components") — confirmed empirically, not
+// assumed; see tests/mocks/next-intl-server.ts's own header comment
+// for the full trace. Same alias mechanism, same reasoning, same
+// test-only scope as the entry above.
 
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
@@ -40,6 +47,9 @@ export default defineConfig({
       "@": fileURLToPath(new URL(".", import.meta.url)),
       "next/navigation": fileURLToPath(
         new URL("./tests/mocks/next-navigation.ts", import.meta.url),
+      ),
+      "next-intl/server": fileURLToPath(
+        new URL("./tests/mocks/next-intl-server.ts", import.meta.url),
       ),
     },
   },

@@ -15,10 +15,18 @@ describe("Footer", () => {
       "href",
       "/en/terms",
     );
+    expect(
+      screen.getByText(`© ${new Date().getFullYear()} Atlas.`, {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
   });
 
-  it("marketing variant renders Company and Legal columns", () => {
+  it("marketing variant renders Product, Company, and Legal columns", () => {
     renderWithProviders(<Footer variant="marketing" />);
+    expect(
+      screen.getByRole("heading", { name: "Product" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Company" }),
     ).toBeInTheDocument();
@@ -27,5 +35,21 @@ describe("Footer", () => {
       "href",
       "/en/about",
     );
+    expect(screen.getByRole("link", { name: "Discover" })).toHaveAttribute(
+      "href",
+      "#discover",
+    );
+  });
+
+  it("marketing variant shows the full copyright line and tagline", () => {
+    renderWithProviders(<Footer variant="marketing" />);
+    expect(
+      screen.getByText(
+        `© ${new Date().getFullYear()} Atlas. All rights reserved.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/intelligent travel companion/i),
+    ).toBeInTheDocument();
   });
 });

@@ -34,18 +34,22 @@ record, not because it changes anything about what's actually built.
 `AUTH-01` (2026-07-24), `DESIGNSYS-01` (2026-07-29), `DESIGNSYS-02`
 (2026-07-29), `DESIGNSYS-03` (2026-08-15), `DESIGNSYS-04` (2026-08-16),
 `AUTH-02` through `AUTH-05` (2026-08-22), `AUTH-06` through
-`AUTH-08` (2026-08-24), and `PROF-02`, `PROF-01`, `PROF-03`
-(2026-08-25, in that dependency order) are done — genuinely verified as
-done, not just re-asserted (see Verification Results below). **All eight
-AUTH tasks are complete and the AUTH module is closed. The PROF module
-(all three tasks) is now also complete and closed — `/profile` is the
-first real page in `(app)`/ApplicationLayout.**
+`AUTH-08` (2026-08-24), `PROF-02`, `PROF-01`, `PROF-03`
+(2026-08-25, in that dependency order), and `LAND-01`, `LAND-02`,
+`LAND-03` (2026-08-29, in that dependency order) are done — genuinely
+verified as done, not just re-asserted (see Verification Results
+below). **All eight AUTH tasks are complete and the AUTH module is
+closed. The PROF module (all three tasks) is complete and closed. The
+LAND module (all three tasks) is now also complete and closed — the
+real Landing page replaces the Bootstrap placeholder for the first
+time.**
 
 ---
 
 **Current Phase:** Phase 1 — Core Platform MVP (underway)
 **Current Milestone:** M1
-**Current Module:** none active — `DESIGNSYS` (01–04), `AUTH` (01–08), and `PROF` (01–03) are complete and closed
+**Current Module:** none active — `DESIGNSYS` (01–04), `AUTH` (01–08),
+`PROF` (01–03), and `LAND` (01–03) are complete and closed
 **Current WBS ID:** none active
 **Current Task:** none — awaiting next task authorization
 
@@ -597,29 +601,57 @@ is still used as designed.
 
 ---
 
+## Verification Results (2026-08-29, LAND-01 through LAND-03 — actually run against real infrastructure, not asserted)
+
+Frontend-only (`INDEX.md`'s own LAND entry: "Backend: none — guest mode
+is frontend + existing chat endpoint"); no backend changes this
+session.
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ 295/295 passing, 49/49 files (277 pre-existing + 18 new: one file per new Landing component, plus `tests/mocks/next-intl-server.ts` as new shared test infrastructure) |
+| `next build` | ✅ succeeds — exactly one manifest entry for `/[locale]` (`app-paths-manifest.json` checked directly, not inferred from build success alone — see bug (1) below) |
+| Live standalone-server smoke test, all 3 locales | ✅ `/en`, `/fa`, `/de` → HTTP 200, correct `<html lang dir>` each; `/fa` confirmed rendering real Persian hero copy, not English fallback |
+| Live smoke test, unrelated existing route | ✅ `/en/register` still 200 (no regression from Footer's edits, which `AuthLayout`'s own footer does not use) |
+| Heading hierarchy, live HTML | ✅ exactly one `<h1>`; every `<h2>`'s content sits under it with `<h3>`s beneath, no skipped levels (`ACCESSIBILITY.md` §Heading Structure) |
+
+**Three real bugs found and fixed mid-session (not asserted away — none of the three were caught by typecheck, lint, or `next build` alone; each needed either a manifest inspection or an actual running server):**
+
+1. **Duplicate route, silently ambiguous.** `app/[locale]/page.tsx` (the original Bootstrap placeholder) and `app/[locale]/(marketing)/page.tsx` (DESIGNSYS-03's real target) both existed and both compiled into separate `.next/server/app-paths-manifest.json` entries for the same effective path — a leftover from DESIGNSYS-03's move that copied rather than deleted the original. `next build` alone gives no warning for this; only inspecting the manifest directly surfaced it. Fixed by deleting the stray file.
+2. **RSC boundary violation — real 500, invisible to typecheck/lint/build.** `CTASection` (a Server Component) called `buttonVariants()` — exported from `button.tsx`, a `"use client"` module — directly, to style a plain `<a>` as a button. This type-checks and survives `next build` (Turbopack's static analysis doesn't catch it), then crashes with a real `500` the moment the standalone server actually serves the page: `"Attempted to call buttonVariants() from the server."` Only caught by starting `node .next/standalone/server.js` and requesting the page — exactly the class of bug `INFRASTRUCTURE_BASELINE.md`'s own RSC-boundary caution (and `MASTER_RULES.md` §18's "standalone server smoke test" requirement) exists to catch. Fixed by marking `CTASection` `"use client"`, matching the identical, pre-existing constraint `Navbar` already carries for its own `buttonVariants`-styled links.
+3. **`next-intl/server`'s `getTranslations` throws unconditionally under Vitest.** Tried the `getTranslations` + async-Server-Component pattern for `Footer` first, mirroring AuthLayout's own (AUTH-01-audit-documented) precedent. It builds and runs correctly in the real app, but breaks *every existing test that renders a layout containing Footer* — `tests/layouts.test.tsx`'s `MarketingLayout`/`ApplicationLayout` tests call plain synchronous `render()`, which cannot await a component nested arbitrarily deep in the tree. Root cause (confirmed via a throwaway repro, not assumed): `next-intl/server` resolves to a build that throws `"not supported in Client Components"` whenever a jsdom-like environment is detected, regardless of the calling component's real boundary. Built `tests/mocks/next-intl-server.ts` (aliased in `vitest.config.ts`, same mechanism as the pre-existing `next/navigation` alias) as a working stand-in — but, having built it, still chose to revert `Footer` itself to a synchronous `"use client"` component using `useTranslations` instead, since that's zero-cost here (Footer has no real interactivity either way) and avoids the *recurring* cost of every future test touching a Footer-containing layout needing the same await-first workaround. The mock is kept anyway: real, working, reusable infrastructure for the next async-Server-Component this codebase does need to test (AuthLayout, for instance, still has none).
+
+**Scope decisions made and flagged, not silently assumed (full rationale inline in each component's own docstring):**
+- **No Testimonials, StatisticsSection, PartnerLogos, or Newsletter section**, despite all four being named in `COMPONENT_INVENTORY.md` §Landing Page. Atlas has no real users, reviews, usage statistics, or partners yet — `BRAND_GUIDELINES.md` §8/§13 ("Never invent facts... Never fabricates reviews") rules out fabricating any of the four rather than leaving the section empty. `DestinationCarousel` uses only real, verifiable geography/culture (no ratings, review counts, or invented "best time to visit" specifics); `AIShowcase` uses one explicitly-labeled *example* exchange, not a claimed real transcript.
+- **No GSAP, no Three.js**, despite both being nominally "Approved Libraries" (`DESIGN_SYSTEM.md` §40). Neither is an installed dependency of this repository today; `AnimatedBackground`'s abstract route/waypoint motif is built entirely with the already-installed Framer Motion (`DESIGN_TOKENS.md` Part 5's own "default interaction library"). Introducing either as a new runtime dependency for one decorative background is a call this task didn't make unilaterally (`MASTER_RULES.md` §5).
+- **`AIQuickAccess` (Shared, `COMPONENT_OWNERSHIP_MATRIX.md` §4) intentionally not claimed**, even though LAND shipped first among its two candidate owners (LAND-01/CHAT-01). `LAND-02`'s own AI search box already serves as the Landing page's primary AI entry point; a persistent cross-page quick-access trigger would need somewhere to open *to* (an actual chat surface), which doesn't exist yet. Building it now would mean inventing UI for a destination that doesn't exist. Left for `CHAT-01` to claim once `/chat` is real.
+- **`AISearchBox` submission and `GuestEntryCta`'s link both target `/chat`**, which has no real page yet (`CHAT-01` not started) — the same "wire the entry point, the destination catches up" pattern already established for `AUTH-08`'s route guards and every `nav-items.ts` link to a not-yet-built page. `AISearchBox` passes the typed prompt via `?prompt=` so `CHAT-01` can pre-fill the first message rather than discarding it.
+- **`tests/layout-test-utils.tsx`'s `renderWithProviders` extended to wrap `MotionProvider`**, matching the real `app/[locale]/layout.tsx` provider order exactly (`INFRASTRUCTURE_BASELINE.md` §3) — missing until this task; no existing consumer of the helper had rendered a `FadeIn`/`SlideIn`/`ScaleIn`/`ScrollReveal` component before, so the gap had never surfaced. Purely additive (`MotionProvider` renders no DOM of its own), confirmed non-breaking by re-running the full pre-existing suite afterward.
+
 ## Relevant Documentation (for whichever next task is chosen)
 
-The AUTH module (all eight tasks) and the PROF module (all three
-tasks) are both closed — nothing further to read there unless
-revisiting either. For the newly-unblocked/still-available candidates:
+The AUTH module (all eight tasks), the PROF module (all three tasks),
+and the LAND module (all three tasks) are now closed — nothing further
+to read there unless revisiting one of them. For the remaining
+candidates:
 
 `MEM-02`: `17_AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 — consumes
 `get_current_user`; note `TravelerProfile` (PROF-02) already covers
 durable *preference* fields — `MEM-02`'s own "basic authenticated
 preference storage" scope should be checked against that table first
-so the two don't overlap. `LAND-01`: `01_BRAND_GUIDELINES.md`,
-`02_PRODUCT_VISION.md`, `26_APPLICATION_LAYOUT_GUIDE.md` §Marketing
-Layout, `19_TRIP_PLANNING_EXPERIENCE.md` §Step 1 (Dream),
-`16_ONBOARDING_EXPERIENCE.md` §Guest Experience/§Landing CTA — note
-`/chat` is guest-accessible and deliberately NOT behind AUTH-08's route
-guard, so a "Continue as Guest" CTA linking there needs no auth wiring.
+so the two don't overlap.
 `CHAT-01`/`CHAT-03`: `17_AI_EXPERIENCE.md` (Communication Style,
 Streaming, AI Response Structure sections for Phase 1),
 `26_APPLICATION_LAYOUT_GUIDE.md` §AI Chat, `09_ACCESSIBILITY.md` §AI
 Chat Accessibility — remember `/chat` is intentionally ungated; a
 future task adding real authenticated features to Chat (saved
 conversation history, etc.) is what would need to reconsider that,
-not this pair. `DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
+not this pair. `CHAT-01` also inherits `AISearchBox`'s `?prompt=`
+query param (LAND-02) to pre-fill the first message, and is the
+natural next claimant for `AIQuickAccess` (Shared — see the finding
+above). `DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
 `26_APPLICATION_LAYOUT_GUIDE.md` §Dashboard — still blocked on
 `CHAT-03`; when unblocked, check `COMPONENT_OWNERSHIP_MATRIX.md` §4
 first — `ProfileMenu` and `NotificationCenter` are both explicitly
@@ -634,8 +666,7 @@ document's own note on why).
 `backend/app/schemas/auth.py`, `backend/app/api/v1/auth.py`,
 `backend/app/services/auth_service.py`.
 
-**PROF infrastructure (new this session, 2026-08-25) — the pattern any
-future authenticated-CRUD-with-a-settings-page task should follow:**
+**PROF infrastructure (unchanged since 2026-08-25):**
 `backend/app/models/traveler_profile.py`,
 `backend/app/schemas/profile.py`,
 `backend/app/services/profile_service.py`,
@@ -644,11 +675,23 @@ future authenticated-CRUD-with-a-settings-page task should follow:**
 `frontend/lib/api/profile.ts`,
 `frontend/lib/validation/profile-schema.ts`,
 `frontend/components/profile/**`,
-`frontend/components/ui/{step-indicator,file-upload,image-upload}.tsx`
-(new Shared components), `frontend/components/ui/radio.tsx` (extended
-— `card` variant), `frontend/app/[locale]/(app)/profile/{page.tsx,
-wizard/page.tsx}`. Full list with New/Modified split: "Files Modified
-This Session (2026-08-25, PROF-01 through PROF-03)" below.
+`frontend/components/ui/{step-indicator,file-upload,image-upload}.tsx`,
+`frontend/components/ui/radio.tsx` (`card` variant),
+`frontend/app/[locale]/(app)/profile/{page.tsx, wizard/page.tsx}`.
+
+**LAND infrastructure (new this session, 2026-08-29) — the pattern any
+future marketing-page or Feature-Component-heavy page task should
+follow:** `frontend/components/landing/**` (11 new Feature Components:
+`hero-section`, `ai-search-box`, `example-prompts`, `guest-entry-cta`,
+`animated-background`, `how-it-works`, `destination-carousel`,
+`ai-showcase`, `feature-highlights`, `faq-section`, `cta-section`),
+`frontend/app/[locale]/(marketing)/page.tsx` (rewritten),
+`frontend/components/layout/footer.tsx` (localized, Product column
+added), `frontend/messages/{en,fa,de}.json` (`HomePage`/`Footer`
+namespaces), `frontend/tests/mocks/next-intl-server.ts` (new shared
+test infrastructure). Full list with New/Modified/Deleted split:
+"Files Modified This Session (2026-08-29, LAND-01 through LAND-03)"
+below.
 
 ## Findings Requiring Project Owner Decision
 
@@ -740,18 +783,47 @@ visibility rather than under "Resolved":
 
 ## Known Issues
 
-None outstanding from AUTH-01's own scope after this session. Historical
-known issues (pnpm build-script approval requirement, TypeScript 7.x
-incompatibility, Sidebar tooltip RTL `side` prop) remain environment/
-scope characteristics, unchanged. The `Footer` localization gap and the
-broader `Navigation`/`HomePage` translation gap noted just above remain
-open, owned by other tasks. New from this session: `/api/v1/health`
-still doesn't exist (see finding above); `register-page-content.tsx`'s
-`handleRegister` remains an intentional stub pending a decision on
-whether to wire it now that the endpoint is real; OAuth (`AUTH-03`) and
-email delivery (`AUTH-04`) remain stubbed pending real provider
-credentials — neither is a defect, both were explicitly permitted or
-necessitated by their own task's scope.
+**Resolved this session (LAND-01 through LAND-03, 2026-08-29):**
+- ~~`components/layout/footer.tsx` hardcoded-English `LEGAL_LINKS`~~ —
+  flagged during the AUTH-01 audit (2026-08-19) as "whoever next
+  touches Footer or ships real LAND-01 content should localize it."
+  Now done: full `Footer` namespace (`tagline`/`product`/`company`/
+  `legal`/`copyrightPrefix`/`copyrightFull`) in all three locale files,
+  real translations not placeholders, plus a new Product column
+  (`APPLICATION_LAYOUT_GUIDE.md` §Landing Footer Sections) linking to
+  the four real sections this session builds.
+- ~~`messages/fa.json`/`messages/de.json`'s `HomePage`/`Navigation`
+  placeholder-English gap~~ — `HomePage` fully rewritten with real
+  Persian/German content (hero, how-it-works, discover, AI showcase,
+  features, FAQ, closing CTA); `Navigation`'s four marketing-anchor
+  labels (`discover`/`aiAssistant`/`features`/`faq`) were already real
+  as of DESIGNSYS-03 and are now genuinely load-bearing, reused
+  directly by Footer's new Product column rather than duplicated.
+
+**Newly found this session (LAND-01 through LAND-03, 2026-08-29), all
+three fixed — see "Verification Results" above for the full root-cause
+narrative on each:** the duplicate `app/[locale]/page.tsx` route, the
+`CTASection` RSC-boundary 500, and `next-intl/server`'s Vitest
+incompatibility (worked around with a new mock rather than left
+broken).
+
+**Still open, unresolved by this session (out of LAND's own scope, not
+newly discovered):** `color-accent`/`color-glass-highlight` (dark
+theme) remain unmapped; Overlay scrim/Popover contract remain thin
+inferences; Tooltip's `side` prop is physical not logical (RTL gap);
+`/api/v1/health` still doesn't exist; `register-page-content.tsx`'s
+`handleRegister` stub; OAuth/email-delivery stubs — all unchanged,
+carried forward from prior sessions.
+
+Historical known issues (pnpm build-script approval requirement,
+TypeScript 7.x incompatibility, Sidebar tooltip RTL `side` prop) remain
+environment/scope characteristics, unchanged by this or any prior
+session. `register-page-content.tsx`'s `handleRegister` remains an
+intentional stub pending a decision on whether to wire it now that the
+endpoint is real; OAuth (`AUTH-03`) and email delivery (`AUTH-04`)
+remain stubbed pending real provider credentials — neither is a defect,
+both were explicitly permitted or necessitated by their own task's
+scope.
 
 ## Files Modified This Session (2026-08-16, DESIGNSYS-04)
 
@@ -1039,6 +1111,54 @@ backend test suite (102/102) and the `traveler_profiles` table's
 presence were both re-confirmed afterward before continuing, not
 assumed to have survived.
 
+## Files Modified This Session (2026-08-29, LAND-01 through LAND-03)
+
+Frontend-only — no backend files touched.
+
+**New (Feature Components, `frontend/components/landing/`):**
+`hero-section.tsx`, `ai-search-box.tsx`, `example-prompts.ts`,
+`guest-entry-cta.tsx`, `animated-background.tsx`, `how-it-works.tsx`,
+`destination-carousel.tsx`, `ai-showcase.tsx`, `feature-highlights.tsx`,
+`faq-section.tsx`, `cta-section.tsx` (11 files).
+
+**New (tests):** one file per component above —
+`frontend/tests/{hero-section,ai-search-box,guest-entry-cta,
+animated-background,how-it-works,destination-carousel,ai-showcase,
+feature-highlights,faq-section,cta-section}.test.tsx` (10 files, 20 new
+test cases), plus `frontend/tests/mocks/next-intl-server.ts` (new
+shared test infrastructure, not itself a test file).
+
+**Modified:** `frontend/app/[locale]/(marketing)/page.tsx` (rewritten
+— composes the 7 Content Section components above inside
+`MarketingLayout`, replacing the Bootstrap placeholder; adds
+per-locale `generateMetadata`, matching `register/page.tsx`'s
+established pattern exactly), `frontend/components/layout/footer.tsx`
+(localized in full — `useTranslations`, not the `getTranslations`
+pattern first tried and then reverted, see Verification Results above
+— new Product column), `frontend/messages/{en,fa,de}.json`
+(`HomePage` fully rewritten from its one-line Bootstrap placeholder;
+new `Footer` namespace; real Persian/German throughout, not
+placeholder English), `frontend/tests/layout-test-utils.tsx`
+(`renderWithProviders` now also wraps `MotionProvider`, matching the
+real app's provider order — see Verification Results finding above),
+`frontend/tests/footer.test.tsx` (updated for the new Product column
+and full localized copy), `frontend/vitest.config.ts` (`next-intl/
+server` aliased to the new mock, same mechanism as the pre-existing
+`next/navigation` alias).
+
+**Deleted:** `frontend/app/[locale]/page.tsx` — the stray duplicate of
+`(marketing)/page.tsx` found this session (see Verification Results,
+bug 1).
+
+**`.ai/` governance files also updated this session:**
+`PROJECT_STATE.md` (this file), `TASK_BOARD.md` (LAND-01/02/03 moved
+to Done with verification note, removed from Todo), `COMPONENT_
+OWNERSHIP_MATRIX.md` (§5: 11 new Landing Feature Components added;
+§4: `AIQuickAccess` row annotated with this session's explicit
+non-claim and why). `WORK_BREAKDOWN_STRUCTURE.md` not touched — no
+task's own declared scope or acceptance criteria changed from what was
+already defined there.
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -1119,7 +1239,7 @@ follow instead. Neither `LoginForm` nor `RegisterForm` was touched —
 both are AUTH-01/AUTH-05's own files, outside this task group's
 boundary — but whoever next touches either should apply the same fix.
 
-**PROF-01 through PROF-03 are now done — the PROF module is closed.**
+**PROF-01 through PROF-03 are done — the PROF module is closed.**
 `/profile` is the first real page in `(app)`/ApplicationLayout, and
 `/profile/wizard` is the first genuinely wired multi-step form flow in
 the product. Any future authenticated-settings-style feature
@@ -1137,14 +1257,36 @@ has a `card` variant, useful for any future single-select-from-a-small-
 set UI (Phase 2 destination/hotel style pickers are a plausible future
 consumer).
 
-Recommended next task: **`LAND-01`** (Marketing layout shell) — High
-priority, no unmet dependencies, and the Landing page is the one major
-Phase 1 surface with zero real content so far (`app/[locale]/
-(marketing)/page.tsx` is still the placeholder from Bootstrap). `CHAT-01`
-and `CHAT-03` remain equally valid alternatives with no unmet
-dependencies either — this is a genuine product-sequencing choice, not
-a dependency-graph necessity, so treat this as a recommendation to
-confirm, not a decision already made on the project owner's behalf.
+**LAND-01 through LAND-03 are now done — the LAND module is closed.**
+The real Landing page (`app/[locale]/(marketing)/page.tsx`) replaces
+the Bootstrap placeholder for the first time — Hero, How It Works,
+Discover, AI Showcase, Features, FAQ, and a closing CTA, all real,
+localized (EN/FA/DE) content grounded in the Design Bible, none of it
+fabricated. If a future session works on `CHAT-01`: `AISearchBox`
+already sends visitors to `/chat?prompt=<encoded text>` on submit —
+read that query param and pre-fill the first message rather than
+discarding it; `AIQuickAccess` (Shared) is explicitly available for
+`CHAT-01` to claim now that a real chat surface will exist for it to
+open (see the finding above for why LAND-01 deliberately didn't build
+it). Two small, genuinely reusable pieces of test infrastructure came
+out of this session regardless of what a future task builds:
+`tests/layout-test-utils.tsx`'s `renderWithProviders` now correctly
+supports any component using the `FadeIn`/`SlideIn`/`ScaleIn`/
+`ScrollReveal` motion wrappers, and `tests/mocks/next-intl-server.ts`
+makes `getTranslations`-based async Server Components testable for the
+first time in this codebase (not yet applied to `AuthLayout`, which
+still has no test file — a reasonable pickup for whoever next touches
+it, not done here as it's outside LAND's own file boundary).
+
+Recommended next task: **`CHAT-01`** (streaming AI Chat layout, guest
+mode) — High priority per `MASTER_IMPLEMENTATION_ROADMAP.md`'s Phase 1
+module list, no unmet dependencies, and now the natural next step since
+both of Landing's entry points (`AISearchBox`, `GuestEntryCta`) already
+route to `/chat` and are waiting for a real destination. `MEM-02` and
+`DASH-01` remain valid alternatives (`DASH-01` still blocked on
+`CHAT-03` specifically, not `CHAT-01`) — this is a product-sequencing
+recommendation to confirm, not a dependency-graph necessity or a
+decision already made on the project owner's behalf.
 
 ---
 
@@ -1156,5 +1298,6 @@ Governance Reconciliation, same date, second session), 2026-08-19
 through AUTH-05 complete — first real `backend/app/` code), 2026-08-24
 (AUTH-06 through AUTH-08 complete — the AUTH module is closed),
 2026-08-25 (PROF-01 through PROF-03 complete — the PROF module is
-closed).
+closed), 2026-08-29 (LAND-01 through LAND-03 complete — the LAND
+module is closed; the real Landing page ships for the first time).
 Future changes only via `MASTER_RULES.md` §21.

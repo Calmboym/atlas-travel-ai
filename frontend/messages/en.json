@@ -1,6 +1,134 @@
 {
   "HomePage": {
-    "title": "Atlas — bootstrap placeholder, not final copy"
+    "metaTitle": "Atlas — Your AI Travel Companion",
+    "metaDescription": "Plan trips with an AI travel companion that explains its reasoning, remembers your preferences, and never pressures you to book.",
+    "hero": {
+      "eyebrow": "AI Travel Companion",
+      "headline": "Plan every trip with a companion that remembers you.",
+      "subheadline": "Tell Atlas where you're dreaming of going. Get a realistic plan, explained clearly, and refined however you like.",
+      "searchLabel": "Describe your trip",
+      "searchSubmit": "Start planning",
+      "examplesLabel": "Example trips",
+      "examplePrompts": [
+        "A romantic weekend in Italy",
+        "Family vacation in Thailand",
+        "Cheap trip from Germany",
+        "7 days in Japan",
+        "Winter adventure",
+        "Beach with nightlife",
+        "Solo backpacking",
+        "Luxury honeymoon"
+      ],
+      "guestCta": "Continue as Guest",
+      "guestCtaHint": "No account needed to explore."
+    },
+    "howItWorks": {
+      "title": "How Atlas works",
+      "steps": [
+        {
+          "title": "Tell Atlas about your trip",
+          "description": "Describe where, when, or what you're dreaming of — in your own words."
+        },
+        {
+          "title": "Get a plan you can trust",
+          "description": "Atlas builds a realistic itinerary and explains why each part fits your trip."
+        },
+        {
+          "title": "Refine it together",
+          "description": "Ask for changes anytime. Atlas adjusts without starting over."
+        }
+      ]
+    },
+    "discover": {
+      "title": "Places to get you dreaming",
+      "subtitle": "A few destinations to spark ideas — Atlas can help you plan a trip to any of them, or somewhere entirely different.",
+      "destinations": [
+        {
+          "name": "Kyoto",
+          "region": "Japan",
+          "description": "Centuries of temples, gardens, and quiet backstreets."
+        },
+        {
+          "name": "Reykjavík",
+          "region": "Iceland",
+          "description": "Glaciers, hot springs, and the northern lights."
+        },
+        {
+          "name": "Lisbon",
+          "region": "Portugal",
+          "description": "Hillside streets, ocean light, and an easy food culture."
+        },
+        {
+          "name": "Cape Town",
+          "region": "South Africa",
+          "description": "Mountains, coastline, and wine country side by side."
+        },
+        {
+          "name": "Bali",
+          "region": "Indonesia",
+          "description": "Rice terraces, temples, and warm, easy-going beaches."
+        },
+        {
+          "name": "Queenstown",
+          "region": "New Zealand",
+          "description": "Alpine lakes and year-round outdoor adventure."
+        }
+      ]
+    },
+    "aiShowcase": {
+      "title": "Recommendations you can question",
+      "subtitle": "Atlas explains its reasoning, so you always understand why something was suggested.",
+      "exampleLabel": "Example conversation",
+      "exampleQuestion": "I have 6 days and love good food. Where should I go?",
+      "exampleAnswer": "Lisbon fits well — 6 days is enough to explore without rushing, and restaurants are quieter outside peak summer. Want a day-by-day plan?"
+    },
+    "features": {
+      "title": "Built to earn your trust",
+      "items": [
+        {
+          "title": "Explained, not just generated",
+          "description": "Every recommendation tells you why it's there, and what it assumes."
+        },
+        {
+          "title": "Built around your preferences",
+          "description": "Atlas learns your travel style as you go, and you can always see or edit what it remembers."
+        },
+        {
+          "title": "Honest about uncertainty",
+          "description": "If something can't be confirmed, Atlas says so instead of guessing."
+        },
+        {
+          "title": "No pressure to book",
+          "description": "Atlas recommends. You decide. There's no pressure to book anything."
+        }
+      ]
+    },
+    "faq": {
+      "title": "Questions travelers ask",
+      "items": [
+        {
+          "question": "Do I need an account to use Atlas?",
+          "answer": "No. You can chat and build a trip as a guest — creating an account just lets you save it for later."
+        },
+        {
+          "question": "What languages does Atlas support?",
+          "answer": "Atlas currently supports English, Persian, and German, with more languages planned."
+        },
+        {
+          "question": "Is my information kept private?",
+          "answer": "Yes. You control what Atlas remembers, and you can edit or delete it anytime."
+        },
+        {
+          "question": "Can Atlas book flights or hotels for me?",
+          "answer": "Not yet. Atlas recommends options — booking happens with your chosen provider."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Ready to start planning?",
+      "subtitle": "Describe your next trip and see what Atlas puts together.",
+      "primaryCta": "Start Planning"
+    }
   },
   "Navigation": {
     "dashboard": "Dashboard",
@@ -215,5 +343,24 @@
         "de": "Deutsch"
       }
     }
+  },
+  "Footer": {
+    "tagline": "Your intelligent travel companion — before, during, and after every journey.",
+    "product": {
+      "title": "Product"
+    },
+    "company": {
+      "title": "Company",
+      "about": "About",
+      "contact": "Contact"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "cookies": "Cookies"
+    },
+    "copyrightPrefix": "© {year} Atlas.",
+    "copyrightFull": "© {year} Atlas. All rights reserved."
   }
 }
