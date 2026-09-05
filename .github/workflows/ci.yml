@@ -47,6 +47,15 @@ jobs:
       - name: Type check (mypy)
         working-directory: backend
         run: uv run mypy --ignore-missing-imports .
+      # ADDED — ATLAS-P1-CHAT-03. ai/ is a sibling top-level package to
+      # backend/ (DEBUG_LOG.md: "ai/ package independent from
+      # backend/app/"), so backend/'s own mypy target (".") never
+      # reaches it. Uses backend's already-installed venv/strict config
+      # rather than adding a second mypy install — same technique
+      # verified locally: `uv run mypy --explicit-package-bases ../ai`.
+      - name: Type check ai/ layer (mypy)
+        working-directory: backend
+        run: uv run mypy --ignore-missing-imports --explicit-package-bases ../ai
       # RECONSTRUCTED: test command/framework not documented.
       # DOCUMENTED: continue-on-error, since tests require live
       # Postgres/Redis/Qdrant (DEBUG_LOG.md Known Issues).

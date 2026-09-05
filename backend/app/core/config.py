@@ -86,6 +86,35 @@ class Settings(BaseSettings):
     # response body — see POST /auth/login in app/api/v1/auth.py.
     refresh_token_expire_days: int = 30
 
+    # --- AI / Conversation Manager (ATLAS-P1-CHAT-03) ---
+    # OPENAI_API_KEY was already documented verbatim in .env.example
+    # (DEBUG_LOG.md Known Issues) but was never wired into Settings —
+    # confirmed empty here before this task. Left as "" by default
+    # (not a fake key) so the app still starts cleanly without one;
+    # app/core/ai.py raises a clear ProviderNotConfiguredError, mapped
+    # to a calm 503, only when the chat endpoint is actually called —
+    # see that module's own docstring for the reasoning.
+    openai_api_key: str = ""
+    # RECONSTRUCTED default — no model name is documented anywhere.
+    # gpt-4o-mini chosen as a reasonable, cost-conscious default for a
+    # single-model Phase 1 passthrough (WORK_BREAKDOWN_STRUCTURE.md
+    # ATLAS-P1-CHAT-03); flagged here rather than silently assumed.
+    openai_model: str = "gpt-4o-mini"
+    # RECONSTRUCTED default, matching the reasoning already used for
+    # every other rate limit above — no specific number is documented
+    # anywhere for AI endpoints (GUIDELINES.md §11 only says "Mandatory.
+    # Protect: ... AI chat endpoints"). A real conversation can easily
+    # run 10+ turns, so this is deliberately more generous than
+    # register/login while still bounding cost exposure per caller.
+    rate_limit_chat_max: int = 30
+    rate_limit_chat_window_seconds: int = 3600
+    # Per-request message-count/length ceilings live as Field()
+    # constraints on app/schemas/chat.py's ChatCompletionRequest, not
+    # here — they're structural request validation (always-on, not a
+    # tunable operational knob like the rate limits above), so one
+    # source of truth in the schema is more honest than duplicating the
+    # same numbers in two places that could silently drift apart.
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]

@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-08-24 (AUTH-06 through AUTH-08 session — password reset, Redis-backed sessions, RBAC scaffold + frontend route guard)
+**Last updated:** 2026-09-05 (CHAT-03 through CHAT-04 session — Conversation Manager backend, AI provider abstraction, SSE streaming, frontend wiring)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -35,14 +35,17 @@ record, not because it changes anything about what's actually built.
 (2026-07-29), `DESIGNSYS-03` (2026-08-15), `DESIGNSYS-04` (2026-08-16),
 `AUTH-02` through `AUTH-05` (2026-08-22), `AUTH-06` through
 `AUTH-08` (2026-08-24), `PROF-02`, `PROF-01`, `PROF-03`
-(2026-08-25, in that dependency order), and `LAND-01`, `LAND-02`,
-`LAND-03` (2026-08-29, in that dependency order) are done — genuinely
-verified as done, not just re-asserted (see Verification Results
-below). **All eight AUTH tasks are complete and the AUTH module is
-closed. The PROF module (all three tasks) is complete and closed. The
-LAND module (all three tasks) is now also complete and closed — the
-real Landing page replaces the Bootstrap placeholder for the first
-time.**
+(2026-08-25, in that dependency order), `LAND-01`, `LAND-02`,
+`LAND-03` (2026-08-29, in that dependency order), `CHAT-01`, `CHAT-02`
+(2026-09-01), and `CHAT-03`, `CHAT-04` (2026-09-05, in that dependency
+order) are done — genuinely verified as done, not just re-asserted (see
+Verification Results below). **All eight AUTH tasks are complete and
+the AUTH module is closed. The PROF module (all three tasks) is
+complete and closed. The LAND module (all three tasks) is complete and
+closed. The CHAT module (all four Phase 1 tasks) is now also complete
+and closed — `/chat` calls a real, single-model Conversation Manager
+over a genuine SSE stream; nothing in the frontend is simulated
+anymore.**
 
 ---
 
@@ -677,40 +680,81 @@ growing this page's height math to account for a footer it doesn't own.
 - **Naming vs. `COMPONENT_INVENTORY.md`:** `ConversationList`/`ConversationCard` ship as one `ConversationSidebar` component, not two; `StreamingBubble` ships as `export const StreamingBubble = MessageBubble` — a direct alias, not a parallel implementation, since `MessageBubble`'s own `status` field already fully covers the streaming visual and `aria-busy` treatment.
 - **Real EN/FA/DE translations for the new `Chat` namespace** (not placeholder English), matching the established per-namespace convention — verified live via screenshots in all three locales, not just present in the JSON. The pre-existing `Navigation.chat` label ("AI Chat," left untranslated in `fa`/`de`) was deliberately not used as a precedent to imitate; this task's new copy is translated on its own terms rather than mirroring an ambiguous, previously-unaudited choice.
 
+## Verification Results (2026-09-05, CHAT-03 through CHAT-04 — actually run against real infrastructure, not asserted)
+
+Backend + frontend. Closes the CHAT module: `/chat` now calls a real,
+single-model Conversation Manager over a genuine SSE stream — nothing
+in the send/streaming pipeline is simulated anymore.
+
+| Check | Result |
+|---|---|
+| `uv sync` | ✅ clean (`openai==3.0.0` resolves; was listed in `pyproject.toml` but genuinely unused anywhere before this session) |
+| `mypy --strict` (`app/`) | ✅ 34 files, 0 issues |
+| `mypy --strict` (`ai/`, `--explicit-package-bases`) | ✅ 9 files, 0 issues — new CI step added (`.github/workflows/ci.yml`), since `ai/` is a sibling package `backend/`'s own mypy target never reached |
+| `mypy --strict` (combined, the exact CI command) | ✅ 52 files, 0 issues |
+| Real Postgres 16 + Redis 7 (apt-installed, no Docker daemon here — same approach as every prior session), `alembic upgrade head` | ✅ 4 migrations, unchanged — this task added no new tables (see scope decisions below) |
+| `pytest` | ✅ 123/123 passing (102 pre-existing + 21 new: `tests/test_chat.py`) |
+| Live standalone server (`uv run uvicorn app.main:app`) + `curl`, both endpoints | ✅ confirmed after fixing two real bugs — see below |
+| `pnpm install` + `approve-builds --all` | ✅ clean, documented known issue only |
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ 356/356 passing, 56/56 files (344 pre-existing + 12 new: 7 in the new `tests/stream-assistant-reply.test.ts`, 2 added to `chat-page-content.test.tsx`, and net +3 in a rewritten `use-chat-session.test.ts`; `previewNotice` and its one dedicated test are gone with the retired stub) |
+| `next build` | ✅ succeeds, `/[locale]/chat` still compiles as the same dynamic route |
+
+**Three real bugs found and fixed — all three only surfaced by actually
+running something (a live server, or a test genuinely exercising the
+real, non-mocked code path), exactly the pattern this project's own
+prior sessions already established:**
+
+1. **`ModuleNotFoundError: No module named 'ai'` starting the real server — never caught by `pytest`.** `pytest`'s own `pythonpath` ini option (added this session, alongside `mypy_path`, to let `backend/`'s tooling resolve the sibling `ai/` package — see `backend/pyproject.toml`) puts the repo root on `sys.path` unconditionally for the *entire test session*, which fully masked an import-order bug: `app/api/v1/chat.py` imports directly from `ai.providers.base` *above* its own `from app.core.ai import get_llm_provider` line, and `app/core/ai.py`'s own `sys.path` insertion (the only place that had one) therefore ran too late for that first import. Fixed by moving the same insertion technique (already precedented in `alembic/env.py`) to the very top of `app/main.py`, guaranteed to run before anything it transitively imports — `app/core/ai.py` keeps its own copy too (idempotent, guarded), for any future entrypoint that imports it directly.
+2. **A malformed request came back `503` instead of `422` whenever the AI provider was also unconfigured — found via live `curl`, not by any test using `dependency_overrides` (which replaces `get_llm_provider` entirely and never exercises its own behavior).** FastAPI resolves a route's `Depends()` dependencies as part of the same pass that validates the request body; the original `get_llm_provider()` raised `ProviderNotConfiguredError` *during that resolution*, which pre-empted FastAPI ever reporting the body's own validation failure — an empty `messages` list or a client-supplied `"system"`-role message both came back as a truthful-but-wrong 503 ("try again later") instead of the more useful 422 ("fix your request"). Fixed by having `get_llm_provider()` return `None` instead of raising; `app/api/v1/chat.py`'s two routes check for `None` themselves, inside the function body — which only executes once the request body has already validated successfully. Two regression tests added (`test_invalid_request_returns_422_even_when_provider_is_unconfigured` and its streaming counterpart), both deliberately *not* using `dependency_overrides`, so they exercise the real dependency the way the live bug did.
+3. **A "late" `onChunk`/`onDone`/`onError` after `stopGenerating()` could silently rewrite an already-finalized message — found by this session's own new frontend unit test, before any manual check.** `runAssistantTurn`'s callbacks updated the target message by id only, with no check that it was still `status: "streaming"` — a real, if narrow, race (the abort signal doesn't necessarily silence an in-flight `reader.read()` that already resolved with data at the same tick `stop()` fires). Fixed by guarding all three callbacks on `message.status === "streaming"` before applying an update.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **`ai/` gets real content for the first time.** `prompts/`, `agents/`, `schemas/`, `evaluations/` existed only as `.gitkeep` scaffolding before this session — `DEBUG_LOG.md`'s M0 record claiming an "LLMProvider interface" and "OpenAIProvider implementation" were already delivered does not match the actual repository (confirmed empty; same category of gap already logged for `/api/v1/health`). This session adds `ai/providers/{base,openai_provider}.py`, `ai/config.py`, `ai/prompts/atlas_conversation_prompt.py`, and `ai/agents/conversation_manager.py` — `ai/schemas/` and `ai/evaluations/` remain empty, correctly (structured tool-call schemas and an eval harness are Phase 2/5 scope, not needed for a single-model passthrough).
+- **Stateless by design — no conversation persistence added.** `ChatCompletionRequest` carries the full message history on every call; the backend holds nothing between requests. `MEM-01`/`MEM-02` (guest session memory, authenticated preference storage) are separate, independently-scoped tasks — folding persistence in here would have crossed into their declared territory.
+- **No authentication required on either chat endpoint.** `/chat` is deliberately unguarded (guest-mode AI Chat is locked product scope) and this task added no persistence that would need a user attached — both endpoints are rate-limited by client IP instead, sharing one counter (verified: alternating between the streaming and non-streaming route does not extend the effective limit).
+- **`CHAT-03` (non-streaming `POST /completions`) intentionally left un-wired to the frontend.** Building the frontend against a non-streaming endpoint first, then rewiring it again for `CHAT-04`'s SSE endpoint, would have been throwaway work — the frontend swap happened once, directly onto the streaming endpoint, in `CHAT-04`. The non-streaming endpoint is still real and independently tested (useful on its own merits — e.g. a future non-browser consumer per `ARCHITECTURE.md`'s Telegram Bot/API expansion list — not dead code).
+- **`prefersReducedMotion` removed from `UseChatSessionOptions` entirely**, not left as an accepted-but-ignored option. It existed only to tell the retired stub whether to skip an artificial typewriter-style reveal — a real network stream has no equivalent to skip (chunks arrive whenever the backend actually sends them). `chat-page-content.tsx`'s own now-unused `useMotionPreference()` import/call was removed along with it; reduced-motion for chat's own *rendering* remains a `components/chat/*` concern via `conversation-panel.tsx`'s own, separate `useMotionPreference()` call, unaffected.
+- **`lib/chat/simulate-assistant-reply.ts` deleted**, not left alongside the new real client — its own doc comment from `CHAT-01/02` explicitly named this exact swap as the moment it would be retired.
+- **Provider choice: OpenAI, matching already-existing precedent** (`openai` in `pyproject.toml`, `OPENAI_API_KEY` in `.env.example` since Phase 0) — not changed to any other provider despite this sandbox being unable to reach `api.openai.com` (confirmed: `403 x-deny-reason: host_not_allowed`) but able to reach `api.anthropic.com`. Swapping the documented provider choice would itself have been an unauthorized architecture change (`MASTER_RULES.md` §5); the network restriction is an environment limitation on *verification*, not a reason to change the decision. Verified instead via a dependency-injected fake provider (`tests/test_chat.py`) exercising the real request/response/error-mapping code, a live `curl` smoke test of the full pipeline up to the provider boundary, and a from-scratch SSE-parsing test (`tests/stream-assistant-reply.test.ts`) using a real `ReadableStream`. A live call to the real OpenAI API has not happened and cannot happen from this environment — that remains a project-owner action once a reachable environment and a real key are both available.
+
 ## Relevant Documentation (for whichever next task is chosen)
 
 The AUTH module (all eight tasks), the PROF module (all three tasks),
-the LAND module (all three tasks), and now `CHAT-01`/`CHAT-02` (the
-CHAT module's frontend half) are closed — nothing further to read
-there unless revisiting one of them. For the remaining candidates:
+the LAND module (all three tasks), and now the CHAT module (all four
+Phase 1 tasks) are closed — nothing further to read there unless
+revisiting one of them. All three remaining Phase 1 candidates are now
+unblocked (`CHAT-02`, `CHAT-03`, and `AUTH-07` — their only
+dependencies — are all done):
 
 `MEM-01`: `17_AI_EXPERIENCE.md` §Memory ("Guest users: Session memory
 until browser close"), `lib/chat/use-chat-session.ts`'s own doc
-comment (states plainly what is and isn't its job). This task wraps
-or extends the CHAT-02 hook for persistence — it should not need to
-touch any `components/chat/*` file, since they only ever see plain
-data/callbacks from the hook.
+comment (states plainly what is and isn't its job — it currently holds
+no persistence at all, by design; this task is what's expected to wrap
+or extend it). Should not need to touch any `components/chat/*` file,
+since they only ever see plain data/callbacks from the hook.
 `MEM-02`: `17_AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 — consumes
 `get_current_user`; note `TravelerProfile` (PROF-02) already covers
 durable *preference* fields — `MEM-02`'s own "basic authenticated
 preference storage" scope should be checked against that table first
 so the two don't overlap.
-`CHAT-03`/`CHAT-04`: `ARCHITECTURE.md` §7 (AI Orchestration Service —
-"basic, non-orchestrated for Phase 1" per `INDEX.md` §CHAT),
-`GUIDELINES.md` §8 (AI Safety Rules — never fabricate, state
-uncertainty clearly) and §9 (Tool Usage Rules), `MASTER_BUILD_PROMPT.md`
-§10 (Data Reliability Rules). The frontend contract it needs to satisfy
-already exists and is fully built/tested: `lib/chat/types.ts`
-(`ChatMessage`/`Conversation` shapes) and the callback surface
-`use-chat-session.ts` currently fills with
-`lib/chat/simulate-assistant-reply.ts` — read that module's own doc
-comment first, since it explains exactly what it stands in for and
-why. `DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
-`26_APPLICATION_LAYOUT_GUIDE.md` §Dashboard — still blocked on
-`CHAT-03`; when unblocked, check `COMPONENT_OWNERSHIP_MATRIX.md` §4
-first — `ProfileMenu` and `NotificationCenter` are both explicitly
-assigned to `DASH-01` now that PROF-03 declined the former (see that
-document's own note on why).
+`DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
+`26_APPLICATION_LAYOUT_GUIDE.md` §Dashboard — now fully unblocked
+(both `CHAT-03` and `AUTH-07` are done). Check
+`COMPONENT_OWNERSHIP_MATRIX.md` §4 first — `ProfileMenu` and
+`NotificationCenter` are both explicitly assigned to `DASH-01` now that
+PROF-03 declined the former (see that document's own note on why).
+
+Recommended: `MEM-01` first (smallest, Complexity S, and the most
+natural continuation of this session's own work — see this session's
+own Verification Results below for exactly what `use-chat-session.ts`
+looks like now). `MEM-02` and `DASH-01` do not depend on `MEM-01` or on
+each other and can run in separate, parallel sessions per
+`CONVERSATION_STRATEGY.md` §8 — their `Allowed Files to Modify` lists
+don't overlap with `MEM-01`'s (`lib/chat/**`) or with each other's
+(`MEM-02`: backend preference storage; `DASH-01`: new dashboard-only
+frontend files).
 
 ## Relevant Files
 
@@ -742,19 +786,26 @@ document's own note on why).
 `frontend/components/layout/footer.tsx`,
 `frontend/tests/mocks/next-intl-server.ts`.
 
-**CHAT infrastructure (new this session, 2026-09-01) — the pattern any
-future page that consumes CHAT-02's message-state hook should follow:**
-`frontend/lib/chat/{types,use-chat-session,simulate-assistant-reply}.ts`
-(CHAT-02 — read `use-chat-session.ts`'s own doc comment before treating
-anything here as available for persistence; it explicitly isn't yet),
-`frontend/components/chat/{message-bubble,typing-indicator}.tsx`
-(CHAT-02), `frontend/app/[locale]/(app)/chat/page.tsx`,
+**CHAT infrastructure — module now fully closed (2026-09-05). The
+pattern any future page/task that consumes this hook should follow:**
+`ai/{config,providers/**,prompts/**,agents/conversation_manager}.py`
+(CHAT-03 — the provider-independent AI layer; `ai/schemas/`,
+`ai/evaluations/` remain empty scaffold, Phase 2/5 scope),
+`backend/app/core/{ai,exception_handlers}.py`,
+`backend/app/schemas/chat.py`, `backend/app/services/chat_service.py`,
+`backend/app/api/v1/chat.py` (CHAT-03 non-streaming route + CHAT-04
+streaming route), `frontend/lib/chat/{types,use-chat-session,
+stream-assistant-reply}.ts` (CHAT-02/CHAT-04 — `simulate-assistant-reply.ts`
+is retired/deleted; read `use-chat-session.ts`'s own doc comment before
+treating anything here as available for persistence — it explicitly
+isn't yet, that's `MEM-01`), `frontend/components/chat/
+{message-bubble,typing-indicator}.tsx` (CHAT-02),
+`frontend/app/[locale]/(app)/chat/page.tsx`,
 `frontend/components/chat/{chat-page-content,conversation-sidebar,
-chat-composer,conversation-panel}.tsx` (CHAT-01),
-`frontend/messages/{en,fa,de}.json` (`Chat` namespace, real
-translations, not placeholders). Full list with New/Modified split:
-"Files Modified This Session (2026-09-01, CHAT-01 through CHAT-02)"
-below.
+chat-composer,conversation-panel}.tsx` (CHAT-01), `frontend/messages/
+{en,fa,de}.json` (`Chat` namespace, real translations, not
+placeholders). Full list with New/Modified split: "Files Modified This
+Session (2026-09-05, CHAT-03 through CHAT-04)" below.
 
 ## Findings Requiring Project Owner Decision
 
@@ -1282,6 +1333,99 @@ delivered, with real file paths and the `ConversationList`/
 touched — no task's own declared scope or acceptance criteria changed
 from what was already defined there.
 
+## Files Modified This Session (2026-09-05, CHAT-03 through CHAT-04)
+
+**New (`ai/` — first real content in this package; CHAT-03):**
+`__init__.py`, `config.py` (`AIConfig` — plain dataclass, populated by
+`backend/app/core/ai.py`, per `DEBUG_LOG.md`'s own documented but
+previously-unbuilt decision), `providers/__init__.py`,
+`providers/base.py` (`LLMProvider` ABC, `LLMMessage`, the
+`ProviderError` hierarchy), `providers/openai_provider.py`
+(`OpenAIProvider` — `complete()` + `stream_complete()`),
+`prompts/__init__.py`, `prompts/atlas_conversation_prompt.py`
+(versioned system prompt), `agents/__init__.py`,
+`agents/conversation_manager.py` (`generate_reply()` +
+`stream_reply()` — the actual "direct passthrough to one model").
+`schemas/`, `evaluations/` remain empty scaffold — correctly, Phase
+2/5 scope.
+
+**New (`backend/app/` — CHAT-03/04):** `core/ai.py`
+(`get_llm_provider()` factory + the `ai/` ↔ `backend/` `sys.path`
+wiring), `core/exception_handlers.py` (`ProviderError` → calm HTTP
+mapping, `describe_provider_error()`), `schemas/chat.py`
+(`ChatMessageIn`/`ChatCompletionRequest`/`ChatCompletionResponse`),
+`services/chat_service.py` (`complete_chat()`/`stream_chat()`),
+`api/v1/chat.py` (`POST /completions` — CHAT-03; `POST
+/completions/stream`, SSE — CHAT-04).
+
+**New (tests):** `backend/tests/test_chat.py` (21 cases: success,
+system-prompt prepending, guest access, validation, provider-error
+mapping, rate limiting, streaming, and the two live-bug regression
+tests — see Verification Results above).
+
+**Modified (`backend/app/`):** `core/config.py` (`openai_api_key`,
+`openai_model`, `rate_limit_chat_max`, `rate_limit_chat_window_seconds`),
+`api/v1/router.py` (wired `chat_router`), `main.py` (the `sys.path`
+fix for bug #1 above, `register_exception_handlers(app)` call).
+
+**Modified (backend infra):** `pyproject.toml` (`pythonpath`/`mypy_path`
+pointing at the repo root, for the `ai/` ↔ `backend/` package
+boundary), `.github/workflows/ci.yml` (new "Type check ai/ layer"
+step).
+
+**New (`frontend/lib/chat/` — CHAT-04):** `stream-assistant-reply.ts`
+(real `fetch()` + `ReadableStream` SSE client — the documented
+`CHAT-03/04` swap point `simulate-assistant-reply.ts` itself named).
+
+**Deleted:** `frontend/lib/chat/simulate-assistant-reply.ts` — retired,
+per its own doc comment's stated intent, not left in place alongside
+the real client.
+
+**Modified (`frontend/lib/chat/`):** `use-chat-session.ts`
+(`runAssistantTurn` now calls the real network client instead of the
+stub, gained an `onError` path and a `status === "streaming"` guard on
+all three callbacks — bug #3 above; `sendMessage`/`regenerateLastResponse`
+now compute the outgoing message array synchronously, mirroring the
+existing fix already applied to this same file for the identical React
+state-timing pitfall; `prefersReducedMotion` removed entirely — see
+Verification Results above), `types.ts` (doc-comment updates only, no
+type changes — reflects `CHAT-03/04` now existing and `MessageStatus`
+`"error"` now having a real producer).
+
+**Modified (other frontend):** `lib/api/client.ts` (`API_BASE_URL`
+exported, was module-private — reused by the new streaming client),
+`components/chat/chat-page-content.tsx` (`errorMessage` replaces
+`previewReply`; `useMotionPreference()` import/call removed, now
+unused there).
+
+**Modified:** `frontend/messages/{en,fa,de}.json` (`Chat.errors.generic`
+replaces the retired `Chat.previewNotice` — real, meaning-preserving
+Persian and German, not placeholder English, matching this module's
+own established convention from `CHAT-01/02`).
+
+**New/rewritten tests:** `frontend/tests/stream-assistant-reply.test.ts`
+(new — 7 cases, a real `ReadableStream` through a mocked `fetch`,
+covering buffering across reads, the `done`/`error` discriminator,
+malformed-event resilience, and `stop()`), `frontend/tests/
+use-chat-session.test.ts` (rewritten — mocks the module instead of
+driving fake timers; 14 cases, net +2 versus before), `frontend/tests/
+chat-page-content.test.tsx` (rewritten the same way; 11 cases, net +2,
+including a new Retry-after-error case).
+
+**`.ai/` governance files also updated this session:** `PROJECT_STATE.md`
+(this file — also brought the top summary block and this section's own
+predecessor current, which had drifted behind the dated
+Verification/Files-Modified sections below it for the `PROF`/`LAND`/
+`CHAT-01/02` sessions; noted, not silently normalized as if it had
+always been current), `TASK_BOARD.md` (`CHAT-03`/`04` moved to Done,
+CHAT module marked closed, Todo section's own note updated for the
+newly-unblocked set). `WORK_BREAKDOWN_STRUCTURE.md` and
+`COMPONENT_OWNERSHIP_MATRIX.md` not touched — no task's declared scope
+or acceptance criteria changed from what was already defined, and no
+UI component (Foundation, Shared, or Feature) was created or modified
+this session (`lib/chat/*` is hook/data-layer code, not a component
+per that document's own §2 definitions).
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -1447,6 +1591,39 @@ valid). As in every prior instance of this note, this names the
 unblocked set rather than asserting a single choice on the project
 owner's behalf.
 
+**CHAT-03 through CHAT-04 are now done — the entire CHAT module is
+closed.** `/chat` calls a real, single-model Conversation Manager over
+a genuine SSE stream (`POST /api/v1/chat/completions/stream`);
+`lib/chat/simulate-assistant-reply.ts` is deleted, not left in place.
+Three real bugs were found and fixed this session (an `ai/` ↔
+`backend/` import-order bug, a FastAPI dependency-resolution-vs-body-
+validation ordering bug, and a frontend race between `stopGenerating()`
+and a late network callback) — see Verification Results above for all
+three; none were hypothetical, each was reproduced live or by a test
+before being fixed. The backend cannot be live-verified against the
+real OpenAI API from this sandbox (`api.openai.com` is blocked by the
+egress proxy — confirmed, not assumed) — that remains a project-owner
+action with a real key in a reachable environment; everything else
+(request handling, validation, rate limiting, error mapping, the SSE
+wire format on both ends) is genuinely tested, not asserted. If a
+future session works on `MEM-01`: `lib/chat/use-chat-session.ts` is now
+the file to wrap or extend for persistence — its own doc comment states
+plainly, again, that it holds no persistence today. If a future session
+works on `DASH-01`: it is now fully unblocked (`CHAT-03` ✅, `AUTH-07`
+✅ already were) — no further backend prerequisite remains.
+
+Recommended next task (current): **`ATLAS-P1-MEM-01`** (guest session
+memory) — smallest remaining Phase 1 item (Complexity S), directly
+closes the refresh-loses-your-conversation gap this session's own
+Verification Results describe, and is the most natural continuation of
+this session's own `lib/chat/` work. `ATLAS-P1-MEM-02` and
+`ATLAS-P1-DASH-01` are both independently available (no unmet
+dependencies) and can run in parallel with `MEM-01` or each other per
+`CONVERSATION_STRATEGY.md` §8 — this names the unblocked set, not a
+single choice already made on the project owner's behalf. Completing
+any two of these three closes out every module `MASTER_IMPLEMENTATION_
+ROADMAP.md`'s Phase 1 lists except whichever one is left.
+
 ---
 
 **LOCK STATUS:** LIVING — baseline approved 2026-07-22, updated
@@ -1461,5 +1638,7 @@ closed), 2026-08-29 (LAND-01 through LAND-03 complete — the LAND
 module is closed; the real Landing page ships for the first time),
 2026-09-01 (CHAT-01 through CHAT-02 complete — the CHAT module's
 frontend half is closed; `/chat` is a real, guest-accessible page for
-the first time).
+the first time), 2026-09-05 (CHAT-03 through CHAT-04 complete — the
+CHAT module is fully closed; `/chat` is backed by a real, streaming
+Conversation Manager for the first time).
 Future changes only via `MASTER_RULES.md` §21.

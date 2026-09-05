@@ -403,6 +403,8 @@
         "Schlagen Sie eine entspannte dreitägige Route für Rom vor"
       ]
     },
-    "previewNotice": "Diese Vorschau zeigt, wie Antworten aussehen werden, sobald Atlas mit seinem KI-System verbunden ist. Echte Empfehlungen beruhen stets auf geprüften Informationen, niemals auf Vermutungen."
+    "errors": {
+      "generic": "Diese Antwort wurde unterbrochen. Bitte versuchen Sie es erneut."
+    }
   }
 }

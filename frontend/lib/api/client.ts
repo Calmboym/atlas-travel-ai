@@ -19,7 +19,13 @@
  * calling EXTERNAL APIs directly.
  */
 
-const API_BASE_URL = (
+// EXTENDED — ATLAS-P1-CHAT-04: exported (was module-private) so
+// lib/chat/stream-assistant-reply.ts can build the same backend origin
+// for its own fetch() call without duplicating the
+// NEXT_PUBLIC_API_URL-resolution logic — that file can't reuse apiFetch
+// itself, since apiFetch awaits the full JSON body up front and this
+// is a streaming (ReadableStream) response instead.
+export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 ).replace(/\/$/, "");
 

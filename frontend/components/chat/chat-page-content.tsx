@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PanelLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useMotionPreference } from "@/components/providers/motion-provider";
 import { useChatSession } from "@/lib/chat/use-chat-session";
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar";
 import { ConversationPanel } from "@/components/chat/conversation-panel";
@@ -33,7 +32,6 @@ import { ChatComposer } from "@/components/chat/chat-composer";
 export function ChatPageContent() {
   const t = useTranslations("Chat");
   const searchParams = useSearchParams();
-  const { prefersReducedMotion } = useMotionPreference();
   const [composerValue, setComposerValue] = useState(
     () => searchParams.get("prompt") ?? "",
   );
@@ -51,8 +49,7 @@ export function ChatPageContent() {
     startNewConversation,
     selectConversation,
   } = useChatSession({
-    previewReply: t("previewNotice"),
-    prefersReducedMotion,
+    errorMessage: t("errors.generic"),
   });
 
   function handleSend() {

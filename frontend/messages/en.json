@@ -403,6 +403,8 @@
         "Suggest a relaxed 3-day itinerary in Rome"
       ]
     },
-    "previewNotice": "This preview shows how responses will look once Atlas connects to its AI backend. Real recommendations will be grounded in verified information, never guesses."
+    "errors": {
+      "generic": "Something interrupted this response. Please try again."
+    }
   }
 }

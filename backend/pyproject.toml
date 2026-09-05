@@ -87,6 +87,17 @@ dev = [
 # DOCUMENTED — DEBUG_LOG.md: "mypy strict mode", "--ignore-missing-imports"
 strict = true
 ignore_missing_imports = true
+# ADDED — ATLAS-P1-CHAT-03. Without this, files under backend/ that
+# `import ai...` (app/core/ai.py, app/services/chat_service.py,
+# app/api/v1/chat.py, tests/test_chat.py) get ai.* resolved as `Any`
+# rather than its real types (ignore_missing_imports above hides the
+# failure instead of surfacing it) — harmless for ordinary usage, but
+# mypy specifically rejects subclassing an Any-typed name ("Class
+# cannot subclass ... (has type Any)"), which tests/test_chat.py's
+# FakeLLMProvider(LLMProvider) does. Points at the repository root, the
+# same relative path [tool.pytest.ini_options] pythonpath already uses
+# for the identical ai/ <-> backend/ boundary at test-runtime.
+mypy_path = ".."
 
 [tool.pytest.ini_options]
 # ADDED — ATLAS-P1-AUTH-02. "auto" avoids requiring an
@@ -103,6 +114,15 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+# ADDED — ATLAS-P1-CHAT-03. Puts the repository root (one level above
+# backend/) on sys.path so tests can `import ai...` — the sibling ai/
+# package (DEBUG_LOG.md: "ai/ package independent from backend/app/")
+# is not otherwise reachable when pytest is invoked from inside
+# backend/. Standard pytest option, not a new dependency. The running
+# app does the same thing at import time in app/core/ai.py, via the
+# same technique already established in alembic/env.py — see that
+# file's own docstring.
+pythonpath = [".."]
 
 [build-system]
 # RECONSTRUCTED — conventional for uv-managed projects; not

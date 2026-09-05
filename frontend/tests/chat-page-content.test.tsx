@@ -3,14 +3,27 @@ import { act, screen, fireEvent, within } from "@testing-library/react";
 import { useSearchParams } from "next/navigation";
 import { renderWithProviders } from "@/tests/layout-test-utils";
 import { ChatPageContent } from "@/components/chat/chat-page-content";
+import { streamAssistantReply } from "@/lib/chat/stream-assistant-reply";
+import type { StreamAssistantReplyOptions } from "@/lib/chat/stream-assistant-reply";
 
 /**
- * ATLAS-P1-CHAT-01/02 integration coverage. Uses fake timers because
- * lib/chat/simulate-assistant-reply.ts times its "thinking" pause and
- * progressive reveal with real setTimeout calls (see that module's own
- * doc comment for why a real backend call isn't available to await
- * instead).
+ * ATLAS-P1-CHAT-01/02 integration coverage.
+ * EXTENDED — ATLAS-P1-CHAT-04: lib/chat/stream-assistant-reply.ts (a
+ * real fetch()-based network client) replaces the retired
+ * lib/chat/simulate-assistant-reply.ts stub, so this suite now mocks
+ * that module directly instead of driving a fixed setTimeout sequence
+ * with fake timers — completeCurrentTurn() below invokes the captured
+ * onDone callback exactly as the real network client eventually would,
+ * once a response actually arrives. Fake timers remain in use only for
+ * an unrelated reason — see the last test in this file, which settles
+ * SheetContent's own CSS closing transition.
  */
+
+vi.mock("@/lib/chat/stream-assistant-reply", () => ({
+  streamAssistantReply: vi.fn(),
+}));
+
+const mockedStreamAssistantReply = vi.mocked(streamAssistantReply);
 
 function mockSearchParams(query: string): void {
   vi.mocked(useSearchParams).mockReturnValue(
@@ -21,6 +34,8 @@ function mockSearchParams(query: string): void {
 beforeEach(() => {
   vi.useFakeTimers();
   mockSearchParams("");
+  mockedStreamAssistantReply.mockReset();
+  mockedStreamAssistantReply.mockReturnValue({ stop: vi.fn() });
 });
 
 afterEach(() => {
@@ -28,9 +43,15 @@ afterEach(() => {
   mockSearchParams("");
 });
 
-function completeCurrentTurn() {
+/** Resolves the most recently started turn — mirrors what a real
+ *  network response eventually does, without needing jsdom to
+ *  understand a real streamed fetch() body. */
+function completeCurrentTurn(text = "Here's a plan for your trip."): void {
+  const lastCall = mockedStreamAssistantReply.mock.calls.at(-1);
+  if (!lastCall) throw new Error("streamAssistantReply was never called");
+  const options = lastCall[0] as StreamAssistantReplyOptions;
   act(() => {
-    vi.advanceTimersByTime(10000);
+    options.onDone(text);
   });
 }
 
@@ -80,14 +101,44 @@ describe("ChatPageContent", () => {
     expect(screen.getAllByText("Plan a trip to Kyoto")).toHaveLength(3);
     expect(screen.getByRole("status", { name: "Thinking…" })).toBeInTheDocument();
 
-    completeCurrentTurn();
+    completeCurrentTurn("Here's a plan for your trip.");
 
     expect(screen.queryByRole("status", { name: "Thinking…" })).not.toBeInTheDocument();
+    expect(screen.getByText("Here's a plan for your trip.")).toBeInTheDocument();
+  });
+
+  it("sends the full message history, oldest first, to the network client", () => {
+    renderWithProviders(<ChatPageContent />);
+    fireEvent.change(screen.getByLabelText("Message Atlas"), {
+      target: { value: "Plan a trip to Kyoto" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(mockedStreamAssistantReply).toHaveBeenCalledTimes(1);
+    const { messages } = mockedStreamAssistantReply.mock.calls[0][0];
+    expect(messages).toEqual([{ role: "user", content: "Plan a trip to Kyoto" }]);
+  });
+
+  it("shows a calm, translated error and a working Retry after a failed turn", () => {
+    renderWithProviders(<ChatPageContent />);
+    fireEvent.change(screen.getByLabelText("Message Atlas"), {
+      target: { value: "Plan a trip to Kyoto" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    const lastCall = mockedStreamAssistantReply.mock.calls.at(-1);
+    const options = lastCall?.[0] as StreamAssistantReplyOptions;
+    act(() => {
+      options.onError();
+    });
+
     expect(
-      screen.getByText(
-        "This preview shows how responses will look once Atlas connects to its AI backend. Real recommendations will be grounded in verified information, never guesses.",
-      ),
+      screen.getByText("Something interrupted this response. Please try again."),
     ).toBeInTheDocument();
+
+    mockedStreamAssistantReply.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(mockedStreamAssistantReply).toHaveBeenCalledTimes(1);
   });
 
   it("updates the sidebar with the new conversation's title once a message is sent", () => {
