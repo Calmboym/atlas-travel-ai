@@ -52,14 +52,14 @@ async def _clean_database_and_redis() -> AsyncGenerator[None, None]:
         # fixed here per MASTER_RULES.md's scope-boundary rule ("report
         # it in the handoff instead" rather than touching unrelated
         # code) — flagged in this task's own handoff notes instead.
-        # traveler_profiles IS added below: TRUNCATE...CASCADE on
-        # `users` would catch it implicitly via its FK, but every other
-        # FK-dependent table here is named explicitly, and following
-        # that convention costs nothing.
+        # traveler_profiles and user_memory ARE added below: TRUNCATE
+        # ...CASCADE on `users` would catch both implicitly via their
+        # FK, but every other FK-dependent table here is named
+        # explicitly, and following that convention costs nothing.
         await connection.execute(
             text(
-                "TRUNCATE TABLE email_verification_tokens, traveler_profiles, users "
-                "RESTART IDENTITY CASCADE"
+                "TRUNCATE TABLE email_verification_tokens, traveler_profiles, "
+                "user_memory, users RESTART IDENTITY CASCADE"
             )
         )
     redis_client = get_redis_client()

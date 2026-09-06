@@ -1,11 +1,18 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import type { ChatMessage, Conversation } from "@/lib/chat/types";
 import {
   streamAssistantReply,
   type StreamReplyHandle,
 } from "@/lib/chat/stream-assistant-reply";
+import {
+  getGuestSessionServerSnapshot,
+  getGuestSessionSnapshot,
+  subscribeToGuestSession,
+  updateGuestSession,
+  type GuestSession,
+} from "@/lib/chat/guest-session-store";
 
 /**
  * ATLAS-P1-CHAT-02 — chat session state.
@@ -21,24 +28,26 @@ import {
  * rendering (the streaming cursor, message transitions) is a
  * components/chat/* concern via its own useMotionPreference() call,
  * unrelated to this hook's data layer.
- *
- * SCOPE, STATED PLAINLY: conversation/message state lives only in this
- * component tree's React state. Nothing here reads or writes
- * localStorage/sessionStorage. Guest session memory (client-side,
- * survives navigation within the tab, cleared on browser close) is
- * `ATLAS-P1-MEM-01`'s own, separately-scoped task —
- * WORK_BREAKDOWN_STRUCTURE.md lists it with an explicit dependency on
- * CHAT-02, i.e. it is expected to wrap or extend this hook later, not
- * something this hook should pre-build. A page refresh here loses the
- * conversation; that is correct, current, in-scope behavior, not a bug.
- * The backend itself is stateless too (no conversation persistence) —
- * see backend/app/services/chat_service.py's own docstring; this hook
- * remains the single source of truth for message history, both what's
+ * EXTENDED — ATLAS-P1-MEM-01: conversations/activeConversationId now
+ * live in guest-session-store.ts (a sessionStorage-backed vanilla
+ * store, read here via useSyncExternalStore) instead of plain
+ * useState, so a `/chat` refresh restores the conversation instead of
+ * losing it — 17_AI_EXPERIENCE.md §Memory: "Guest users: Session
+ * memory until browser close." Closing the tab clears it automatically;
+ * nothing here needs to do that itself. Applies regardless of
+ * authentication status: this hook has no concept of auth, and MEM-01's
+ * only declared dependency is CHAT-02 — real *persistent* (survives a
+ * closed tab) authenticated memory remains explicitly out of scope,
+ * Phase 4's Long-term Memory Service, not this task. The backend
+ * remains stateless (no conversation persistence) either way — see
+ * backend/app/services/chat_service.py's own docstring; this hook (now
+ * backed by guest-session-store.ts rather than component state) is
+ * still the single source of truth for message history, both what's
  * shown and what's sent to the backend on the next turn.
  *
  * Business logic kept out of components per MASTER_RULES.md §6 —
  * components/chat/* only ever receives plain props/callbacks from
- * this hook.
+ * this hook; nothing about this change alters that return shape.
  */
 
 function createId(prefix: string): string {
@@ -58,9 +67,10 @@ function makeConversation(id: string): Conversation {
 }
 
 /** Fixed, non-random id for the very first conversation only, so the
- *  initial `useState` lazy initializer never depends on
- *  crypto.randomUUID() during the server-rendered pass — every
- *  subsequent conversation is created inside an onClick handler
+ *  default-session factory below (used for both the server snapshot and
+ *  the very first client snapshot — see guest-session-store.ts) never
+ *  depends on crypto.randomUUID() during the server-rendered pass —
+ *  every subsequent conversation is created inside an onClick handler
  *  (startNewConversation), which by definition only ever runs
  *  client-side after hydration, where a random id is unproblematic. */
 const INITIAL_CONVERSATION_ID = "conv-initial";
@@ -89,11 +99,25 @@ export interface UseChatSessionOptions {
 }
 
 export function useChatSession({ errorMessage }: UseChatSessionOptions) {
-  const [conversations, setConversations] = useState<Conversation[]>(() => [
-    makeConversation(INITIAL_CONVERSATION_ID),
-  ]);
-  const [activeConversationId, setActiveConversationId] = useState(
-    INITIAL_CONVERSATION_ID,
+  const makeDefaultSession = useCallback(
+    (): GuestSession => ({
+      conversations: [makeConversation(INITIAL_CONVERSATION_ID)],
+      activeConversationId: INITIAL_CONVERSATION_ID,
+    }),
+    [],
+  );
+  const getSnapshot = useCallback(
+    () => getGuestSessionSnapshot(makeDefaultSession),
+    [makeDefaultSession],
+  );
+  const getServerSnapshot = useCallback(
+    () => getGuestSessionServerSnapshot(makeDefaultSession),
+    [makeDefaultSession],
+  );
+  const { conversations, activeConversationId } = useSyncExternalStore(
+    subscribeToGuestSession,
+    getSnapshot,
+    getServerSnapshot,
   );
   const streamHandleRef = useRef<StreamReplyHandle | null>(null);
   const lastPartialRef = useRef("");
@@ -111,11 +135,12 @@ export function useChatSession({ errorMessage }: UseChatSessionOptions) {
 
   const patchConversation = useCallback(
     (id: string, updater: (conversation: Conversation) => Conversation) => {
-      setConversations((current) =>
-        current.map((conversation) =>
+      updateGuestSession((current) => ({
+        ...current,
+        conversations: current.conversations.map((conversation) =>
           conversation.id === id ? updater(conversation) : conversation,
         ),
-      );
+      }));
     },
     [],
   );
@@ -239,7 +264,7 @@ export function useChatSession({ errorMessage }: UseChatSessionOptions) {
   const regenerateLastResponse = useCallback(() => {
     if (isStreaming) return;
     // Read the current state directly rather than mutating a variable
-    // from inside the setConversations updater below and reading it
+    // from inside the updateGuestSession updater below and reading it
     // back immediately after — that pattern isn't reliably synchronous
     // in React (a real bug this hook's own tests caught: the trimmed
     // conversation could commit before the flag it set was observed,
@@ -269,12 +294,14 @@ export function useChatSession({ errorMessage }: UseChatSessionOptions) {
     streamHandleRef.current?.stop();
     streamHandleRef.current = null;
     const conversation = makeConversation(createId("conv"));
-    setConversations((current) => [conversation, ...current]);
-    setActiveConversationId(conversation.id);
+    updateGuestSession((current) => ({
+      conversations: [conversation, ...current.conversations],
+      activeConversationId: conversation.id,
+    }));
   }, []);
 
   const selectConversation = useCallback((id: string) => {
-    setActiveConversationId(id);
+    updateGuestSession((current) => ({ ...current, activeConversationId: id }));
   }, []);
 
   return {

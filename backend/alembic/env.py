@@ -21,6 +21,7 @@ from app.models import (  # noqa: E402,F401  (registers tables on Base.metadata)
     password_reset_token,
     traveler_profile,
     user,
+    user_memory,
 )
 
 # this is the Alembic Config object, which provides

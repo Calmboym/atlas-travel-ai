@@ -3,6 +3,10 @@ import { act, renderHook } from "@testing-library/react";
 import { useChatSession } from "@/lib/chat/use-chat-session";
 import { streamAssistantReply } from "@/lib/chat/stream-assistant-reply";
 import type { StreamAssistantReplyOptions } from "@/lib/chat/stream-assistant-reply";
+import {
+  __resetGuestSessionStoreForTests,
+  type GuestSession,
+} from "@/lib/chat/guest-session-store";
 
 /**
  * EXTENDED — ATLAS-P1-CHAT-04. Mocks lib/chat/stream-assistant-reply.ts
@@ -11,7 +15,15 @@ import type { StreamAssistantReplyOptions } from "@/lib/chat/stream-assistant-re
  * each test captures the `options` passed to the mocked function and
  * invokes onChunk/onDone/onError itself, exactly mirroring what a real
  * network response eventually does.
+ *
+ * EXTENDED — ATLAS-P1-MEM-01: conversations/activeConversationId now
+ * live in guest-session-store.ts's module-level cache rather than
+ * per-instance React state, so every test resets that store (and
+ * sessionStorage itself) in beforeEach — otherwise one test's
+ * conversation would leak into the next.
  */
+
+const STORAGE_KEY = "atlas-chat-guest-session";
 
 vi.mock("@/lib/chat/stream-assistant-reply", () => ({
   streamAssistantReply: vi.fn(),
@@ -34,6 +46,7 @@ function lastCallOptions(): StreamAssistantReplyOptions {
 beforeEach(() => {
   mockedStreamAssistantReply.mockReset();
   mockedStreamAssistantReply.mockReturnValue({ stop: vi.fn() });
+  __resetGuestSessionStoreForTests();
 });
 
 describe("useChatSession", () => {
@@ -218,5 +231,85 @@ describe("useChatSession", () => {
 
     act(() => result.current.selectConversation(firstId));
     expect(result.current.activeConversation.messages[0].content).toBe("Conversation one");
+  });
+});
+
+describe("guest session persistence (ATLAS-P1-MEM-01)", () => {
+  it("persists conversations to sessionStorage after a change", () => {
+    const { result } = setup();
+    act(() => result.current.sendMessage("Plan a trip to Rome"));
+
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    expect(raw).not.toBeNull();
+    const stored = JSON.parse(raw as string) as GuestSession;
+    expect(stored.conversations[0].messages[0]).toMatchObject({
+      role: "user",
+      content: "Plan a trip to Rome",
+    });
+    expect(stored.activeConversationId).toBe(result.current.activeConversationId);
+  });
+
+  it("restores a previously-persisted session from sessionStorage on mount", () => {
+    const persisted: GuestSession = {
+      conversations: [
+        {
+          id: "conv-restored",
+          title: "Rome trip",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          messages: [
+            {
+              id: "msg-1",
+              role: "user",
+              content: "Plan a trip to Rome",
+              status: "complete",
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        },
+      ],
+      activeConversationId: "conv-restored",
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+
+    const { result } = setup();
+
+    expect(result.current.activeConversationId).toBe("conv-restored");
+    expect(result.current.activeConversation.title).toBe("Rome trip");
+    expect(result.current.activeConversation.messages[0].content).toBe(
+      "Plan a trip to Rome",
+    );
+  });
+
+  it("falls back to a fresh conversation when sessionStorage holds corrupted JSON", () => {
+    sessionStorage.setItem(STORAGE_KEY, "{not valid json");
+    const { result } = setup();
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.activeConversation.messages).toHaveLength(0);
+  });
+
+  it("falls back to a fresh conversation when sessionStorage holds a shape that isn't a GuestSession", () => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ foo: "bar" }));
+    const { result } = setup();
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.activeConversation.messages).toHaveLength(0);
+  });
+
+  it("keeps updating in-memory state even if sessionStorage.setItem throws (e.g. private browsing)", () => {
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("QuotaExceededError");
+      });
+
+    try {
+      const { result } = setup();
+      act(() => result.current.sendMessage("Plan a trip to Rome"));
+
+      expect(result.current.activeConversation.messages[0]).toMatchObject({
+        content: "Plan a trip to Rome",
+      });
+    } finally {
+      setItemSpy.mockRestore();
+    }
   });
 });

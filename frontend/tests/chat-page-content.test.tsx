@@ -5,6 +5,7 @@ import { renderWithProviders } from "@/tests/layout-test-utils";
 import { ChatPageContent } from "@/components/chat/chat-page-content";
 import { streamAssistantReply } from "@/lib/chat/stream-assistant-reply";
 import type { StreamAssistantReplyOptions } from "@/lib/chat/stream-assistant-reply";
+import { __resetGuestSessionStoreForTests } from "@/lib/chat/guest-session-store";
 
 /**
  * ATLAS-P1-CHAT-01/02 integration coverage.
@@ -17,6 +18,14 @@ import type { StreamAssistantReplyOptions } from "@/lib/chat/stream-assistant-re
  * once a response actually arrives. Fake timers remain in use only for
  * an unrelated reason — see the last test in this file, which settles
  * SheetContent's own CSS closing transition.
+ *
+ * EXTENDED — ATLAS-P1-MEM-01: ChatPageContent's conversation state now
+ * lives in guest-session-store.ts's module-level cache (sessionStorage-
+ * backed) rather than per-render-tree React state, so it survives
+ * across renderWithProviders() calls within this file unless reset —
+ * found empirically here: without the beforeEach reset below, this
+ * suite's later tests inherited an already-"streaming" conversation
+ * from an earlier test and silently no-opted every sendMessage() call.
  */
 
 vi.mock("@/lib/chat/stream-assistant-reply", () => ({
@@ -36,6 +45,7 @@ beforeEach(() => {
   mockSearchParams("");
   mockedStreamAssistantReply.mockReset();
   mockedStreamAssistantReply.mockReturnValue({ stop: vi.fn() });
+  __resetGuestSessionStoreForTests();
 });
 
 afterEach(() => {

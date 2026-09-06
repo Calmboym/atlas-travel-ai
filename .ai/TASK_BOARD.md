@@ -1,6 +1,6 @@
 # TASK_BOARD.md
 
-**Last updated:** 2026-08-29 (LAND-01 through LAND-03)
+**Last updated:** 2026-09-06 (MEM-01 through MEM-02 — the MEM module is closed; note this line had drifted behind the file's own dated verification entries for at least the CHAT-01/02 and CHAT-03/04 sessions, corrected here rather than left compounding further)
 **Document tier:** Living — updated every session via `MASTER_RULES.md` §21.
 
 Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every card cites its WBS ID and required documentation set so it can be picked up without re-deriving context. **Governance Sessions** (below) are a separate, non-WBS category — documentation/process work, not product implementation; see `MASTER_RULES.md` §3 Scope Control for why these never carry a WBS ID.
@@ -70,6 +70,8 @@ question, only its localization.
 | ATLAS-P1-LAND-01 | Marketing layout shell (Header/Hero/CTA/Footer) | High | INDEX.md §LAND, `01_BRAND_GUIDELINES.md`, `02_PRODUCT_VISION.md`, `26_APPLICATION_LAYOUT_GUIDE.md` §Marketing Layout | 2026-08-29 |
 | ATLAS-P1-LAND-02 | AI search box + rotating example prompts | Medium | INDEX.md §LAND, `19_TRIP_PLANNING_EXPERIENCE.md` §Step 1 (Dream) | 2026-08-29 |
 | ATLAS-P1-LAND-03 | "Continue as Guest" entry wiring | Medium | INDEX.md §LAND, `16_ONBOARDING_EXPERIENCE.md` §Guest Experience, `USER_FLOWS.md` Flow 02 | 2026-08-29 |
+| ATLAS-P1-MEM-01 | Guest session memory (client-side, cleared on browser close) | Medium | INDEX.md §MEM, `17_AI_EXPERIENCE.md` §Memory | 2026-09-06 |
+| ATLAS-P1-MEM-02 | Authenticated preference storage (basic tier) | Medium | INDEX.md §MEM, `17_AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13, `ARCHITECTURE.md` §7 | 2026-09-06 |
 
 **Verification status (DESIGNSYS-03, 2026-08-15 — actually executed, not asserted):** typecheck clean · lint 0 errors/0 warnings (2 real `react-hooks/set-state-in-effect` violations found and fixed at the root, not suppressed) · 129/129 tests passing across 20/20 files (98 pre-existing + 31 new) · production build succeeds, including the two new orphan route-group layouts with zero pages under them yet · RTL confirmed correct for en/fa/de via live HTTP requests against the real standalone server, with header/footer/nav landmarks confirmed present in the actual rendered HTML · `/en/register` (AUTH-01) confirmed still working, untouched.
 
@@ -92,6 +94,8 @@ question, only its localization.
 
 **Verification status (CHAT-03 through CHAT-04, 2026-09-05 — actually executed against real infrastructure, not asserted):** closes the CHAT module. Execution order CHAT-03 → CHAT-04 as WBS declares. Backend: `ai/` held zero application code before this session (confirmed `.gitkeep` only in `prompts/`/`agents/`/`schemas/`/`evaluations/`, despite `DEBUG_LOG.md`'s M0 record claiming an LLMProvider/OpenAIProvider were already delivered) — this session adds the real provider abstraction for the first time. Real Postgres 16 + Redis 7 (apt-installed, no Docker daemon here, same approach as every prior session) · mypy strict clean across `app/` (34 files), `ai/` (9 files, new CI step added), and the combined CI target (52 files) · 123/123 pytest passing (102 pre-existing + 21 new, `tests/test_chat.py`) · a real `alembic upgrade head` (unchanged — no new tables this session) · a live standalone-server curl smoke test of both endpoints, confirmed only after fixing two real bugs (see below). Frontend: typecheck clean · lint 0 errors/0 warnings · 356/356 tests passing across 56/56 files (344 pre-existing + 12 new/net) · production build succeeds, `/[locale]/chat` still compiling. **Three real bugs found and fixed, none asserted away:** (1) `ModuleNotFoundError: No module named 'ai'` starting the real server — masked by `pytest`'s own `pythonpath` config (added this session for the same `ai/`↔`backend/` boundary) putting the repo root on `sys.path` unconditionally for the whole test session; `app/api/v1/chat.py` imports `ai.providers.base` directly, above its own import of `app/core/ai.py` (the only file with a `sys.path` fix), so that fix ran too late — moved to the top of `app/main.py`, guaranteed-first, mirroring the existing `alembic/env.py` precedent; (2) a malformed request (empty `messages`, or a client-supplied `"system"`-role message) came back `503` instead of `422` whenever the provider was also unconfigured — found via live `curl`, not by any `dependency_overrides`-based test; root cause: FastAPI resolves `Depends()` dependencies as part of the same pass that validates the request body, and the original `get_llm_provider()` raised during that resolution, pre-empting the body-validation error entirely — fixed by having it return `None` instead, checked explicitly inside each route body (which only runs once the body has already validated), with two new regression tests that deliberately don't use `dependency_overrides`; (3) a "late" `onChunk`/`onDone`/`onError` after `stopGenerating()` could silently rewrite an already-finalized message (a real race: an aborted fetch doesn't necessarily silence an in-flight `reader.read()` that already resolved) — found by this session's own new frontend unit test before any manual check; fixed by guarding all three callbacks on `message.status === "streaming"`. **Scope decisions, stated plainly:** stateless by design, no conversation persistence (`MEM-01`/`MEM-02`'s separate territory); no authentication required on either chat endpoint (`/chat` is deliberately unguarded, matching `AUTH-08`'s own note); `CHAT-03`'s non-streaming endpoint deliberately left un-wired to the frontend (building against it then rewiring for `CHAT-04`'s SSE endpoint would have been throwaway work — the frontend swap happened once, onto the streaming endpoint); `prefersReducedMotion` removed entirely from `UseChatSessionOptions` (no real-network equivalent to the retired stub's artificial reveal-skipping); `lib/chat/simulate-assistant-reply.ts` deleted, per its own doc comment's stated intent; OpenAI remains the provider (matching existing `pyproject.toml`/`.env.example` precedent) despite this sandbox's egress proxy blocking `api.openai.com` (confirmed: `403 x-deny-reason: host_not_allowed`) — an environment limitation on live-verifying the real API call, not a reason to change an already-documented architecture decision; verified instead via a dependency-injected fake provider, a live curl smoke test up to the provider boundary, and a from-scratch SSE-parsing test using a real `ReadableStream`. Full detail: `.ai/PROJECT_STATE.md`.
 
+**Verification status (MEM-01 through MEM-02, 2026-09-06 — actually executed against real infrastructure, not asserted):** closes the MEM module — every Phase 1 task is now done except `DASH-01`. Real Postgres 16 + Redis 7 (apt-installed, no Docker daemon here, same approach as every prior session) provisioned fresh this session. Backend: mypy strict clean (37 files) · new `user_memory` migration generated and roundtrip-verified (upgrade → downgrade → upgrade; no enum types involved, so `AUTH-06`'s documented drop-CASCADE gotcha doesn't apply) · 137/137 pytest passing (123 pre-existing + 14 new, `tests/test_memory.py`) · live app import + OpenAPI schema confirmed `/api/v1/memory/me` (GET, PATCH) and `/api/v1/memory/me/{key}` (DELETE) registered. Frontend: typecheck clean · lint 0 errors/0 warnings (including `react-hooks/set-state-in-effect`, the exact rule this task's chosen design was written to satisfy — see below) · 361/361 tests passing across 57/57 files (356 pre-existing + 5 new) · production build succeeds · live standalone-server smoke test on `/en/chat` and `/fa/chat` (correct `lang`/`dir`, no crash). **One real bug found and fixed, not asserted away:** moving `MEM-01`'s guest-session state from per-instance `useState` into a module-level store meant it now persisted across `renderHook`/`render` calls *within a test file* unless reset — `use-chat-session.test.ts` got that reset in the same commit that introduced the store, but the pre-existing `chat-page-content.test.tsx` (which also renders the hook, indirectly via `ChatPageContent`) did not, and started failing: later tests inherited an already-`"streaming"` conversation from an earlier test in the same file, silently no-opting every subsequent `sendMessage()`. Fixed by adding the identical store-reset call to that file's own `beforeEach`. **Scope decisions, stated plainly:** `MEM-01` uses `useSyncExternalStore`, not `useEffect`+`setState` — flagged to and confirmed by the project owner during pre-flight, since `components/layout/sidebar.tsx`'s own history already found the `useEffect`+`setState` version of this exact "hydrate from browser storage" problem violates `react-hooks/set-state-in-effect`; applies regardless of authentication status, since `useChatSession` has no auth concept and `MEM-01`'s only declared dependency is `CHAT-02`. `MEM-02` does **not** duplicate `TravelerProfile` — checked every field `17_AI_EXPERIENCE.md` §Memory and `PRD.md` §7.13 name against `PROF-02`'s model first (per the prior session's own flag): travel style/budget/accommodation/transportation/food/languages are already fully owned there, so `MEM-02` instead builds a generic, schema-less `user_memory` JSONB key/value store — the Phase-1 slice of `ARCHITECTURE.md` §7's "Memory Service" module, backend-only by design since no UI task currently consumes it (confirmed via `COMPONENT_OWNERSHIP_MATRIX.md` §4). Favorite destinations and conversation/itinerary memory remain explicitly unbuilt (Phase 2+/Phase 4, per that same document and `MEM-02`'s own acceptance criterion). `DELETE` is idempotent, matching `PROF-02`'s own established "no-op is not an error" convention. Full detail: `.ai/PROJECT_STATE.md`.
+
 ---
 
 ## Governance Sessions (non-WBS)
@@ -108,30 +112,29 @@ question, only its localization.
 
 | Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
 |---|---|---|---|---|---|
-| ATLAS-P1-MEM-01 | Guest session memory (client-side, temporary) | Medium | CHAT-02 ✅ | INDEX.md §MEM | S |
-| ATLAS-P1-MEM-02 | Authenticated preference storage (basic) | Medium | AUTH-07 ✅ | INDEX.md §MEM | S |
 | ATLAS-P1-DASH-01 | Dashboard shell (opens to last conversation / Welcome) | Medium | CHAT-03 ✅, AUTH-07 ✅ | INDEX.md §DASH | M |
 
-*(LAND-01/02/03 and now all four CHAT tasks are Done — see above; the
-real Landing page ships with a working guest entry point, and `/chat`
-is now backed by a real, streaming Conversation Manager, not a stub.
-All three remaining Phase 1 tasks are independently unblocked — no
-dependency graph necessity picks one over the others. MEM-01's CHAT-02
-dependency was already satisfied; DASH-01's CHAT-03 dependency is now
-also satisfied (as of this session), alongside its already-satisfied
-AUTH-07 dependency. `AIQuickAccess` and `ConnectionStatus`/`RetryCard`
-(Shared, `COMPONENT_OWNERSHIP_MATRIX.md` §4) remain unclaimed —
-`CHAT-01` had a clear opportunity to claim either and deliberately did
-not (see that verification note above); `CHAT-03`/`04` had no reason to
-either (no UI component work in scope). Once DASH-01 ships a real page
-under `/dashboard`, AUTH-08's route guard — already live in `proxy.ts`
-— starts protecting it with no further wiring needed. DASH-01 still
-fills `Navbar`'s and `ApplicationLayout`'s
+*(LAND-01/02/03, all four CHAT tasks, and now both MEM tasks are Done —
+see above; the real Landing page ships with a working guest entry
+point, `/chat` is backed by a real, streaming Conversation Manager,
+guest chat sessions survive a refresh, and authenticated users have a
+basic AI-memory store. `ATLAS-P1-DASH-01` is now the *only* remaining
+Phase 1 task — both its dependencies (`CHAT-03`, `AUTH-07`) were
+already satisfied before this session. `AIQuickAccess` and
+`ConnectionStatus`/`RetryCard` (Shared, `COMPONENT_OWNERSHIP_MATRIX.md`
+§4) remain unclaimed — `CHAT-01` had a clear opportunity to claim
+either and deliberately did not (see that verification note above);
+neither `CHAT-03`/`04` nor `MEM-01`/`02` had reason to either (no UI
+component work in scope for any of them). Once `DASH-01` ships a real
+page under `/dashboard`, `AUTH-08`'s route guard — already live in
+`proxy.ts` — starts protecting it with no further wiring needed.
+`DASH-01` still fills `Navbar`'s and `ApplicationLayout`'s
 `userSlot`/`notificationsSlot` props with its own
 ProfileMenu/NotificationCenter — PROF-03 explicitly deferred
 ProfileMenu to DASH-01, see `COMPONENT_OWNERSHIP_MATRIX.md` §4.
-Completing any two of these three closes out Phase 1 per
-`MASTER_IMPLEMENTATION_ROADMAP.md`'s own module list.)*
+Completing it closes out Phase 1 in full per
+`MASTER_IMPLEMENTATION_ROADMAP.md`'s own module list and stated exit
+criteria.)*
 
 ---
 

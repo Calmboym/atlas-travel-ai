@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-09-05 (CHAT-03 through CHAT-04 session — Conversation Manager backend, AI provider abstraction, SSE streaming, frontend wiring)
+**Last updated:** 2026-09-06 (MEM-01 through MEM-02 session — guest session memory, basic-tier authenticated preference storage)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -37,24 +37,34 @@ record, not because it changes anything about what's actually built.
 `AUTH-08` (2026-08-24), `PROF-02`, `PROF-01`, `PROF-03`
 (2026-08-25, in that dependency order), `LAND-01`, `LAND-02`,
 `LAND-03` (2026-08-29, in that dependency order), `CHAT-01`, `CHAT-02`
-(2026-09-01), and `CHAT-03`, `CHAT-04` (2026-09-05, in that dependency
-order) are done — genuinely verified as done, not just re-asserted (see
-Verification Results below). **All eight AUTH tasks are complete and
-the AUTH module is closed. The PROF module (all three tasks) is
-complete and closed. The LAND module (all three tasks) is complete and
-closed. The CHAT module (all four Phase 1 tasks) is now also complete
-and closed — `/chat` calls a real, single-model Conversation Manager
-over a genuine SSE stream; nothing in the frontend is simulated
-anymore.**
+(2026-09-01), `CHAT-03`, `CHAT-04` (2026-09-05, in that dependency
+order), and `MEM-01`, `MEM-02` (2026-09-06, run in that order, though
+independently dependency-free of each other) are done — genuinely
+verified as done, not just re-asserted (see Verification Results
+below). **All eight AUTH tasks are complete and the AUTH module is
+closed. The PROF module (all three tasks) is complete and closed. The
+LAND module (all three tasks) is complete and closed. The CHAT module
+(all four Phase 1 tasks) is complete and closed. The MEM module (both
+Phase 1 tasks) is now also complete and closed — guest chat sessions
+survive a `/chat` refresh (sessionStorage, cleared on browser close),
+and authenticated users have a basic, generic AI-memory key/value store
+(`GET`/`PATCH /api/v1/memory/me`, `DELETE /api/v1/memory/me/{key}`)
+distinct from `TravelerProfile`'s structured fields. `ATLAS-P1-DASH-01`
+is now the only remaining Phase 1 task — its two declared dependencies
+(`CHAT-03`, `AUTH-07`) are both done, so it is fully unblocked and
+Phase 1's exit criteria are within a single task's reach.**
 
 ---
 
 **Current Phase:** Phase 1 — Core Platform MVP (underway)
 **Current Milestone:** M1
 **Current Module:** none active — `DESIGNSYS` (01–04), `AUTH` (01–08),
-`PROF` (01–03), and `LAND` (01–03) are complete and closed
+`PROF` (01–03), `LAND` (01–03), `CHAT` (01–04), and `MEM` (01–02) are
+complete and closed
 **Current WBS ID:** none active
 **Current Task:** none — awaiting next task authorization
+(`ATLAS-P1-DASH-01` is the sole remaining Phase 1 task; see "Next Task"
+in Notes for Next Session, below)
 
 **Governance Reconciliation (2026-08-16, this session):** not a WBS task —
 documentation/governance-only, per its own explicit scope. Audited the
@@ -719,42 +729,75 @@ prior sessions already established:**
 - **`lib/chat/simulate-assistant-reply.ts` deleted**, not left alongside the new real client — its own doc comment from `CHAT-01/02` explicitly named this exact swap as the moment it would be retired.
 - **Provider choice: OpenAI, matching already-existing precedent** (`openai` in `pyproject.toml`, `OPENAI_API_KEY` in `.env.example` since Phase 0) — not changed to any other provider despite this sandbox being unable to reach `api.openai.com` (confirmed: `403 x-deny-reason: host_not_allowed`) but able to reach `api.anthropic.com`. Swapping the documented provider choice would itself have been an unauthorized architecture change (`MASTER_RULES.md` §5); the network restriction is an environment limitation on *verification*, not a reason to change the decision. Verified instead via a dependency-injected fake provider (`tests/test_chat.py`) exercising the real request/response/error-mapping code, a live `curl` smoke test of the full pipeline up to the provider boundary, and a from-scratch SSE-parsing test (`tests/stream-assistant-reply.test.ts`) using a real `ReadableStream`. A live call to the real OpenAI API has not happened and cannot happen from this environment — that remains a project-owner action once a reachable environment and a real key are both available.
 
-## Relevant Documentation (for whichever next task is chosen)
+## Verification Results (2026-09-06, MEM-01 through MEM-02 — actually run against real infrastructure, not asserted)
+
+Closes the MEM module (both Phase 1 tasks).
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings — including `react-hooks/set-state-in-effect`, the exact rule this task's chosen design (`useSyncExternalStore`, not `useEffect`+`setState`) was specifically written to satisfy |
+| `vitest run` | ✅ 361/361 passing, 57/57 files (356 pre-existing + 5 new in `use-chat-session.test.ts`; `chat-page-content.test.tsx` unchanged in test count but fixed — see bug below) |
+| `next build` | ✅ succeeds |
+| Live standalone server (`node .next/standalone/server.js`) + `curl`, `/en/chat` and `/fa/chat` | ✅ `<html lang="en" dir="ltr">` / `<html lang="fa" dir="rtl">`, no crash, default welcome conversation renders server-side as expected |
+| Real Postgres 16 + Redis 7 (apt-installed, no Docker daemon here — same approach as every prior session) | ✅ provisioned fresh this session |
+| `alembic upgrade head` (existing 4 migrations, unchanged) then new `user_memory` migration | ✅ 5 migrations total; upgrade → downgrade → upgrade roundtrip on the new one specifically confirmed clean (no enum types involved, so none of `47035b9239e4`'s documented drop-CASCADE gotcha applies here) |
+| `mypy --strict` (`app/`) | ✅ 37 files, 0 issues |
+| `pytest` | ✅ 137/137 passing (123 pre-existing + 14 new: `tests/test_memory.py`) |
+| Live app import + OpenAPI schema | ✅ `/api/v1/memory/me` (GET, PATCH) and `/api/v1/memory/me/{key}` (DELETE) confirmed registered |
+
+**One real bug found and fixed — again only surfaced by actually
+running the existing suite, not by reasoning about the change in the
+abstract:** `MEM-01`'s guest-session state was moved from per-instance
+`useState` into `guest-session-store.ts`'s module-level cache (see
+scope decision below for why). That module-level state persisted
+across every `renderHook`/`render` call *within a single test file*
+unless explicitly reset — `use-chat-session.test.ts` got its own reset
+in the same commit that introduced the store, but
+`chat-page-content.test.tsx` (a second, pre-existing file that also
+renders the hook indirectly, via `ChatPageContent`) did not, and
+started failing: its later tests inherited an already-`"streaming"`
+conversation left over from an earlier test in the same file, so
+`sendMessage()`'s own `isStreaming` guard silently no-opted every
+subsequent call. Fixed by adding the identical
+`__resetGuestSessionStoreForTests()` call to that file's own
+`beforeEach` — the one file in this task's diff that isn't under
+`lib/chat/**`, and squarely a consequence of `MEM-01`'s own change
+rather than unrelated drive-by work, per `MASTER_RULES.md` §3.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **`MEM-01` uses `useSyncExternalStore`, not the more obvious `useState` + `useEffect` mount-hydration.** Flagged to the project owner during this session's pre-flight and confirmed before implementation. `components/layout/sidebar.tsx`'s own doc comment records that this exact codebase already tried the `useEffect`+`setState` version of "hydrate component state from browser storage after mount" once before (for the sidebar's collapsed/expanded flag) and found it violated `react-hooks/set-state-in-effect`, fixing it at the root by moving to `useSyncExternalStore` rather than suppressing the rule. `guest-session-store.ts` applies the same fix from the start rather than repeating that history. Unlike `theme-provider.tsx`/`sidebar.tsx` (a single toggled primitive, naturally stable across `Object.is` comparisons with no extra caching), this store's value is a growing, actively-mutated array — re-parsing `sessionStorage` on every `getSnapshot()` call would hand back a new object reference every time even when nothing changed, which is exactly the "getSnapshot should be cached" failure mode `useSyncExternalStore` guards against — so, unlike theme/sidebar, this store needed an actual module-level cached snapshot, mutated only through its own `updateGuestSession()`, not read fresh from storage on every render.
+- **`MEM-01` applies regardless of authentication status.** `useChatSession` has no concept of authentication anywhere in its existing implementation, and `MEM-01`'s only declared `WORK_BREAKDOWN_STRUCTURE.md` dependency is `CHAT-02` — adding an auth check would have been scope expansion into `AUTH`/`MEM-02` territory it doesn't need. `17_AI_EXPERIENCE.md` §Memory's "Authenticated users: Persistent memory" promise is **not** what this delivers for logged-in users — sessionStorage still clears on tab close either way — that remains explicitly Phase 4's Long-term Memory Service, unbuilt, per `MASTER_IMPLEMENTATION_ROADMAP.md`.
+- **`MEM-02` does not duplicate `TravelerProfile`.** Checked (per this session's own pre-flight, and per the previous session's explicit flag in this document's "Relevant Documentation" section — see that section's now-updated `MEM-02` note below) every field `17_AI_EXPERIENCE.md` §Memory and `PRD.md` §7.13 name against `app/models/traveler_profile.py`: travel style, budget, accommodation, transportation, food, and languages are already fully owned by `PROF-02`. What's left — and all `MEM-02` actually builds — is a generic, schema-less `user_memory` JSONB key/value store: the Phase-1 "basic tier" slice of `ARCHITECTURE.md` §7's "Memory Service" module (explicitly distinct from "User Profile Service"), intended as the storage surface a future Phase 2+ Memory/Traveler-Profile Agent will read and write into, not something CHAT-03/04's stateless single-model chat consults today. Confirmed via `COMPONENT_OWNERSHIP_MATRIX.md` that no UI task currently owns a consumer for this (no Settings/AI-Preferences page exists yet) — `MEM-02` is backend-only, by design, for Phase 1.
+- **Favorite destinations and conversation/itinerary memory are still explicitly not built.** Both are named in `17_AI_EXPERIENCE.md` §Memory; the former is already tracked as its own "TBD — Phase 2+" row in `COMPONENT_OWNERSHIP_MATRIX.md` §4 (no destination entity exists yet to reference), the latter is `MEM-02`'s own acceptance criterion's explicit exclusion ("does NOT implement long-term trip memory" — Phase 4). Neither is touched here.
+- **DELETE is idempotent.** Deleting a key that was never set (or already removed) returns `200` with the unchanged store, not a `404` — matching `PROF-02`'s own established "no-op is not an error" convention for its empty-body `PATCH` (`test_patch_empty_body_is_a_no_op`), applied here to `test_delete_nonexistent_key_is_idempotent`.
+- **No dedicated rate limiter on the three new endpoints** — same reasoning `profile.py`'s own docstring already gives for its endpoints: `MASTER_RULES.md` §10 / `GUIDELINES.md` §11 scope mandatory rate limiting to authentication, AI, and expensive endpoints; all three memory endpoints require an already-authenticated session and are none of those.
+
 
 The AUTH module (all eight tasks), the PROF module (all three tasks),
-the LAND module (all three tasks), and now the CHAT module (all four
-Phase 1 tasks) are closed — nothing further to read there unless
-revisiting one of them. All three remaining Phase 1 candidates are now
-unblocked (`CHAT-02`, `CHAT-03`, and `AUTH-07` — their only
-dependencies — are all done):
+the LAND module (all three tasks), the CHAT module (all four Phase 1
+tasks), and now the MEM module (both Phase 1 tasks) are closed —
+nothing further to read there unless revisiting one of them.
+`ATLAS-P1-DASH-01` is the only remaining Phase 1 task; both its
+declared dependencies (`CHAT-03`, `AUTH-07`) are done, so it is fully
+unblocked:
 
-`MEM-01`: `17_AI_EXPERIENCE.md` §Memory ("Guest users: Session memory
-until browser close"), `lib/chat/use-chat-session.ts`'s own doc
-comment (states plainly what is and isn't its job — it currently holds
-no persistence at all, by design; this task is what's expected to wrap
-or extend it). Should not need to touch any `components/chat/*` file,
-since they only ever see plain data/callbacks from the hook.
-`MEM-02`: `17_AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 — consumes
-`get_current_user`; note `TravelerProfile` (PROF-02) already covers
-durable *preference* fields — `MEM-02`'s own "basic authenticated
-preference storage" scope should be checked against that table first
-so the two don't overlap.
 `DASH-01`: `18_DASHBOARD_EXPERIENCE.md` (full document),
-`26_APPLICATION_LAYOUT_GUIDE.md` §Dashboard — now fully unblocked
-(both `CHAT-03` and `AUTH-07` are done). Check
+`26_APPLICATION_LAYOUT_GUIDE.md` §Dashboard. Check
 `COMPONENT_OWNERSHIP_MATRIX.md` §4 first — `ProfileMenu` and
 `NotificationCenter` are both explicitly assigned to `DASH-01` now that
 PROF-03 declined the former (see that document's own note on why).
+`QuickActions` and `ConnectionStatus`/`RetryCard` are also its Shared
+Component rows to create, per that same matrix.
 
-Recommended: `MEM-01` first (smallest, Complexity S, and the most
-natural continuation of this session's own work — see this session's
-own Verification Results below for exactly what `use-chat-session.ts`
-looks like now). `MEM-02` and `DASH-01` do not depend on `MEM-01` or on
-each other and can run in separate, parallel sessions per
-`CONVERSATION_STRATEGY.md` §8 — their `Allowed Files to Modify` lists
-don't overlap with `MEM-01`'s (`lib/chat/**`) or with each other's
-(`MEM-02`: backend preference storage; `DASH-01`: new dashboard-only
-frontend files).
+Recommended: `ATLAS-P1-DASH-01` — the sole remaining Phase 1 task, and
+completing it satisfies `MASTER_IMPLEMENTATION_ROADMAP.md`'s Phase 1
+exit criteria in full (Flow 03 and Flow 06 from `USER_FLOWS.md`
+end-to-end, per `WORK_BREAKDOWN_STRUCTURE.md`'s own stated Phase 1 exit
+criteria). No parallel-session opportunity remains within Phase 1 —
+Phase 2 (AI Agent System) is the next wave after this, per
+`MASTER_IMPLEMENTATION_ROADMAP.md`, and is not yet elaborated to
+Task level (rolling-wave planning).
 
 ## Relevant Files
 
@@ -786,8 +829,7 @@ frontend files).
 `frontend/components/layout/footer.tsx`,
 `frontend/tests/mocks/next-intl-server.ts`.
 
-**CHAT infrastructure — module now fully closed (2026-09-05). The
-pattern any future page/task that consumes this hook should follow:**
+**CHAT infrastructure — module fully closed (2026-09-05):**
 `ai/{config,providers/**,prompts/**,agents/conversation_manager}.py`
 (CHAT-03 — the provider-independent AI layer; `ai/schemas/`,
 `ai/evaluations/` remain empty scaffold, Phase 2/5 scope),
@@ -796,16 +838,29 @@ pattern any future page/task that consumes this hook should follow:**
 `backend/app/api/v1/chat.py` (CHAT-03 non-streaming route + CHAT-04
 streaming route), `frontend/lib/chat/{types,use-chat-session,
 stream-assistant-reply}.ts` (CHAT-02/CHAT-04 — `simulate-assistant-reply.ts`
-is retired/deleted; read `use-chat-session.ts`'s own doc comment before
-treating anything here as available for persistence — it explicitly
-isn't yet, that's `MEM-01`), `frontend/components/chat/
-{message-bubble,typing-indicator}.tsx` (CHAT-02),
-`frontend/app/[locale]/(app)/chat/page.tsx`,
+is retired/deleted; `use-chat-session.ts` is now MEM-01-backed — see
+the MEM infrastructure block immediately below for what changed),
+`frontend/components/chat/{message-bubble,typing-indicator}.tsx`
+(CHAT-02), `frontend/app/[locale]/(app)/chat/page.tsx`,
 `frontend/components/chat/{chat-page-content,conversation-sidebar,
 chat-composer,conversation-panel}.tsx` (CHAT-01), `frontend/messages/
 {en,fa,de}.json` (`Chat` namespace, real translations, not
 placeholders). Full list with New/Modified split: "Files Modified This
 Session (2026-09-05, CHAT-03 through CHAT-04)" below.
+
+**MEM infrastructure (new, 2026-09-06):**
+`frontend/lib/chat/guest-session-store.ts` (new — the
+`useSyncExternalStore`-backed vanilla store `use-chat-session.ts` now
+reads/writes through instead of plain `useState`; exports
+`__resetGuestSessionStoreForTests()`, required in the `beforeEach` of
+any test file that renders `useChatSession`/`ChatPageContent`, or state
+leaks across tests within that file — see this session's own
+Verification Results above for exactly how that surfaced),
+`backend/app/models/user_memory.py`, `backend/app/schemas/memory.py`,
+`backend/app/services/memory_service.py`, `backend/app/api/v1/memory.py`,
+`backend/alembic/versions/0aba7d0ff199_create_user_memory_table.py`.
+Full list with New/Modified split: "Files Modified This Session
+(2026-09-06, MEM-01 through MEM-02)" below.
 
 ## Findings Requiring Project Owner Decision
 
@@ -1426,6 +1481,71 @@ UI component (Foundation, Shared, or Feature) was created or modified
 this session (`lib/chat/*` is hook/data-layer code, not a component
 per that document's own §2 definitions).
 
+## Files Modified This Session (2026-09-06, MEM-01 through MEM-02)
+
+**New (`frontend/lib/chat/` — MEM-01):** `guest-session-store.ts` (the
+`useSyncExternalStore`-backed vanilla store; see this session's
+Verification Results above for the full design rationale).
+
+**Modified (`frontend/lib/chat/` — MEM-01):** `use-chat-session.ts`
+(`conversations`/`activeConversationId` now read via
+`useSyncExternalStore` from `guest-session-store.ts` instead of plain
+`useState`; `patchConversation`/`startNewConversation`/
+`selectConversation` now call `updateGuestSession()` instead of local
+setters — every other function's logic is byte-for-byte unchanged, and
+the hook's returned shape/`UseChatSessionReturn` type is unchanged, so
+no consumer needed edits).
+
+**New (`backend/app/` — MEM-02):** `models/user_memory.py`
+(`UserMemory` — generic per-user JSONB store; see its own docstring for
+why this isn't more fields on `TravelerProfile`), `schemas/memory.py`
+(`MemoryResponse`, `MemoryUpdate`), `services/memory_service.py`
+(`get_or_create_memory`/`update_memory`/`delete_memory_key`),
+`api/v1/memory.py` (`GET`/`PATCH /memory/me`,
+`DELETE /memory/me/{key}`).
+
+**New (migration):**
+`backend/alembic/versions/0aba7d0ff199_create_user_memory_table.py`
+(head is now `0aba7d0ff199`, was `47035b9239e4`; upgrade/downgrade/
+upgrade roundtrip-verified against a real local Postgres — see
+Verification Results above).
+
+**Modified (`backend/app/`):** `api/v1/router.py` (wired
+`memory_router`).
+
+**Modified (backend infra):** `alembic/env.py` (added `user_memory` to
+the model-import block that registers tables on `Base.metadata` — the
+same registration every prior model-adding task has needed),
+`backend/tests/conftest.py` (added `user_memory` to the per-test
+`TRUNCATE` list, matching that list's own stated convention of naming
+every FK-dependent table explicitly even though `CASCADE` on `users`
+would already catch it).
+
+**New (tests):** `backend/tests/test_memory.py` (14 cases: auth gate,
+get-or-create, merge semantics, overwrite, nested/list values,
+empty/missing-body no-ops, single-key delete, idempotent delete on a
+missing key, per-user isolation).
+
+**Modified (`frontend/tests/`):** `use-chat-session.test.ts` (5 new
+persistence-specific cases, plus a `beforeEach` reset of the new
+store), `chat-page-content.test.tsx` (no new cases — `beforeEach` reset
+added to fix the real cross-test-pollution bug this session found; see
+Verification Results above).
+
+**`.ai/` governance files also updated this session:** `PROJECT_STATE.md`
+(this file), `TASK_BOARD.md` (`MEM-01`/`MEM-02` moved to Done, MEM
+module marked closed, Todo section's own note updated for the
+newly-unblocked set — now just `DASH-01`). `WORK_BREAKDOWN_STRUCTURE.md`
+not touched — neither task's declared dependencies, priority, or
+complexity changed from what was already defined; the MEM-02 scope
+decision (generic JSONB store vs. fixed fields) is a design choice made
+*within* the already-generic "basic tier" wording, not a change to the
+WBS entry itself. `COMPONENT_OWNERSHIP_MATRIX.md` not touched — no UI
+component (Foundation, Shared, or Feature) was created or modified this
+session; `guest-session-store.ts` is hook/data-layer code, and MEM-02
+is backend-only with no UI task yet to consume it (confirmed via that
+matrix's own §4 during this session's pre-flight).
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -1624,6 +1744,36 @@ single choice already made on the project owner's behalf. Completing
 any two of these three closes out every module `MASTER_IMPLEMENTATION_
 ROADMAP.md`'s Phase 1 lists except whichever one is left.
 
+**Update, 2026-09-06: both `MEM-01` and `MEM-02` happened this
+session** — see the 2026-09-06 Verification Results and Files Modified
+sections above for the full narrative, including the one real
+cross-test-pollution bug this session found and fixed, and the
+`MEM-02`-vs-`TravelerProfile` overlap check the prior session flagged
+(resolved: no overlap — `MEM-02` is a generic key/value store, not a
+restatement of `PROF-02`'s structured fields). If a future session
+touches `frontend/lib/chat/use-chat-session.ts` again: it no longer
+holds `conversations`/`activeConversationId` as plain `useState` — read
+`guest-session-store.ts`'s own doc comment first, and remember every
+test file that renders this hook (directly or via `ChatPageContent`)
+needs `__resetGuestSessionStoreForTests()` in its own `beforeEach`, or
+state leaks across that file's own test cases exactly as it did here.
+If a future session builds a Settings/AI-Preferences page or a Phase
+2+ agent that needs to read/write arbitrary AI-derived preferences:
+`GET`/`PATCH /api/v1/memory/me` and `DELETE /api/v1/memory/me/{key}`
+already exist and are tested — no need to invent a new storage
+mechanism for that.
+
+**Recommended next task (current): `ATLAS-P1-DASH-01`.** It is now the
+*only* remaining Phase 1 task — `DESIGNSYS`, `AUTH`, `PROF`, `LAND`,
+`CHAT`, and `MEM` are all complete and closed, and both of `DASH-01`'s
+declared dependencies (`CHAT-03`, `AUTH-07`) were already done before
+this session. Completing it satisfies `MASTER_IMPLEMENTATION_
+ROADMAP.md`'s stated Phase 1 exit criteria in full. See this document's
+"Relevant Documentation" section above for its exact doc/component
+list — `ProfileMenu`, `NotificationCenter`, `QuickActions`, and
+`ConnectionStatus`/`RetryCard` are all Shared Components this task is
+expected to create, per `COMPONENT_OWNERSHIP_MATRIX.md` §4.
+
 ---
 
 **LOCK STATUS:** LIVING — baseline approved 2026-07-22, updated
@@ -1640,5 +1790,7 @@ module is closed; the real Landing page ships for the first time),
 frontend half is closed; `/chat` is a real, guest-accessible page for
 the first time), 2026-09-05 (CHAT-03 through CHAT-04 complete — the
 CHAT module is fully closed; `/chat` is backed by a real, streaming
-Conversation Manager for the first time).
+Conversation Manager for the first time), 2026-09-06 (MEM-01 through
+MEM-02 complete — the MEM module is closed; `ATLAS-P1-DASH-01` is now
+the sole remaining Phase 1 task).
 Future changes only via `MASTER_RULES.md` §21.
