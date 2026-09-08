@@ -29,7 +29,7 @@ record, not because it changes anything about what's actually built.
 
 ## Bootstrap Phase: ✅ COMPLETE (2026-07-22). Unchanged.
 
-## Implementation Status: **AUTHORIZED — Phase 1 underway**
+## Implementation Status: **Phase 1 — Core Platform MVP — ✅ COMPLETE**
 
 `AUTH-01` (2026-07-24), `DESIGNSYS-01` (2026-07-29), `DESIGNSYS-02`
 (2026-07-29), `DESIGNSYS-03` (2026-08-15), `DESIGNSYS-04` (2026-08-16),
@@ -38,33 +38,32 @@ record, not because it changes anything about what's actually built.
 (2026-08-25, in that dependency order), `LAND-01`, `LAND-02`,
 `LAND-03` (2026-08-29, in that dependency order), `CHAT-01`, `CHAT-02`
 (2026-09-01), `CHAT-03`, `CHAT-04` (2026-09-05, in that dependency
-order), and `MEM-01`, `MEM-02` (2026-09-06, run in that order, though
-independently dependency-free of each other) are done — genuinely
-verified as done, not just re-asserted (see Verification Results
-below). **All eight AUTH tasks are complete and the AUTH module is
-closed. The PROF module (all three tasks) is complete and closed. The
-LAND module (all three tasks) is complete and closed. The CHAT module
-(all four Phase 1 tasks) is complete and closed. The MEM module (both
-Phase 1 tasks) is now also complete and closed — guest chat sessions
-survive a `/chat` refresh (sessionStorage, cleared on browser close),
-and authenticated users have a basic, generic AI-memory key/value store
-(`GET`/`PATCH /api/v1/memory/me`, `DELETE /api/v1/memory/me/{key}`)
-distinct from `TravelerProfile`'s structured fields. `ATLAS-P1-DASH-01`
-is now the only remaining Phase 1 task — its two declared dependencies
-(`CHAT-03`, `AUTH-07`) are both done, so it is fully unblocked and
-Phase 1's exit criteria are within a single task's reach.**
+order), `MEM-01`, `MEM-02` (2026-09-06, run in that order, though
+independently dependency-free of each other), and now `ATLAS-P1-DASH-01`
+(2026-09-08) are done — genuinely verified as done, not just re-asserted
+(see Verification Results below). **All eight AUTH tasks, all three
+PROF tasks, all three LAND tasks, all four CHAT tasks, both MEM tasks,
+and now DASH-01 are complete. Every module in Phase 1 is closed.
+`DASH-01` was the last remaining Phase 1 task: `/dashboard` now exists
+(opens to the last guest-session conversation, or an honest Welcome
+state — no fabricated trip data), and `Navbar`/`ApplicationLayout`'s
+`userSlot`/`notificationsSlot` are filled with real `ProfileMenu`/
+`NotificationCenter` for the first time across every `(app)` page.
+Phase 1's exit criteria (`WORK_BREAKDOWN_STRUCTURE.md`) are met in
+full.**
 
 ---
 
-**Current Phase:** Phase 1 — Core Platform MVP (underway)
-**Current Milestone:** M1
+**Current Phase:** Phase 1 — Core Platform MVP — **✅ complete (2026-09-08)**
+**Current Milestone:** M1 — **met**
 **Current Module:** none active — `DESIGNSYS` (01–04), `AUTH` (01–08),
-`PROF` (01–03), `LAND` (01–03), `CHAT` (01–04), and `MEM` (01–02) are
-complete and closed
+`PROF` (01–03), `LAND` (01–03), `CHAT` (01–04), `MEM` (01–02), and `DASH`
+(01) are all complete and closed
 **Current WBS ID:** none active
-**Current Task:** none — awaiting next task authorization
-(`ATLAS-P1-DASH-01` is the sole remaining Phase 1 task; see "Next Task"
-in Notes for Next Session, below)
+**Current Task:** none — Phase 1 is fully complete; Phase 2 (AI Agent
+System) is the next wave and is not yet elaborated to Task level
+(rolling-wave planning, per `WORK_BREAKDOWN_STRUCTURE.md`). See "Next
+Task" in Notes for Next Session, below.
 
 **Governance Reconciliation (2026-08-16, this session):** not a WBS task —
 documentation/governance-only, per its own explicit scope. Audited the
@@ -798,6 +797,69 @@ criteria). No parallel-session opportunity remains within Phase 1 —
 Phase 2 (AI Agent System) is the next wave after this, per
 `MASTER_IMPLEMENTATION_ROADMAP.md`, and is not yet elaborated to
 Task level (rolling-wave planning).
+
+## Verification Results (2026-09-08, DASH-01 — actually run against real infrastructure, not asserted)
+
+Closes the DASH module — the last remaining Phase 1 task.
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ clean |
+| `eslint .` | ✅ 0 errors, 0 warnings |
+| `vitest run` | ✅ 385/385 passing, 63/63 files (361 pre-existing + 24 new across 7 new test files) |
+| `next build` | ✅ succeeds, `/[locale]/dashboard` listed as a real route |
+| Live standalone server (`node .next/standalone/server.js`) + `curl`, unauthenticated | ✅ `GET /en/dashboard` → `307` → `/en/login?redirect=%2Fen%2Fdashboard`; `GET /fa/dashboard` → `307` → `/fa/login?redirect=%2Ffa%2Fdashboard` — `AUTH-08`'s route guard protecting a real page for the first time since it shipped |
+| Live standalone server, authenticated (dummy `atlas_access_token` cookie set directly — no live backend in this session to issue a real one; `proxy.ts`'s edge guard only checks cookie *presence*, exactly as its own docstring says) | ✅ `GET /en/dashboard` → `200`, `<html lang="en" dir="ltr">`, `<title>Dashboard — Atlas</title>`; `GET /fa/dashboard` → `200`, `<html lang="fa" dir="rtl">`, `<title>داشبورد — اطلس</title>` (real translation, not placeholder); `GET /de/dashboard` → `200`, `<html lang="de" dir="ltr">`, `<title>Dashboard — Atlas</title>`; server log clean, no errors on any request |
+| `GET /en/chat`, `/en/profile` (regression check on the modified shared `(app)/layout.tsx`) | ✅ both still `200`/working as before |
+
+**No bugs found in already-shipped code this session** — unlike several
+prior sessions, nothing pre-existing needed fixing. Two design issues
+were caught and corrected *during* this session's own development,
+before ever being committed to the test suite (documented here for
+provenance, per this project's own "reconcile, don't erase" norm, not
+because they ever shipped broken):
+1. `useLastConversationPreview`'s first draft called
+   `getGuestSessionSnapshot()` — `guest-session-store.ts`'s own cached,
+   default-populating reader `useChatSession` also uses — with a
+   *different* default-session shape. Since `cachedSession` is a
+   module-level singleton shared by every caller in the tab, whichever
+   of this hook or `useChatSession` ran first would silently seed the
+   other with the wrong default. Fixed before any test was written: the
+   hook now uses the newly-added read-only `peekGuestSession()`
+   (bypasses that cache entirely) plus its own independent,
+   content-keyed cache — see that file's own docstring for the full
+   reasoning.
+2. The same hook's first pass took the *literal last* message in a
+   conversation as the "preview" — but `sendMessage()` immediately
+   appends an empty, still-streaming assistant placeholder, so a
+   conversation with real content could still preview as blank. Caught
+   by this task's own test (`useLastConversationPreview`'s "updates
+   once a real conversation is started elsewhere via useChatSession"
+   case), not by inspection — fixed by searching backward for the last
+   message with non-empty content.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **Travel Summary Hero, Travel Timeline, and every trip-data-backed widget are explicitly not built.** `18_DASHBOARD_EXPERIENCE.md` itself scopes the Hero to "Always displayed when an active trip exists" — no Trip Service exists until Phase 2+ (`DEPENDENCY_GRAPH.md` §4/§5). Building any of them now would mean inventing trip/budget/weather data, which `BRAND_GUIDELINES.md` §13 explicitly forbids ("Never fabricates travel information"). What ships instead is the part of the same document that *is* in Phase 1 scope: §Default Landing (welcome vs. continue-conversation) and §Empty Dashboard (suggested prompts, capability overview, honest empty sections for Trips/Recommendations).
+- **"Last conversation" comes from `MEM-01`'s guest-session-store, not from any backend record.** `CHAT-03`/`04`'s Conversation Manager is deliberately stateless (no persistence layer for authenticated users either), and `MEM-01`'s own scope decision was that its sessionStorage-backed store "applies regardless of authentication status" — so it's genuinely the only persisted conversation history available in Phase 1, for guest and authenticated users alike. A new read-only `peekGuestSession()` was added to `guest-session-store.ts` (additive; no existing exported behavior changed) rather than duplicating its `readFromStorage`/validation logic in a second module.
+- **`ProfileMenu` and `DashboardPageContent` fetch the same two endpoints independently — flagged, not silently duplicated or silently fixed with a new dependency.** Navbar (where `ProfileMenu` lives) is a layout-level sibling of page content, not a parent with shared state, and no query-caching layer exists yet. `lib/api/client.ts`'s own comment (written during `AUTH-05`) already named this exact moment: "TanStack Query is a reasonable addition whenever a future task actually needs query caching, e.g. Dashboard data fetching." `ARCHITECTURE.md` §4 already approves TanStack Query in principle, but actually adding a new dependency, a `QueryClientProvider`, and migrating both call sites is more than one Complexity-M task's scope per `MASTER_RULES.md` §5 — recorded here as the natural next infrastructure task rather than added unilaterally or ignored.
+- **`logoutRequest()` added to `lib/api/auth.ts`.** The backend's `POST /auth/logout` has existed since `AUTH-07`, but no frontend wrapper or UI trigger existed anywhere in the app until `ProfileMenu` needed one (`APPLICATION_LAYOUT_GUIDE.md` §User Menu's own "...Logout" line).
+- **`DashboardPageContent` redirects to `/login?redirect=/dashboard` on a 401.** Fulfills `proxy.ts`'s own documented, previously-unfulfilled expectation ("a page that receives a 401... is expected to redirect to /login itself once such a page exists") — Dashboard is the first authenticated page in the app with a real client-side data fetch, so this is the first time that expectation could actually be met.
+- **`ProfileMenu`'s menu is shorter than `APPLICATION_LAYOUT_GUIDE.md` §User Menu's full list.** Only Dashboard, Profile, Settings, and Sign out are linked — My Trips, Saved, and Help have no real page yet in Phase 1 (same reasoning `PROF-03` already gave for deferring `ProfileMenu` entirely). A dead link would be worse than a shorter, honest menu.
+- **`AIQuickAccess` remains unclaimed.** Checked deliberately (per `COMPONENT_OWNERSHIP_MATRIX.md` §4's note naming `DASH-01` as the likely next candidate) — found no documented requirement for a *third* global header slot beyond `userSlot`/`notificationsSlot` plus Dashboard's own in-page `QuickActions`; every AI entry point `INFORMATION_ARCHITECTURE.md` §AI Entry Points lists for this phase (Dashboard, Chat) is already reachable. Third deliberate decline on record for this component (`LAND-01`, `CHAT-01`, now `DASH-01`) — still genuinely open for whichever future task has a concrete cross-page need for it.
+
+**Phase 1 — Core Platform MVP is now fully complete.** Every module
+(`DESIGNSYS`, `AUTH`, `PROF`, `LAND`, `CHAT`, `MEM`, `DASH`) is done and
+closed. `MASTER_IMPLEMENTATION_ROADMAP.md`'s Phase 1 exit criteria are
+met: Flow 03 (Register) and Flow 06 (Continue Chat) from
+`USER_FLOWS.md` both complete end-to-end, with zero dead ends per Flow
+20/21. Phase 2 — AI Agent System is the next wave and is **not yet
+elaborated to Task level** (rolling-wave planning) — the natural next
+step is a planning/WBS-elaboration pass for Phase 2's modules
+(`ORCH`, `AGENTSVC`, `CORE-AGENTS` per `CONVERSATION_STRATEGY.md` §2),
+not a specific implementation task in itself. Two real, flagged
+architectural opportunities are now ready for that planning pass to
+pick up: introducing TanStack Query (see scope decision above), and
+deciding `AIQuickAccess`'s eventual owner.
 
 ## Relevant Files
 
@@ -1546,6 +1608,43 @@ session; `guest-session-store.ts` is hook/data-layer code, and MEM-02
 is backend-only with no UI task yet to consume it (confirmed via that
 matrix's own §4 during this session's pre-flight).
 
+## Files Modified This Session (2026-09-08, DASH-01)
+
+**Created — frontend, application code:**
+- `frontend/lib/dashboard/use-last-conversation-preview.ts` — read-only, live-reactive hook exposing whether a real guest conversation already exists, for the Dashboard hero's welcome/continue-conversation branching
+- `frontend/components/shared/quick-actions.tsx` — Shared `QuickActions` (data-driven action-link row)
+- `frontend/components/shared/connection-status.tsx` — Shared `ConnectionStatus` indicator
+- `frontend/components/shared/retry-card.tsx` — Shared `RetryCard` (card-level error + retry)
+- `frontend/components/layout/profile-menu.tsx` — Shared `ProfileMenu`, fills Navbar's `userSlot`
+- `frontend/components/layout/notification-center.tsx` — Shared `NotificationCenter`, fills Navbar's `notificationsSlot`
+- `frontend/components/dashboard/dashboard-hero.tsx` — welcome/continue-conversation greeting Feature Component
+- `frontend/components/dashboard/dashboard-suggested-prompts.tsx` — starter-prompt chips Feature Component
+- `frontend/components/dashboard/dashboard-capabilities.tsx` — "What Atlas can help with" grid Feature Component
+- `frontend/components/dashboard/dashboard-empty-section.tsx` — reusable empty-section wrapper (Trips/Recommendations)
+- `frontend/components/dashboard/dashboard-page-content.tsx` — page orchestrator: data fetching, loading/error states, section composition
+- `frontend/app/[locale]/(app)/dashboard/page.tsx` — the `/dashboard` route itself
+
+**Created — tests (24 new tests, 7 new files):**
+- `frontend/tests/quick-actions.test.tsx`
+- `frontend/tests/connection-status.test.tsx`
+- `frontend/tests/retry-card.test.tsx`
+- `frontend/tests/notification-center.test.tsx`
+- `frontend/tests/profile-menu.test.tsx` (fetch success/failure, all three nav links, sign-out success and sign-out-request-failure-still-navigates)
+- `frontend/tests/use-last-conversation-preview.test.ts` (no conversation, real conversation, zero-message conversation doesn't count, corrupted JSON, live reactivity via `useChatSession`, long-message truncation)
+- `frontend/tests/dashboard-page-content.test.tsx` (loading → welcome, suggested prompts + capabilities shown, honest empty sections, continue-conversation state suppresses suggested prompts, RetryCard → successful retry, 401 → redirect)
+
+**Modified:**
+- `frontend/lib/chat/guest-session-store.ts` — additive `peekGuestSession()` export only (read-only, bypasses the shared `cachedSession` singleton deliberately — see that function's own docstring); no existing export's behavior changed
+- `frontend/lib/api/auth.ts` — additive `logoutRequest()` export only; `getMeRequest`/other exports unchanged
+- `frontend/app/[locale]/(app)/layout.tsx` — `userSlot`/`notificationsSlot` now render `<ProfileMenu />`/`<NotificationCenter />` instead of being left unset (this is the one shared file every `(app)` page — Chat, Profile, and now Dashboard — inherits automatically)
+- `frontend/messages/en.json`, `fa.json`, `de.json` — new `Shared` (profileMenu, notificationCenter) and `Dashboard` (page, hero, quickActions, suggestedPrompts, capabilities, trips, recommendations, loadError) namespaces; real Persian and German translations throughout, no placeholder English left in either non-English file for this task's own keys
+
+**Governance files updated (this task):**
+- `.ai/PROJECT_STATE.md` — this file: Implementation Status, Current Phase/Task pointers, new Verification Results section, this Files Modified section, Notes for Next Session
+- `.ai/TASK_BOARD.md` — `DASH-01` moved from Todo to Done with full verification note; Todo table now empty pending Phase 2 elaboration
+- `.ai/WORK_BREAKDOWN_STRUCTURE.md` — `DASH-01` marked Done with status note; Phase 1 header marked ✅ DONE; Phase 1 exit criteria marked Met
+- `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — §4 gains five newly-Built rows (`NotificationCenter`, `ProfileMenu`, `QuickActions`, `ConnectionStatus`/`RetryCard`); `AIQuickAccess` annotated with this task's own deliberate non-claim; §5 `Dashboard-specific` row moved from planned to delivered; header provenance line updated
+
 ## Notes for Next Session
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
@@ -1774,6 +1873,50 @@ list — `ProfileMenu`, `NotificationCenter`, `QuickActions`, and
 `ConnectionStatus`/`RetryCard` are all Shared Components this task is
 expected to create, per `COMPONENT_OWNERSHIP_MATRIX.md` §4.
 
+**Update, 2026-09-08: `DASH-01` happened this session — Phase 1 is now
+fully complete.** See the 2026-09-08 Verification Results and Files
+Modified sections above for the full narrative, including the two
+design issues this session's own hook caught and fixed before they
+ever shipped (shared-cache corruption risk; empty-streaming-placeholder
+previews) and the five scope decisions recorded there. If a future
+session touches `frontend/lib/chat/guest-session-store.ts` again: it
+now has a second read path, `peekGuestSession()`, deliberately separate
+from `getGuestSessionSnapshot`'s cached/default-populating one — read
+that function's own docstring before adding a third. If a future
+session touches `frontend/app/[locale]/(app)/layout.tsx` again: it now
+renders real `ProfileMenu`/`NotificationCenter`, not empty slots — every
+`(app)` page (Chat, Profile, Dashboard, and any future Trips/Settings
+page) inherits them automatically; there is no per-page wiring left to
+do. If a future session builds a Settings page: `ProfileMenu` already
+links to `/settings` — that link is currently the only thing pointing
+there, so the page's own route will resolve immediately once it exists,
+no further discovery needed.
+
+Two real, flagged architectural opportunities are ready for whoever
+scopes Phase 2 (or an infrastructure-focused session before it) to pick
+up, neither blocking further Phase 1 work since none remains: (1)
+introducing **TanStack Query** — `ProfileMenu` and `DashboardPageContent`
+currently fetch the same `GET /auth/me` + `GET /profile/me` pair
+independently, with no shared cache; `ARCHITECTURE.md` §4 already
+approves the library, `lib/api/client.ts`'s own comment already
+anticipated this exact moment. (2) deciding **`AIQuickAccess`'s**
+eventual owner — three tasks (`LAND-01`, `CHAT-01`, `DASH-01`) have now
+each independently found no concrete requirement for it and declined;
+it remains a real, documented Shared component with no current
+consumer, not a dead entry to prune.
+
+**Recommended next step (current): elaborate Phase 2 — AI Agent System
+to Task level.** Every Phase 1 module is done; `WORK_BREAKDOWN_
+STRUCTURE.md`'s Phase 2 section currently exists only at Module/Feature
+level (`ORCH`, `AGENTSVC`, `CORE-AGENTS` per `CONVERSATION_STRATEGY.md`
+§2's own module-code list), consistent with the project's stated
+rolling-wave planning approach — Phase 2 was deliberately left
+unelaborated until Phase 1 actually finished. This is a planning/WBS
+session, not an implementation task with its own Acceptance Criteria
+yet; per `DEVELOPMENT_EXECUTION_PLAN.md` §3, "starting a new Phase"
+requires the project owner's explicit sign-off before any Phase 2 Task
+is defined or implemented.
+
 ---
 
 **LOCK STATUS:** LIVING — baseline approved 2026-07-22, updated
@@ -1792,5 +1935,9 @@ the first time), 2026-09-05 (CHAT-03 through CHAT-04 complete — the
 CHAT module is fully closed; `/chat` is backed by a real, streaming
 Conversation Manager for the first time), 2026-09-06 (MEM-01 through
 MEM-02 complete — the MEM module is closed; `ATLAS-P1-DASH-01` is now
-the sole remaining Phase 1 task).
+the sole remaining Phase 1 task), 2026-09-08 (DASH-01 complete — the
+DASH module is closed and **Phase 1 — Core Platform MVP is fully
+complete**; `/dashboard` is real, `Navbar`'s `userSlot`/
+`notificationsSlot` are filled for the first time, and Phase 2's Task-
+level elaboration is the recommended next step).
 Future changes only via `MASTER_RULES.md` §21.

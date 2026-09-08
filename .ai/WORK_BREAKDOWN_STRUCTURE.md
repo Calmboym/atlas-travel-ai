@@ -34,7 +34,7 @@ Full itemization: `TASK_BOARD.md` → Done column.
 
 ---
 
-## PHASE 1 — Core Platform MVP — ▶ ACTIVE (Milestone M1)
+## PHASE 1 — Core Platform MVP — ✅ DONE (2026-09-08) (Milestone M1)
 
 **Milestone M1 objective:** a user can register, log in, converse with the AI assistant with a real streamed response, and maintain a basic profile. Guest mode works with zero registration friction.
 
@@ -185,8 +185,9 @@ built, and verified work rather than a pending proposal.
     - Dependencies: CHAT-03, AUTH-07
     - Priority: Medium | Complexity: M | Context: M
     - Acceptance: never an empty page, per 18 §Default Landing
+    - Status: **Done** (2026-09-08) — implements `18_DASHBOARD_EXPERIENCE.md` §Default Landing/§Empty Dashboard only; Travel Summary Hero, Travel Timeline, and every trip-data-backed widget are explicitly out of scope until Trip Service exists (Phase 2+, `DEPENDENCY_GRAPH.md` §4/§5) — building them now would mean fabricating trip data. "Last conversation" is read from `MEM-01`'s guest-session-store, since `CHAT-03`/`04`'s backend is deliberately stateless. Also fills `Navbar`/`ApplicationLayout`'s `userSlot`/`notificationsSlot` (`ProfileMenu`, `NotificationCenter` — `PROF-03` had explicitly deferred `ProfileMenu` to this task) and delivers `QuickActions`/`ConnectionStatus`/`RetryCard`, closing out every open Shared-component row this task was positioned to claim (`COMPONENT_OWNERSHIP_MATRIX.md` §4). This was the last remaining Phase 1 task — see the Phase 1 exit criteria below and `.ai/PROJECT_STATE.md`/`.ai/TASK_BOARD.md` for full verification detail.
 
-**Phase 1 exit criteria:** Flow 03 (Register) and Flow 06 (Continue Chat) from USER_FLOWS.md complete end-to-end; registration under 2 minutes; zero dead ends per Flow 20/21; Design QA Checklist (24) passes on every screen shipped.
+**Phase 1 exit criteria:** Flow 03 (Register) and Flow 06 (Continue Chat) from USER_FLOWS.md complete end-to-end; registration under 2 minutes; zero dead ends per Flow 20/21; Design QA Checklist (24) passes on every screen shipped. **Met — Phase 1 is complete as of 2026-09-08.**
 
 ---
 

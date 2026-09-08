@@ -406,5 +406,85 @@
     "errors": {
       "generic": "Something interrupted this response. Please try again."
     }
+  },
+  "Shared": {
+    "profileMenu": {
+      "triggerLabel": "Account menu for {name}. Open menu.",
+      "fallbackName": "your account",
+      "menuLabel": "Account",
+      "signOut": "Sign out",
+      "signingOut": "Signing out…"
+    },
+    "notificationCenter": {
+      "triggerLabel": "Notifications. Open notifications.",
+      "panelLabel": "Notifications",
+      "emptyTitle": "You're all caught up",
+      "emptyDescription": "We'll let you know when there's something new."
+    }
+  },
+  "Dashboard": {
+    "page": {
+      "metaTitle": "Dashboard — Atlas",
+      "metaDescription": "Your travel command center — continue planning, pick up your last conversation, and see what Atlas can help with next."
+    },
+    "loading": "Loading your dashboard…",
+    "loadError": {
+      "title": "We couldn't load your dashboard",
+      "description": "Please check your connection and try again.",
+      "retry": "Retry",
+      "reconnecting": "Reconnecting…"
+    },
+    "hero": {
+      "welcomeBack": "Welcome back",
+      "welcomeBackNamed": "Welcome back, {name}",
+      "welcomeSubtitle": "Start a conversation with Atlas to plan your next trip.",
+      "continueSubtitle": "Pick up where you left off, or start something new.",
+      "conversationFallbackTitle": "Untitled conversation",
+      "startPlanning": "Start planning",
+      "continueConversation": "Continue conversation"
+    },
+    "quickActions": {
+      "label": "Quick actions",
+      "newTrip": "New trip",
+      "continueChat": "Continue chat",
+      "settings": "Settings"
+    },
+    "suggestedPrompts": {
+      "title": "Try asking Atlas",
+      "prompts": [
+        "A romantic weekend in Italy",
+        "7 days in Japan",
+        "A relaxed beach trip in October",
+        "Plan a family vacation in Thailand"
+      ]
+    },
+    "capabilities": {
+      "title": "What Atlas can help with",
+      "items": [
+        {
+          "title": "Plan a full itinerary",
+          "description": "Get a day-by-day plan with transportation, stays, and activities."
+        },
+        {
+          "title": "Compare destinations",
+          "description": "See how two places stack up for your budget, season, and style."
+        },
+        {
+          "title": "Estimate your budget",
+          "description": "Understand likely costs before you commit to anything."
+        }
+      ]
+    },
+    "trips": {
+      "title": "Your trips",
+      "emptyTitle": "No trips yet",
+      "emptyDescription": "Start planning to see your itineraries here.",
+      "emptyAction": "Start planning"
+    },
+    "recommendations": {
+      "title": "Recommendations",
+      "emptyTitle": "Nothing to recommend yet",
+      "emptyDescription": "Once you start planning, Atlas will suggest things you might like here."
+    }
   }
 }

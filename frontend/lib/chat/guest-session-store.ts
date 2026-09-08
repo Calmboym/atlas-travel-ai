@@ -133,6 +133,31 @@ export function updateGuestSession(
 }
 
 /**
+ * Read-only peek at the persisted guest session — added for
+ * ATLAS-P1-DASH-01, which needs to know whether a real (non-empty)
+ * conversation already exists before the user has ever opened /chat
+ * in this tab, so the Dashboard can offer "Continue conversation"
+ * instead of "Start planning."
+ *
+ * Deliberately bypasses `cachedSession`/`getGuestSessionSnapshot`
+ * rather than calling either: that function always `??`s in a
+ * `makeDefault()` the first time it runs, and `cachedSession` is a
+ * module-level singleton shared with every `useChatSession()` instance
+ * in the tab. Calling it here with a Dashboard-specific empty default
+ * would populate that shared cache before /chat ever gets a chance to
+ * seed it with CHAT-02's own `makeDefaultSession` (the fixed
+ * `conv-initial` conversation) — a real cross-module bug, not a
+ * hypothetical one, since `cachedSession ??= ...` only ever runs
+ * once per module lifetime and the two default shapes are different
+ * (this reads persisted storage exactly as-is, no default is created
+ * or cached). Returns `null` if nothing has been persisted yet, same
+ * as `readFromStorage()`.
+ */
+export function peekGuestSession(): GuestSession | null {
+  return readFromStorage();
+}
+
+/**
  * Test-only reset. Module-level state (`cachedSession`, `serverSnapshot`,
  * `listeners`) would otherwise leak between unrelated test cases within
  * the same test file — never called from application code.

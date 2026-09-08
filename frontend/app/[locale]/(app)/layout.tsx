@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { ApplicationLayout } from "@/components/layout/application-layout";
+import { ProfileMenu } from "@/components/layout/profile-menu";
+import { NotificationCenter } from "@/components/layout/notification-center";
 
 /**
  * Wires the DESIGNSYS-03 Application shell (Navbar + Sidebar +
@@ -7,24 +9,30 @@ import { ApplicationLayout } from "@/components/layout/application-layout";
  * app/[locale]/(app)/ — 26_APPLICATION_LAYOUT_GUIDE.md §Application
  * Layout, used by Dashboard/Trips/Chat/Profile/Settings.
  *
- * Deliberately no page.tsx exists in this route group yet: there is
- * no real authenticated session/user data to render a genuine
- * Dashboard, Trips list, etc., and building placeholder feature
- * content here would be exactly the "arbitrary placeholder UI" this
- * task is instructed to avoid, and would also cross into DASH-01/
- * CHAT-01/PROF-03's ownership. This file is real, complete DESIGNSYS-03
- * infrastructure on its own: the next task that adds a page here
- * (e.g. app/[locale]/(app)/dashboard/page.tsx) inherits the correct
- * layout automatically, with zero additional wiring.
+ * EXTENDED — ATLAS-P1-DASH-01: `userSlot`/`notificationsSlot` now
+ * render real components. DESIGNSYS-03 deliberately left both unset
+ * (see this file's own prior note, preserved in git history) because
+ * ProfileMenu/NotificationCenter are owned by "PROF-03 or DASH-01,
+ * whichever ships first" per COMPONENT_OWNERSHIP_MATRIX.md §4 —
+ * PROF-03 explicitly declined (see profile-page-content.tsx's own
+ * docstring: it would need to link to routes, like /dashboard, that
+ * didn't exist yet), so DASH-01 is that "whichever." Every other
+ * (app) page (Chat, Profile, and any future Trips/Settings page)
+ * inherits the same filled header automatically, with zero additional
+ * wiring, from this one shared layout — that's the whole point of
+ * these props living on ApplicationLayout rather than on each page.
  *
- * `isAuthenticated` intentionally stays at its default (`true`, i.e.
- * the shell renders "there is a signed-in user" chrome rather than
- * guest CTAs) — real session detection is AUTH-07's job. `userSlot`/
- * `notificationsSlot` are left unset: ProfileMenu/NotificationCenter
- * are owned by PROF-03/DASH-01 per COMPONENT_OWNERSHIP_MATRIX.md, not
- * DESIGNSYS-03 — see the DESIGNSYS-03 report for this exact scope
- * boundary.
+ * `isAuthenticated` still stays at its default (`true`) — real
+ * per-request session detection remains a separate, undone concern
+ * (this file's own prior note on that point is unchanged).
  */
 export default function AppRouteLayout({ children }: { children: ReactNode }) {
-  return <ApplicationLayout>{children}</ApplicationLayout>;
+  return (
+    <ApplicationLayout
+      userSlot={<ProfileMenu />}
+      notificationsSlot={<NotificationCenter />}
+    >
+      {children}
+    </ApplicationLayout>
+  );
 }

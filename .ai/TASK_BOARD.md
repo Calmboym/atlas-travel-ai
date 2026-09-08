@@ -72,6 +72,13 @@ question, only its localization.
 | ATLAS-P1-LAND-03 | "Continue as Guest" entry wiring | Medium | INDEX.md §LAND, `16_ONBOARDING_EXPERIENCE.md` §Guest Experience, `USER_FLOWS.md` Flow 02 | 2026-08-29 |
 | ATLAS-P1-MEM-01 | Guest session memory (client-side, cleared on browser close) | Medium | INDEX.md §MEM, `17_AI_EXPERIENCE.md` §Memory | 2026-09-06 |
 | ATLAS-P1-MEM-02 | Authenticated preference storage (basic tier) | Medium | INDEX.md §MEM, `17_AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13, `ARCHITECTURE.md` §7 | 2026-09-06 |
+| ATLAS-P1-DASH-01 | Dashboard shell (opens to last conversation / Welcome) — fills Navbar's/ApplicationLayout's `userSlot`/`notificationsSlot` with real `ProfileMenu`/`NotificationCenter` | Medium | INDEX.md §DASH, `COMPONENT_OWNERSHIP_MATRIX.md` §4, `INFRASTRUCTURE_BASELINE.md` §1/§3 | 2026-09-08 |
+
+**Verification status (DASH-01, 2026-09-08 — actually executed, not asserted):** typecheck clean · lint 0 errors/0 warnings · 385/385 tests passing across 63/63 files (361 pre-existing + 24 new) · production build succeeds, `/dashboard` listed as a real route · RTL confirmed correct for en/fa/de via a live standalone-server smoke test — including an *authenticated* pass (a dummy `atlas_access_token` cookie set directly, bypassing only the edge cookie-*presence* check per `proxy.ts`'s own documented scope, since no live backend exists in this session to issue a real one) confirming `/dashboard` itself actually renders (200, correct `<title>` per locale — "Dashboard — Atlas" / "داشبورد — اطلس" — correct `lang`/`dir`), not just the pre-login redirect. Unauthenticated requests to `/en/dashboard` and `/fa/dashboard` both correctly 307 to their locale's `/login?redirect=...`, confirming `AUTH-08`'s route guard is now actually protecting a real page for the first time since it shipped. Five new Shared components delivered per `COMPONENT_OWNERSHIP_MATRIX.md` §4's own outstanding rows: `ProfileMenu`, `NotificationCenter` (both `PROF-03` explicitly deferred — see that task's own docstring), `QuickActions`, `ConnectionStatus`, `RetryCard` (both unclaimed since `CHAT-01` — DASH-01 is "whichever ships first" per that row). `AIQuickAccess` remains the one Shared component still unclaimed in the matrix — genuinely optional per this task's own Acceptance Criteria, not silently dropped.
+
+**Scope decisions, stated plainly:** (1) Travel Summary Hero, Travel Timeline, and every trip-data-backed widget (Budget/Weather/Checklist) are explicitly **not** built — `18_DASHBOARD_EXPERIENCE.md` itself scopes the Hero to "when an active trip exists," and Trip Service doesn't exist until Phase 2+ (`DEPENDENCY_GRAPH.md` §4/§5); building them now would mean fabricating trip data, which `BRAND_GUIDELINES.md` §13 forbids. The Phase-1-relevant parts of the same document (§Default Landing, §Empty Dashboard) are what's implemented instead. (2) "Last conversation" is read from `MEM-01`'s guest-session-store (sessionStorage; applies regardless of auth status per that task's own scope decision) — `CHAT-03`/`04`'s backend is deliberately stateless, so there is no other persisted conversation history to read in Phase 1; a new read-only `peekGuestSession()` export was added to that file (additive, no existing behavior changed) rather than duplicating its read/parse logic. (3) `ProfileMenu` fetches its own `GET /auth/me` + `GET /profile/me` independently of `DashboardPageContent`'s identical fetch — Navbar is a layout-level sibling of page content, not a parent with shared state, and no caching layer exists yet. `lib/api/client.ts`'s own prior comment already anticipated this exact moment ("TanStack Query is a reasonable addition whenever a future task actually needs query caching, e.g. Dashboard data fetching") — flagged here as a real, now-current architectural opportunity rather than silently added (a new dependency is outside one task's unilateral scope per `MASTER_RULES.md` §5) or silently ignored. (4) `logoutRequest()` added to `lib/api/auth.ts` and wired into `ProfileMenu` — the backend's `POST /auth/logout` endpoint has existed since `AUTH-07` but had no frontend caller anywhere in the app until now. (5) `DashboardPageContent`'s fetch-failure path checks for a 401 specifically and redirects to `/login?redirect=/dashboard`, fulfilling `proxy.ts`'s own documented expectation ("a page that receives a 401... is expected to redirect to /login itself once such a page exists") for the first time, since Dashboard is the first authenticated page in the app with a real client-side data fetch.
+
+**Phase 1 — Core Platform MVP is now fully complete.** Every module in `MASTER_IMPLEMENTATION_ROADMAP.md`'s Phase 1 list (Landing/Guest Entry, Authentication, Basic Profile, AI Chat, Basic Memory, Dashboard shell) has shipped. See `PROJECT_STATE.md` for the full closing summary and the Phase 2 readiness note.
 
 **Verification status (DESIGNSYS-03, 2026-08-15 — actually executed, not asserted):** typecheck clean · lint 0 errors/0 warnings (2 real `react-hooks/set-state-in-effect` violations found and fixed at the root, not suppressed) · 129/129 tests passing across 20/20 files (98 pre-existing + 31 new) · production build succeeds, including the two new orphan route-group layouts with zero pages under them yet · RTL confirmed correct for en/fa/de via live HTTP requests against the real standalone server, with header/footer/nav landmarks confirmed present in the actual rendered HTML · `/en/register` (AUTH-01) confirmed still working, untouched.
 
@@ -112,29 +119,19 @@ question, only its localization.
 
 | Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
 |---|---|---|---|---|---|
-| ATLAS-P1-DASH-01 | Dashboard shell (opens to last conversation / Welcome) | Medium | CHAT-03 ✅, AUTH-07 ✅ | INDEX.md §DASH | M |
+| *(none)* | | | | | |
 
-*(LAND-01/02/03, all four CHAT tasks, and now both MEM tasks are Done —
-see above; the real Landing page ships with a working guest entry
-point, `/chat` is backed by a real, streaming Conversation Manager,
-guest chat sessions survive a refresh, and authenticated users have a
-basic AI-memory store. `ATLAS-P1-DASH-01` is now the *only* remaining
-Phase 1 task — both its dependencies (`CHAT-03`, `AUTH-07`) were
-already satisfied before this session. `AIQuickAccess` and
-`ConnectionStatus`/`RetryCard` (Shared, `COMPONENT_OWNERSHIP_MATRIX.md`
-§4) remain unclaimed — `CHAT-01` had a clear opportunity to claim
-either and deliberately did not (see that verification note above);
-neither `CHAT-03`/`04` nor `MEM-01`/`02` had reason to either (no UI
-component work in scope for any of them). Once `DASH-01` ships a real
-page under `/dashboard`, `AUTH-08`'s route guard — already live in
-`proxy.ts` — starts protecting it with no further wiring needed.
-`DASH-01` still fills `Navbar`'s and `ApplicationLayout`'s
-`userSlot`/`notificationsSlot` props with its own
-ProfileMenu/NotificationCenter — PROF-03 explicitly deferred
-ProfileMenu to DASH-01, see `COMPONENT_OWNERSHIP_MATRIX.md` §4.
-Completing it closes out Phase 1 in full per
-`MASTER_IMPLEMENTATION_ROADMAP.md`'s own module list and stated exit
-criteria.)*
+*(Phase 1 is complete — see the closing note under Done above.
+`ATLAS-P1-DASH-01` was the last remaining Phase 1 task; both its
+dependencies were already satisfied before that session started. No
+further Phase 1 tasks remain in this table. Phase 2 — AI Agent System
+is not yet elaborated to Task level per `WORK_BREAKDOWN_STRUCTURE.md`'s
+own rolling-wave planning approach; that elaboration is the
+recommended next piece of work, not a specific implementation task in
+itself. `AIQuickAccess` (Shared, `COMPONENT_OWNERSHIP_MATRIX.md` §4)
+remains unclaimed — no task in Phase 1 needed it; it becomes relevant
+again whenever a Phase 2+ task first wants a persistent, cross-page AI
+entry point.)*
 
 ---
 

@@ -406,5 +406,85 @@
     "errors": {
       "generic": "Diese Antwort wurde unterbrochen. Bitte versuchen Sie es erneut."
     }
+  },
+  "Shared": {
+    "profileMenu": {
+      "triggerLabel": "Kontomenü für {name}. Menü öffnen.",
+      "fallbackName": "Ihr Konto",
+      "menuLabel": "Konto",
+      "signOut": "Abmelden",
+      "signingOut": "Wird abgemeldet…"
+    },
+    "notificationCenter": {
+      "triggerLabel": "Benachrichtigungen. Benachrichtigungen öffnen.",
+      "panelLabel": "Benachrichtigungen",
+      "emptyTitle": "Alles erledigt",
+      "emptyDescription": "Wir informieren Sie, sobald es etwas Neues gibt."
+    }
+  },
+  "Dashboard": {
+    "page": {
+      "metaTitle": "Dashboard — Atlas",
+      "metaDescription": "Ihre Reisezentrale — Planung fortsetzen, die letzte Unterhaltung wieder aufnehmen und sehen, wie Atlas als Nächstes helfen kann."
+    },
+    "loading": "Ihr Dashboard wird geladen…",
+    "loadError": {
+      "title": "Ihr Dashboard konnte nicht geladen werden",
+      "description": "Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen",
+      "reconnecting": "Verbindung wird wiederhergestellt…"
+    },
+    "hero": {
+      "welcomeBack": "Willkommen zurück",
+      "welcomeBackNamed": "Willkommen zurück, {name}",
+      "welcomeSubtitle": "Beginnen Sie ein Gespräch mit Atlas, um Ihre nächste Reise zu planen.",
+      "continueSubtitle": "Machen Sie dort weiter, wo Sie aufgehört haben, oder beginnen Sie etwas Neues.",
+      "conversationFallbackTitle": "Unbenannte Unterhaltung",
+      "startPlanning": "Planung starten",
+      "continueConversation": "Unterhaltung fortsetzen"
+    },
+    "quickActions": {
+      "label": "Schnellzugriff",
+      "newTrip": "Neue Reise",
+      "continueChat": "Chat fortsetzen",
+      "settings": "Einstellungen"
+    },
+    "suggestedPrompts": {
+      "title": "Fragen Sie Atlas",
+      "prompts": [
+        "Ein romantisches Wochenende in Italien",
+        "7 Tage in Japan",
+        "Ein entspannter Strandurlaub im Oktober",
+        "Familienurlaub in Thailand planen"
+      ]
+    },
+    "capabilities": {
+      "title": "Womit Atlas helfen kann",
+      "items": [
+        {
+          "title": "Eine komplette Reiseroute planen",
+          "description": "Erhalten Sie einen Tag-für-Tag-Plan mit Transport, Unterkünften und Aktivitäten."
+        },
+        {
+          "title": "Reiseziele vergleichen",
+          "description": "Sehen Sie, wie zwei Orte in Bezug auf Budget, Saison und Reisestil abschneiden."
+        },
+        {
+          "title": "Budget einschätzen",
+          "description": "Verstehen Sie die voraussichtlichen Kosten, bevor Sie sich festlegen."
+        }
+      ]
+    },
+    "trips": {
+      "title": "Ihre Reisen",
+      "emptyTitle": "Noch keine Reisen",
+      "emptyDescription": "Beginnen Sie mit der Planung, um Ihre Reiserouten hier zu sehen.",
+      "emptyAction": "Planung starten"
+    },
+    "recommendations": {
+      "title": "Empfehlungen",
+      "emptyTitle": "Noch keine Empfehlungen",
+      "emptyDescription": "Sobald Sie mit der Planung beginnen, schlägt Atlas hier passende Dinge für Sie vor."
+    }
   }
 }

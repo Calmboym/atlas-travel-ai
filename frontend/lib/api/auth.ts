@@ -12,6 +12,14 @@
  * (TravelerProfile has no email field of its own; email lives on
  * User, per APPLICATION_LAYOUT_GUIDE.md §Personal Information listing
  * Email alongside profile-only fields like Phone/Country/Timezone).
+ * EXTENDED — ATLAS-P1-DASH-01 (logoutRequest): the backend's
+ * POST /auth/logout endpoint existed since AUTH-07 but had no
+ * frontend wrapper or UI trigger anywhere in the app yet —
+ * ProfileMenu (APPLICATION_LAYOUT_GUIDE.md §User Menu: "...Logout")
+ * is the first place one is needed. Returns void: the endpoint itself
+ * is 204 No Content (see backend/app/api/v1/auth.py's own docstring
+ * — "Idempotent... always returns 204"), which apiFetch resolves to
+ * `undefined` since there is no JSON body to parse.
  */
 
 import { apiFetch } from "@/lib/api/client";
@@ -73,4 +81,8 @@ export function resetPasswordRequest(
 
 export function getMeRequest(): Promise<AuthUser> {
   return apiFetch<AuthUser>("/api/v1/auth/me", { method: "GET" });
+}
+
+export function logoutRequest(): Promise<void> {
+  return apiFetch<void>("/api/v1/auth/logout", { method: "POST" });
 }
