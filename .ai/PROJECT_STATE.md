@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-09-06 (MEM-01 through MEM-02 session — guest session memory, basic-tier authenticated preference storage)
+**Last updated:** 2026-09-09 (Phase 2 — AI Agent System WBS Elaboration session — documentation-only, `Module: AGENTS` added to `WORK_BREAKDOWN_STRUCTURE.md` at Task level, Q1–Q4 approved, no Phase 2 task authorized for implementation)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -54,16 +54,57 @@ full.**
 
 ---
 
-**Current Phase:** Phase 1 — Core Platform MVP — **✅ complete (2026-09-08)**
-**Current Milestone:** M1 — **met**
+**Current Phase:** Phase 1 — Core Platform MVP — **✅ complete (2026-09-08)**.
+Phase 2 — AI Agent System — **elaborated to Task level, documentation-only
+(2026-09-09); not authorized for implementation.**
+**Current Milestone:** M1 — **met.** M2 (Phase 2's objective) is now
+defined (`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2) but not started.
 **Current Module:** none active — `DESIGNSYS` (01–04), `AUTH` (01–08),
 `PROF` (01–03), `LAND` (01–03), `CHAT` (01–04), `MEM` (01–02), and `DASH`
-(01) are all complete and closed
-**Current WBS ID:** none active
-**Current Task:** none — Phase 1 is fully complete; Phase 2 (AI Agent
-System) is the next wave and is not yet elaborated to Task level
-(rolling-wave planning, per `WORK_BREAKDOWN_STRUCTURE.md`). See "Next
-Task" in Notes for Next Session, below.
+(01) are all complete and closed. `AGENTS` (01–09) is elaborated and
+Ready per `MASTER_RULES.md` §18, but no task in it is In Progress.
+**Current WBS ID:** none active (implementation)
+**Current Task:** none — Phase 1 is fully complete. Phase 2's
+`Module: AGENTS` is now elaborated to Task level (9 tasks,
+`ATLAS-P2-AGENTS-01..09` — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 and
+`TASK_BOARD.md` "Todo (Phase 2)"), per the project owner's approved
+Q1–Q4 (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). **This elaboration
+does not itself authorize implementation** — `ATLAS-P2-AGENTS-01` (AI
+Orchestrator core) is the recommended first task, awaiting its own
+explicit "Execute" instruction. See "Next Task" in Notes for Next
+Session, below.
+
+**Phase 2 — AGENTS WBS Elaboration (2026-09-09, this session):** not a
+WBS task — documentation/planning-only, per its own explicit scope
+(mirrors the Governance Reconciliation session's category, below).
+Verified the actual repository baseline before writing anything (not
+memory or the prior proposal's assumptions): confirmed `ai/agents/
+conversation_manager.py` is real and shipped (`generate_reply`/
+`stream_reply`, the exact functions `ATLAS-P2-AGENTS-01` is scoped to
+extend, per Q4); confirmed `ai/schemas/` and `ai/evaluations/` are
+still empty (`.gitkeep` only); confirmed `qdrant-client` is a declared
+dependency and `docker-compose.yml` service but **zero Qdrant
+client-instantiation code exists anywhere in the repository** — a real,
+verified fact this elaboration's `AGENTS-03` acceptance criteria now
+state explicitly, rather than assuming Phase 0's declared dependency
+meant real wiring already existed. Elaborated `WORK_BREAKDOWN_
+STRUCTURE.md`'s previously Module-level Phase 2 stub to full Task level
+(9 tasks: Orchestrator core, Agent framework/schemas, Tool Service+RAG,
+Traveler Profile Agent, Destination Intelligence Agent, Budget Agent,
+Itinerary Planner Agent, Recommendation Agent, Multi-agent integration),
+each with Dependencies, Required docs, Priority/Complexity/Context,
+Allowed-files-to-modify, and task-specific Acceptance Criteria, plus a
+Parallelization note and Phase 2 exit criteria. **One real documentation
+conflict found and reported, not silently resolved** — see "Findings
+Requiring Project Owner Decision" below and `DESIGN_BIBLE_AMENDMENTS.md`
+Amendment 010 for the full resolution record. `TASK_BOARD.md`,
+`INDEX.md`, `CONVERSATION_STRATEGY.md`, and `SESSION_PROMPT.md` were all
+updated the same session to stay synchronized with the WBS change — see
+"Files Modified This Session" below for the complete list.
+`COMPONENT_OWNERSHIP_MATRIX.md` was deliberately **not** touched: every
+`AGENTS` task is backend/AI-layer only, no UI component is created or
+consumed by any of them, matching `CONVERSATION_STRATEGY.md` §7's own
+backend-only exception.
 
 **Governance Reconciliation (2026-08-16, this session):** not a WBS task —
 documentation/governance-only, per its own explicit scope. Audited the
@@ -910,6 +951,20 @@ chat-composer,conversation-panel}.tsx` (CHAT-01), `frontend/messages/
 placeholders). Full list with New/Modified split: "Files Modified This
 Session (2026-09-05, CHAT-03 through CHAT-04)" below.
 
+**AGENTS infrastructure — elaborated 2026-09-09, not yet built. For
+whoever picks up `ATLAS-P2-AGENTS-01`:** read `ai/agents/
+conversation_manager.py` and `ai/providers/base.py` first — `AGENTS-01`
+extends/consumes both, per Q4; do not fork or rewrite either.
+`ai/config.py` and `backend/app/core/ai.py` are the existing
+config-wiring pattern for anything the Orchestrator itself needs
+configured. `ai/schemas/` and `ai/evaluations/` are real, empty
+directories (`.gitkeep` only) — `AGENTS-02` is the first task expected
+to populate `ai/schemas/`. `backend/app/services/chat_service.py` and
+`backend/app/api/v1/chat.py` are explicitly **out of scope** for
+`AGENTS-01` through `08` — only `AGENTS-09` touches either. Full
+per-task scope, dependencies, and acceptance criteria:
+`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
+
 **MEM infrastructure (new, 2026-09-06):**
 `frontend/lib/chat/guest-session-store.ts` (new — the
 `useSyncExternalStore`-backed vanilla store `use-chat-session.ts` now
@@ -925,6 +980,28 @@ Full list with New/Modified split: "Files Modified This Session
 (2026-09-06, MEM-01 through MEM-02)" below.
 
 ## Findings Requiring Project Owner Decision
+
+**Resolved this session (Phase 2 — AGENTS WBS Elaboration, 2026-09-09):**
+- **Module-naming conflict, found and reported per `MASTER_RULES.md` §2's
+  "stop and report, don't silently resolve" rule, before being
+  resolved:** `WORK_BREAKDOWN_STRUCTURE.md`'s original Phase 2 stub
+  (2026-07-22 Bootstrap pass) sketched four separate modules — `ORCH`,
+  `AGENTSVC`, `CORE-AGENTS`, `STRUCT-OUT` — matching `CONVERSATION_
+  STRATEGY.md` §2's own placeholder module-code example. The Phase 2
+  elaboration proposal presented this session instead used one
+  consolidated `AGENTS` module with flat `ATLAS-P2-AGENTS-01..09` task
+  IDs. Presented to the project owner as part of Q1–Q4; **approved** —
+  the single `AGENTS` module is now authoritative. `WORK_BREAKDOWN_
+  STRUCTURE.md` §Phase 2 and `CONVERSATION_STRATEGY.md` §2 both updated
+  to match; formal record: `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010.
+- **`DEPENDENCY_GRAPH.md`'s Phase 2 detail** (LOCKED — Tier 1) predates
+  any real Task IDs and only shows the original linear `AI Orchestrator
+  → Agent Service → Core Agents` order from `ARCHITECTURE.md` §3/§8 —
+  not a conflict with this elaboration, but genuinely incomplete
+  relative to it now. Not edited directly (per that document's own
+  "amendment only" precedent, already established for `DESIGNSYS`) —
+  the real Task-level dependency shape is recorded as an extension in
+  `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010 instead.
 
 **Resolved this session (Governance Reconciliation, 2026-08-16):**
 - ~~Sidebar width/collapsed-width (300px vs 280px)~~ — closed via
@@ -1645,7 +1722,41 @@ matrix's own §4 during this session's pre-flight).
 - `.ai/WORK_BREAKDOWN_STRUCTURE.md` — `DASH-01` marked Done with status note; Phase 1 header marked ✅ DONE; Phase 1 exit criteria marked Met
 - `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — §4 gains five newly-Built rows (`NotificationCenter`, `ProfileMenu`, `QuickActions`, `ConnectionStatus`/`RetryCard`); `AIQuickAccess` annotated with this task's own deliberate non-claim; §5 `Dashboard-specific` row moved from planned to delivered; header provenance line updated
 
+## Files Modified This Session (2026-09-09, Phase 2 — AGENTS WBS Elaboration)
+
+**Documentation-only. No production code created, modified, or deleted.
+No Phase 2 task implemented or executed.** Source baseline for this
+session: the uploaded repository ZIP (verified identical, by checksum,
+to the `atlas-travel-ai-main` baseline already on file), not memory or
+prior-session summaries — per this project's own "empirical verification
+over assertion" standard, `ai/agents/conversation_manager.py`, `ai/
+schemas/`, `ai/evaluations/`, and the repository-wide absence of any
+Qdrant client code were all directly inspected before being cited in the
+elaboration below, rather than assumed from documentation claims.
+
+**Modified — canonical governance files:**
+- `.ai/WORK_BREAKDOWN_STRUCTURE.md` — Module-level Phase 2 stub replaced with full Task-level elaboration: `Module: AGENTS`, 9 tasks (`ATLAS-P2-AGENTS-01..09`) each with Dependencies, Required docs, Priority/Complexity/Context, Allowed-files-to-modify, and Acceptance Criteria; a Phase-1-infrastructure-reuse note (verified against the real repo); the Q1–Q4 scope-decision record; a Parallelization note; Phase 2 exit criteria; the module-naming Consolidation note; header tier line and WBS Integrity Check both updated; LOCK STATUS footer updated
+- `.ai/TASK_BOARD.md` — new "Todo (Phase 2 — AI Agent System)" table (9 rows, explicitly marked not-authorized-for-execution); Backlog table's Phase 2 row updated to point to it; "Last updated" and LOCK STATUS footer both updated
+- `.ai/PROJECT_STATE.md` — this file: header dates, Current Phase/Milestone/Module/Task pointers, this session's narrative, a new AGENTS-specific Relevant Files block, a new Findings entry (module-naming conflict, found and resolved), this Files Modified section, Notes for Next Session
+- `.ai/INDEX.md` — `AGENTS` entry rewritten (per-task doc breakdown, verified Phase 1 reuse list, Related WBS now names real Task IDs); `TRIPPLAN` entry annotated with its Q2 exclusion; header note block and LOCK STATUS footer both updated
+- `.ai/CONVERSATION_STRATEGY.md` — §2's Phase 2 module-code example (`ORCH`/`AGENTSVC`/`CORE-AGENTS`) corrected to the real, consolidated `AGENTS` module; new dated approval blockquote added at the top; LOCK STATUS footer updated
+- `.ai/SESSION_PROMPT.md` — "Notes for the Human Operator" refreshed: current status, recommended next task (`ATLAS-P2-AGENTS-01`), a note on which steps 6/7 apply to `AGENTS` tasks, and the parallel-pairs cross-reference; LOCK STATUS footer updated
+- `.ai/DESIGN_BIBLE_AMENDMENTS.md` — new Amendment 010 (Q1–Q4 formal record; the module-naming conflict's found-and-resolved record; `DEPENDENCY_GRAPH.md`'s Task-level extension, recorded here rather than edited into that LOCKED file's body); Log table updated; next amendment number advanced to 011
+
+**Deliberately not modified, with reasons:**
+- `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — every `AGENTS` task is backend/AI-layer only; no task creates or consumes a UI component; matches `CONVERSATION_STRATEGY.md` §7's own backend-only exception.
+- `docs/DEPENDENCY_GRAPH.md` — LOCKED — Tier 1, same tier as the Design Bible; per its own and `DESIGNSYS`'s established precedent, extended via a `DESIGN_BIBLE_AMENDMENTS.md` amendment (010, part 3) rather than a direct body edit.
+- `.ai/MASTER_RULES.md` — no new governance mechanism was introduced this session (unlike the 2026-08-16 Governance Reconciliation); existing §2, §18, §20, and `DEVELOPMENT_EXECUTION_PLAN.md` §3 already fully cover how a new Phase gets elaborated and then separately authorized for implementation.
+- `.ai/MISSING_INFORMATION.md` — no new documentation-vs-reality gap was found that isn't already captured by this session's own Findings entry and the WBS's verified-facts note; not touched to avoid scope creep beyond what was requested.
+- Any of the 26 locked Design Bible documents (`docs/*`) — none apply to a backend-only AI-agent module; none were read as "required docs" by any `AGENTS` task above.
+
+**Not created:** any file under `ai/`, `backend/`, or `frontend/` — this
+session is documentation/planning only, consistent with the explicit
+"documentation-only, do not write production code, do not implement or
+execute any Phase 2 task" instruction it was scoped under.
+
 ## Notes for Next Session
+
 
 `DESIGNSYS-01` through `04` are complete, closed, and now *accurately*
 reflected in `COMPONENT_OWNERSHIP_MATRIX.md` — the matrix previously
@@ -1905,17 +2016,24 @@ each independently found no concrete requirement for it and declined;
 it remains a real, documented Shared component with no current
 consumer, not a dead entry to prune.
 
-**Recommended next step (current): elaborate Phase 2 — AI Agent System
-to Task level.** Every Phase 1 module is done; `WORK_BREAKDOWN_
-STRUCTURE.md`'s Phase 2 section currently exists only at Module/Feature
-level (`ORCH`, `AGENTSVC`, `CORE-AGENTS` per `CONVERSATION_STRATEGY.md`
-§2's own module-code list), consistent with the project's stated
-rolling-wave planning approach — Phase 2 was deliberately left
-unelaborated until Phase 1 actually finished. This is a planning/WBS
-session, not an implementation task with its own Acceptance Criteria
-yet; per `DEVELOPMENT_EXECUTION_PLAN.md` §3, "starting a new Phase"
-requires the project owner's explicit sign-off before any Phase 2 Task
-is defined or implemented.
+**Phase 2 WBS elaboration — done (2026-09-09).** `WORK_BREAKDOWN_
+STRUCTURE.md`'s Phase 2 section is no longer Module/Feature level only —
+it is now elaborated to full Task level as `Module: AGENTS` (9 tasks,
+`ATLAS-P2-AGENTS-01..09`), replacing the previous `ORCH`/`AGENTSVC`/
+`CORE-AGENTS`/`STRUCT-OUT` four-module sketch (a found-and-resolved
+naming conflict — see this session's Findings entry above and
+`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). This was a
+planning/WBS session, not an implementation task — no Acceptance
+Criteria applied to *this* session's own output beyond internal
+consistency and conflict-reporting; per `DEVELOPMENT_EXECUTION_PLAN.md`
+§3, the project owner's explicit sign-off (Q1–Q4) authorized the
+elaboration itself, not the implementation of any task within it.
+
+**Recommended next step (current): execute `ATLAS-P2-AGENTS-01`** (AI
+Orchestrator core — extends/consumes `CHAT-03`'s Conversation Manager,
+per Q4), pending its own explicit "Execute ATLAS-P2-AGENTS-01"
+instruction. Full scope, dependencies, and acceptance criteria:
+`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
 
 ---
 
@@ -1939,5 +2057,10 @@ the sole remaining Phase 1 task), 2026-09-08 (DASH-01 complete — the
 DASH module is closed and **Phase 1 — Core Platform MVP is fully
 complete**; `/dashboard` is real, `Navbar`'s `userSlot`/
 `notificationsSlot` are filled for the first time, and Phase 2's Task-
-level elaboration is the recommended next step).
+level elaboration is the recommended next step), 2026-09-09 (**Phase 2
+— AI Agent System elaborated to Task level** — `Module: AGENTS`,
+`ATLAS-P2-AGENTS-01..09`, documentation-only, Q1–Q4 approved,
+`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010; **no Phase 2 task is
+authorized for implementation by this update** — `ATLAS-P2-AGENTS-01`
+is the recommended next task, awaiting its own explicit go-ahead).
 Future changes only via `MASTER_RULES.md` §21.

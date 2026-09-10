@@ -7,6 +7,8 @@
 > **APPROVED (2026-08-13):** §7 below is approved and part of the locked baseline, consistent with `MASTER_RULES.md` v1.2's approval (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 006).
 >
 > **APPROVED (2026-08-16):** new §8 (Parallel Execution) and the incremental-output line in §5 (Governance Reconciliation, `DESIGN_BIBLE_AMENDMENTS.md` Amendment 009).
+>
+> **APPROVED (2026-09-09):** §2's Phase 2 module-code example (`ORCH`/`AGENTSVC`/`CORE-AGENTS`) is corrected to the single, real `AGENTS` module, consistent with `WORK_BREAKDOWN_STRUCTURE.md`'s 2026-09-09 Task-level elaboration (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010).
 
 Atlas will be built across many independent Claude conversations rather than one continuous session. This document defines how each one is scoped so that conversation history never has to serve as project memory — `.ai/` does that job instead.
 
@@ -30,7 +32,7 @@ A conversation never:
 ```
 Example: `AUTH-001 — Email/Password Registration Flow`
 
-Module codes match the WBS: `LAND`, `AUTH`, `PROF`, `CHAT`, `MEM`, `DASH`, `ONBOARD`, `INFRA` (Phase 0–1, elaborated to Task level now). Phase 2–7 use finer-grained codes assigned when each phase gets its own Task-level elaboration (e.g. `ORCH`, `AGENTSVC`, `CORE-AGENTS` for Phase 2; `INTEG-MAPS`, `DOMAIN-AGENTS`, `RAG` for Phase 3; `MEMSVC`, `PERSONALIZE` for Phase 4) — see `WORK_BREAKDOWN_STRUCTURE.md` for the authoritative, current set at any point in time.
+Module codes match the WBS: `LAND`, `AUTH`, `PROF`, `CHAT`, `MEM`, `DASH`, `ONBOARD`, `INFRA` (Phase 0–1, elaborated to Task level). `AGENTS` (Phase 2, elaborated to Task level 2026-09-09 — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010: this single flat module *replaces* the `ORCH`/`AGENTSVC`/`CORE-AGENTS`/`STRUCT-OUT` four-module split this document previously sketched as a placeholder example — the project owner approved one consolidated `AGENTS-01..09` task sequence instead). Phase 3–7 still use finer-grained codes assigned when each phase gets its own future Task-level elaboration (e.g. `INTEG-MAPS`, `DOMAIN-AGENTS`, `RAG` for Phase 3; `MEMSVC`, `PERSONALIZE` for Phase 4) — see `WORK_BREAKDOWN_STRUCTURE.md` for the authoritative, current set at any point in time.
 
 ---
 
@@ -161,4 +163,4 @@ If a task genuinely depends on another task's output, don't start it until that 
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**IMMUTABLE — approved baseline, 2026-07-22, following Q1–Q4 sign-off. §7 approved 2026-08-13. §8 added 2026-08-16, Governance Reconciliation (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 009), plus the incremental-output line in §5.**
+**IMMUTABLE — approved baseline, 2026-07-22, following Q1–Q4 sign-off. §7 approved 2026-08-13. §8 added 2026-08-16, Governance Reconciliation (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 009), plus the incremental-output line in §5. §2's Phase 2 module-code example corrected 2026-09-09 (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 010).**

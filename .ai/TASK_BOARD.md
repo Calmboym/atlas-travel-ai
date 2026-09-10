@@ -1,6 +1,6 @@
 # TASK_BOARD.md
 
-**Last updated:** 2026-09-06 (MEM-01 through MEM-02 — the MEM module is closed; note this line had drifted behind the file's own dated verification entries for at least the CHAT-01/02 and CHAT-03/04 sessions, corrected here rather than left compounding further)
+**Last updated:** 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, `Module: AGENTS`, 9 tasks added to Todo below — documentation-only, Q1–Q4 approved, no task authorized for implementation; see `.ai/PROJECT_STATE.md` and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). Prior: 2026-09-08 (`DASH-01` complete — Phase 1 fully closed); 2026-09-06 (MEM-01 through MEM-02 — the MEM module is closed).
 **Document tier:** Living — updated every session via `MASTER_RULES.md` §21.
 
 Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every card cites its WBS ID and required documentation set so it can be picked up without re-deriving context. **Governance Sessions** (below) are a separate, non-WBS category — documentation/process work, not product implementation; see `MASTER_RULES.md` §3 Scope Control for why these never carry a WBS ID.
@@ -124,14 +124,45 @@ question, only its localization.
 *(Phase 1 is complete — see the closing note under Done above.
 `ATLAS-P1-DASH-01` was the last remaining Phase 1 task; both its
 dependencies were already satisfied before that session started. No
-further Phase 1 tasks remain in this table. Phase 2 — AI Agent System
-is not yet elaborated to Task level per `WORK_BREAKDOWN_STRUCTURE.md`'s
-own rolling-wave planning approach; that elaboration is the
-recommended next piece of work, not a specific implementation task in
-itself. `AIQuickAccess` (Shared, `COMPONENT_OWNERSHIP_MATRIX.md` §4)
-remains unclaimed — no task in Phase 1 needed it; it becomes relevant
-again whenever a Phase 2+ task first wants a persistent, cross-page AI
-entry point.)*
+further Phase 1 tasks remain in this table. `AIQuickAccess` (Shared,
+`COMPONENT_OWNERSHIP_MATRIX.md` §4) remains unclaimed — no task in
+Phase 1 needed it; it becomes relevant again whenever a Phase 2+ task
+first wants a persistent, cross-page AI entry point.)*
+
+---
+
+## Todo (Phase 2 — AI Agent System)
+
+Elaborated to Task level 2026-09-09 — documentation-only session.
+Every row below is Definition-of-Ready per `MASTER_RULES.md` §18 (Q1–Q4
+resolved, dependencies either none or Phase 1 tasks already Done), but
+**no row is authorized for implementation by this table alone** — each
+still requires its own explicit `"Execute ATLAS-P2-AGENTS-NN"`
+instruction, per `SESSION_PROMPT.md` and `DEVELOPMENT_EXECUTION_PLAN.md`
+§3. Full task-level detail (scope, allowed files, acceptance criteria):
+`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
+
+| Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
+|---|---|---|---|---|---|
+| ATLAS-P2-AGENTS-01 | AI Orchestrator core (extends/consumes `CHAT-03`'s Conversation Manager — Q4) | High | none (Phase 1 CHAT-03/04 ✅) | `ARCHITECTURE.md` §7–8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §7 | L |
+| ATLAS-P2-AGENTS-02 | Agent framework: base contract + structured-output schemas | High | AGENTS-01 | `ARCHITECTURE.md` §8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §8–9 | M |
+| ATLAS-P2-AGENTS-03 | Tool Service: registry, permissions, validation, RAG (static/curated + Qdrant only — Q1) | High | AGENTS-02 | `ARCHITECTURE.md` §9–10, `GUIDELINES.md` §9, `INFRASTRUCTURE_BASELINE.md` §8 | M |
+| ATLAS-P2-AGENTS-04 | Traveler Profile Agent (reads `PROF-02`/`MEM-02`, no field duplication) | High | AGENTS-01, 02, 03 | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 | M |
+| ATLAS-P2-AGENTS-05 | Destination Intelligence Agent | High | AGENTS-01 through 04 | `ARCHITECTURE.md` §8, `PRD.md` §7.2, `AI_EXPERIENCE.md` §Explainability | M |
+| ATLAS-P2-AGENTS-06 | Budget Agent — **estimate-only, explicit uncertainty required (Q3)** | Medium | AGENTS-01 through 04 | `PRD.md` §7.9, `AI_EXPERIENCE.md` §Budget Assistance/§Uncertainty, `GUIDELINES.md` §8 | M |
+| ATLAS-P2-AGENTS-07 | Itinerary Planner Agent | High | AGENTS-05, 06 | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Itinerary Generation, `PRD.md` §7.3 | L |
+| ATLAS-P2-AGENTS-08 | Recommendation Agent | Medium | AGENTS-04, 05 | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Recommendations, `PSYCHOLOGY_GUIDELINES.md` §13/§15 | M |
+| ATLAS-P2-AGENTS-09 | Multi-agent integration — wires `chat_service.py`/`chat.py` to the Orchestrator for the first time since CHAT-04; zero SSE contract change | High | AGENTS-01 through 08 | `TRIP_PLANNING_EXPERIENCE.md` §AI Understanding Phase, `ARCHITECTURE.md` §7, `AI_EXPERIENCE.md` §Streaming | L |
+
+**Parallelizable pairs (per `CONVERSATION_STRATEGY.md` §8):** `AGENTS-05`
++ `AGENTS-06` (once 01–04 are Done); `AGENTS-07` + `AGENTS-08` (once
+their own respective dependencies are Done). `AGENTS-09` is a hard
+serialization point — every other row above must be Done first. See
+`WORK_BREAKDOWN_STRUCTURE.md` for the full parallelization note.
+
+**Recommended first task: `ATLAS-P2-AGENTS-01`.** Ready pending the
+project owner's explicit go-ahead to execute (not granted by this
+elaboration alone).
 
 ---
 
@@ -147,11 +178,13 @@ entry point.)*
 
 *(empty)*
 
-## Backlog (Phase 2–7, module/feature level only — see WORK_BREAKDOWN_STRUCTURE.md for detail)
+## Backlog (Phase 3–7, module/feature level only — see WORK_BREAKDOWN_STRUCTURE.md for detail)
+
+**Phase 2 is elaborated to Task level as of 2026-09-09 — see "Todo
+(Phase 2 — AI Agent System)" above, not this table.**
 
 | Phase | Modules |
 |---|---|
-| Phase 2 | AI Orchestrator, Agent Service, Core Agents (5) |
 | Phase 3 | Maps/Weather/Currency/Events integration, Domain Agents (12) |
 | Phase 4 | Long-term Memory Service, Personalized Recommendations |
 | Phase 5 | Security review, performance testing, AI evaluation, Design QA pass |
@@ -164,4 +197,4 @@ entry point.)*
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard), 2026-08-25 (PROF-01 through PROF-03 complete), 2026-08-29 (LAND-01 through LAND-03 complete), 2026-09-01 (CHAT-01 through CHAT-02 complete), 2026-09-05 (CHAT-03 through CHAT-04 complete), 2026-09-06 (MEM-01 through MEM-02 complete), 2026-09-08 (DASH-01 complete — Phase 1 fully closed), 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, documentation-only, Q1–Q4 approved — Amendment 010; no Phase 2 task authorized for implementation). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

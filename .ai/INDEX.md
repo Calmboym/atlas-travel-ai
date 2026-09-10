@@ -5,6 +5,8 @@
 > **APPROVED (2026-08-13):** the `DESIGNSYS` entry's `COMPONENT_OWNERSHIP_MATRIX.md` reference and `Related WBS` field (below) are approved and part of the locked baseline (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 006).
 >
 > **CORRECTED (2026-08-16, Governance Reconciliation):** the `DESIGNSYS` entry below previously said DESIGNSYS-03/04 were "not yet authorized to start" — both have since shipped (`TASK_BOARD.md`: 03 done 2026-08-15, 04 done 2026-08-16). Corrected below, and `INFRASTRUCTURE_BASELINE.md` added as a new cross-cutting entry. This INDEX entry does not restate task status going forward — see `TASK_BOARD.md`, always, for that — to avoid the two drifting apart again.
+>
+> **UPDATED (2026-09-09):** Phase 1 is complete (`TASK_BOARD.md`, `PROJECT_STATE.md`). The `AGENTS` entry below is elaborated to Task level for the first time (`ATLAS-P2-AGENTS-01..09`), documentation-only, per the project owner's approved Q1–Q4 (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). The `TRIPPLAN` entry is updated to note its explicit exclusion from this pass (Q2).
 
 **Purpose:** for any feature area, this is the complete — and only necessary — documentation list. A session working on `AUTH` should never need to open `TIMELINE`'s documents, and vice versa. Context-size estimates are rough (S = 1–2 short docs/sections, M = 3–5, L = 6–10, XL = the full Design Bible) — treat them as planning guidance, not a hard token count.
 
@@ -64,7 +66,7 @@ Design Bible numbers below follow the canonical index approved 2026-07-22 (Q1) �
 
 - **Docs:** 19 Trip Planning Experience (full), 17 AI Experience §Itinerary Generation, 07 Psychology Guidelines §3/§6/§8/§13 (Hick's Law, Miller's Law, Progressive Disclosure, Decision Fatigue)
 - **Backend:** Destination Intelligence Agent, Itinerary Planner Agent, Budget Agent (ARCHITECTURE §8)
-- **Related WBS:** Phase 2 backlog
+- **Related WBS:** Module/Feature level only — **explicitly excluded from the `AGENTS` module's 2026-09-09 Task-level elaboration (Q2)**; `AGENTS` is backend-only, `TRIPPLAN` remains its own separate future Task-level elaboration pass, to be scheduled once `ATLAS-P2-AGENTS-09` ships real agent output for it to consume
 - **Est. context:** L
 
 ## TRIPDET — Trip Details
@@ -87,9 +89,10 @@ Design Bible numbers below follow the canonical index approved 2026-07-22 (Q1) �
 
 ## AGENTS — AI Agent System (Phase 2)
 
-- **Docs:** ARCHITECTURE §8, PRD §7.14, MASTER_BUILD_PROMPT §7–9, GUIDELINES §7–9
-- **Related WBS:** Phase 2 backlog
-- **Est. context:** L
+- **Docs:** ARCHITECTURE §7–10, PRD §7.14, MASTER_BUILD_PROMPT §7–10, GUIDELINES §7–9, `AI_EXPERIENCE.md` (Memory/Explainability/Uncertainty/Budget Assistance/Itinerary Generation/Recommendations/Streaming sections), `PSYCHOLOGY_GUIDELINES.md` §13/§15, `TRIP_PLANNING_EXPERIENCE.md` §AI Understanding Phase (AGENTS-09 only) — no numbered Design Bible document governs this module as a whole; it is backend/AI-layer only, per-task doc lists in `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2
+- **Backend:** AI Orchestrator, Agent Service, 5 Core Agents (Traveler Profile, Destination Intelligence, Budget, Itinerary Planner, Recommendation) — `ARCHITECTURE.md` §7–8
+- **Related WBS:** `ATLAS-P2-AGENTS-01..09` — **elaborated to Task level 2026-09-09** (documentation-only; not yet authorized for implementation — see `TASK_BOARD.md` and `PROJECT_STATE.md` for current status, authoritative, not restated here). Reuses Phase 1's `ai/agents/conversation_manager.py`, `ai/providers/**`, `PROF-02`'s `traveler_profile` table, and `MEM-02`'s `user_memory` store — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2's own "Phase 1 infrastructure this module reuses" note for the full, verified list.
+- **Est. context:** M per task (L for `AGENTS-01`, `AGENTS-07`, `AGENTS-09`) / L if reading the whole module at once — see `WORK_BREAKDOWN_STRUCTURE.md` for per-task estimates
 
 ## INTEG — External Integrations (Phase 3)
 
@@ -147,4 +150,4 @@ Any task touching more than one row above should still only load the specific do
 **END OF DOCUMENT (this baseline)**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation), updated 2026-08-16 (Governance Reconciliation — DESIGNSYS status corrected, INFRASTRUCTURE entry added). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation), updated 2026-08-16 (Governance Reconciliation — DESIGNSYS status corrected, INFRASTRUCTURE entry added), updated 2026-09-09 (AGENTS entry elaborated to Task level; TRIPPLAN entry notes its explicit Q2 exclusion from that pass). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

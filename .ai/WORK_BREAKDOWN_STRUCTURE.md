@@ -2,7 +2,7 @@
 
 **Project:** Atlas — AI Travel Platform
 **Date:** 2026-07-22
-**Document tier:** Living — Phase 1 is fully elaborated now; Phases 2–7 are elaborated to Task level in their own bootstrap pass, just before each starts (rolling wave — see below). This is the approved 2026-07-22 baseline; changes only via `MASTER_RULES.md` §21.
+**Document tier:** Living — Phase 1 and Phase 2 are fully elaborated to Task level now; Phases 3–7 remain at Module/Feature level and are elaborated to Task level in their own bootstrap pass, just before each starts (rolling wave — see below). This is the approved 2026-07-22 baseline; changes only via `MASTER_RULES.md` §21.
 **Status note:** Q1–Q4 approved 2026-07-22 — see `PROJECT_STATE.md` and `DESIGN_BIBLE_AMENDMENTS.md`. **Phase 1 implementation is authorized and underway** — `ATLAS-P1-AUTH-01`, `ATLAS-P1-AUTH-02`, `ATLAS-P1-AUTH-03`, `ATLAS-P1-AUTH-04`, `ATLAS-P1-AUTH-05`, `ATLAS-P1-DESIGNSYS-01`, `ATLAS-P1-DESIGNSYS-02`, `ATLAS-P1-DESIGNSYS-03`, and `ATLAS-P1-DESIGNSYS-04` are done; see `.ai/PROJECT_STATE.md` → "Implementation Status." Updated 2026-08-22 (AUTH-02 through AUTH-05 session) to record those four tasks' completion — first real `backend/app/` code in the repository; see that session's entry in `.ai/PROJECT_STATE.md` for the backend-scaffolding-as-byproduct note, mirroring how AUTH-01 pre-built Foundation components DESIGNSYS-02 later reconciled with.
 **Hierarchy:** Project → Phase → Milestone → Module → Feature → Epic → Task → Subtask
 
@@ -191,14 +191,117 @@ built, and verified work rather than a pending proposal.
 
 ---
 
-## PHASE 2 — AI Agent System (Module/Feature level)
+## PHASE 2 — AI Agent System — Task-level elaboration (2026-09-09)
 
-- Module ORCH: AI Orchestrator — intent understanding, agent selection, workflow management, output combination
-- Module AGENTSVC: Agent Service — execution, communication (via Orchestrator only), permissions
-- Module CORE-AGENTS: Destination Intelligence, Itinerary Planner, Recommendation, Budget, Traveler Profile
-- Module STRUCT-OUT: Structured output schemas per agent (input/output schema, tool permissions, error handling, eval criteria — per MASTER_BUILD_PROMPT §8)
+**Status note:** Elaborated to Task level 2026-09-09, per the project owner's explicit approval of Q1–Q4 (formal record: `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). **Documentation-only — this elaboration does not itself authorize implementation of any Phase 2 task.** Per `DEVELOPMENT_EXECUTION_PLAN.md` §3, starting a new Phase requires the project owner's explicit sign-off; that has been given for this WBS elaboration (Q1–Q4), not yet for executing any individual task below — each still needs its own `"Execute ATLAS-P2-AGENTS-NN"` instruction, per `SESSION_PROMPT.md`.
 
-Unlocks: `TRIPPLAN` and (partially) `TIMELINE`/`TRIPDET` feature areas become buildable against real data.
+**Milestone M2 objective:** Atlas reasons using five specialized Core Agents (Traveler Profile, Destination Intelligence, Budget, Itinerary Planner, Recommendation) dispatched by a real AI Orchestrator, replacing Phase 1's single-model passthrough — while never fabricating prices, availability, or facts it can't ground in retrieval (`GUIDELINES.md` §8, `MASTER_BUILD_PROMPT.md` §10).
+
+**Consolidation note (resolves a naming conflict — see `PROJECT_STATE.md`'s Findings for this session and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010):** this WBS previously sketched Phase 2 as four separate modules (`ORCH`, `AGENTSVC`, `CORE-AGENTS`, `STRUCT-OUT`, matching `CONVERSATION_STRATEGY.md` §2's own placeholder example). Per the project owner's explicit approval of the 9-task structure below, Phase 2 is elaborated as **one consolidated module, `AGENTS`**, with flat `ATLAS-P2-AGENTS-01..09` task IDs — not four separately-numbered modules. `CONVERSATION_STRATEGY.md` §2 is updated to match (see that document).
+
+### Module: AGENTS (AI Agent System)
+
+Cross-references `ARCHITECTURE.md` §7–9, `PRD.md` §7.14, `GUIDELINES.md` §7–9, `MASTER_BUILD_PROMPT.md` §7–10. No numbered Design Bible document governs this module — it is backend/AI-layer only (confirmed: no task below creates or consumes a UI component; `COMPONENT_OWNERSHIP_MATRIX.md` is not touched by this elaboration, per `CONVERSATION_STRATEGY.md` §7's backend-only exception).
+
+**Phase 1 infrastructure this module reuses (verified against the actual repository baseline this session, not assumed):**
+- `ai/providers/base.py` (`LLMProvider` ABC, `LLMMessage`, `ProviderError` hierarchy) and `ai/providers/openai_provider.py` — every agent calls a model through this, never a provider SDK directly (`ARCHITECTURE.md` §2).
+- `ai/agents/conversation_manager.py` (`generate_reply`/`stream_reply`) — **`AGENTS-01` extends/consumes this, does not rebuild it** (Q4, confirmed). Its existing system-prompt-injection defense (`_with_system_prompt`, the sole place a `"system"`-role message can enter a conversation) is preserved as-is.
+- `ai/config.py` (`AIConfig`) and `backend/app/core/ai.py` (env → `AIConfig` → provider wiring) — unchanged; any new agent-specific configuration follows this same pattern, not a parallel one.
+- `backend/app/services/chat_service.py` / `backend/app/api/v1/chat.py` (`CHAT-03`/`04`'s non-streaming and SSE routes) — **left untouched until `AGENTS-09`**, the one task that swaps `chat_service.py`'s direct `conversation_manager` calls for a call into the new Orchestrator. No earlier task in this module modifies either file.
+- `backend/app/services/memory_service.py` / the `user_memory` JSONB table (`MEM-02`) — the storage surface `AGENTS-04` (Traveler Profile Agent) reads/writes, exactly as `PROJECT_STATE.md`'s 2026-09-06 entry anticipated ("intended as the storage surface a future Phase 2+ Memory/Traveler-Profile Agent will read and write into").
+- `backend/app/models/traveler_profile.py` (`PROF-02`) — the structured-preference table `AGENTS-04` reads (travel style, budget, accommodation, transportation, food, languages); `AGENTS-04` does not duplicate any of these fields.
+- `ai/schemas/` and `ai/evaluations/` — both still empty (`.gitkeep` only, verified against the actual repo this session). `AGENTS-02` is the first task to add real content to either.
+- `qdrant-client` (`backend/pyproject.toml`) and the `qdrant` service (`docker-compose.yml`) — both declared/provisioned since Phase 0, but **zero client-instantiation code exists anywhere in the repository today** (verified this session: no `QdrantClient(...)` call anywhere in `ai/` or `backend/app/`). `AGENTS-03` is the first task that actually wires a Qdrant client — new work, not a reconciliation of something already built.
+
+**Approved scope decisions this elaboration incorporates (Q1–Q4, confirmed by the project owner; formal record: `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010):**
+- **Q1 — RAG scope:** `AGENTS-03`'s Tool Service includes RAG retrieval over **static, curated** knowledge sources only, via Qdrant. Nothing in this module calls a live external API (Maps/Weather/Currency/Flights/Hotels) — that remains `INTEG-*`/`DOMAIN-AGENTS`, Phase 3.
+- **Q2 — TRIPPLAN independence:** the Trip Planning frontend (Design Bible Doc 19, `INDEX.md` §TRIPPLAN) is explicitly **out of scope** for this module and for this elaboration pass. `AGENTS` is backend-only; `TRIPPLAN` remains at Module/Feature level, to be elaborated to Task level in its own separate future pass once these agents exist for it to consume.
+- **Q3 — Budget Agent honesty framing:** `AGENTS-06`'s output is **estimate-only** and must explicitly state its uncertainty in every response, per `AI_EXPERIENCE.md` §Uncertainty ("If Atlas is uncertain... State the uncertainty clearly") — a permanent characteristic of Phase 2's Budget Agent until real pricing adapters exist in Phase 3, not a placeholder.
+- **Q4 — `AGENTS-01` extends, does not rebuild, `CHAT-03`'s Conversation Manager** — see the infrastructure-reuse note above.
+
+**Task ID scheme:** `ATLAS-P2-AGENTS-{seq}` (flat, per the Consolidation note above).
+
+- Task `ATLAS-P2-AGENTS-01` — AI Orchestrator core
+    - **Scope:** intent understanding, an agent registry (empty until `AGENTS-04..08` populate it), dispatch logic, output combination. Standalone and unit-testable — **not yet wired into `chat_service.py`/`chat.py`** (that's `AGENTS-09`). When no specialized agent applies, the Orchestrator falls back to calling `conversation_manager.generate_reply`/`stream_reply` directly — this is the "extend, don't rebuild" relationship (Q4): the existing Phase 1 module becomes the Orchestrator's own default path, not a discarded predecessor.
+    - Dependencies: none (Phase 1 `CHAT-03`/`CHAT-04` already Done)
+    - Required docs: `ARCHITECTURE.md` §7–8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §7
+    - Allowed files to modify: new `ai/orchestrator/**`; extends (does not rewrite) `ai/agents/conversation_manager.py` only if a genuine shared-helper extraction is needed — report before doing so if it is
+    - Priority: High | Complexity: L | Context: L
+    - Acceptance: never bypasses `LLMProvider` (`ARCHITECTURE.md` §2); an unrecognized/ambiguous request produces the same passthrough behavior Phase 1 users already get, not a regression; every dispatch decision is logged with its reasoning (`GUIDELINES.md` §16), never silent; unit tests cover intent-classification and fallback-to-passthrough paths using a dependency-injected fake provider, matching `CHAT-03`/`04`'s own established testing pattern (no live model call required for these tests)
+
+- Task `ATLAS-P2-AGENTS-02` — Agent framework: base contract + structured-output schemas
+    - **Scope:** the base `Agent` contract every Core Agent below implements (Mission/Responsibilities/Allowed tools/Input schema/Output schema/Reasoning rules/System prompt — the exact 7 fields `ARCHITECTURE.md` §8 requires), Pydantic structured-output schemas, and the prompt-file loading convention wired to `ai/prompts/`/`ai/agents/`/`ai/schemas/` (`GUIDELINES.md` §7's directory structure — already scaffolded, not yet populated beyond `conversation_manager`'s own prompt).
+    - Dependencies: AGENTS-01
+    - Required docs: `ARCHITECTURE.md` §8, `GUIDELINES.md` §7 (Prompt Management), `MASTER_BUILD_PROMPT.md` §8–9
+    - Allowed files to modify: new `ai/agents/base.py`; new files under `ai/schemas/` (first real content — currently `.gitkeep` only)
+    - Priority: High | Complexity: M | Context: M
+    - Acceptance: every schema is a real Pydantic model (no `dict[str, Any]` escape hatches); the base contract is abstract/enforced (a Core Agent that skips a required field fails at import or instantiation time, not silently at runtime); system prompts live in `ai/prompts/`, never inline in agent logic (`GUIDELINES.md` §7)
+
+- Task `ATLAS-P2-AGENTS-03` — Tool Service: registry, permissions, validation, RAG (static/curated + Qdrant)
+    - **Scope:** tool registry, per-agent permission enforcement (`GUIDELINES.md` §9 — "Agents must use approved tools only"), response validation, monitoring hooks; the **first real Qdrant client wiring in this repository** (verified: none exists today), retrieving from static/curated knowledge sources only (Q1 — no live external APIs; those are Phase 3 `INTEG-*` adapters). The embedding layer is provider-independent, matching `ARCHITECTURE.md` §9, not hardcoded to one embedding provider.
+    - Dependencies: AGENTS-02
+    - Required docs: `ARCHITECTURE.md` §9–10, `GUIDELINES.md` §9, `INFRASTRUCTURE_BASELINE.md` §8 (backend baseline — confirms no prior Qdrant client code to reconcile against)
+    - Allowed files to modify: new `ai/tools/**`; new `ai/rag/**`; `backend/pyproject.toml` only if a new supporting library is genuinely needed beyond the already-declared `qdrant-client` (report before adding)
+    - Priority: High | Complexity: M | Context: M
+    - Acceptance: no tool call reaches Qdrant or any other resource without passing permission + validation first; retrieval sources are static/curated and cited in this task's own handoff (no fabricated or invented "knowledge base" content — `BRAND_GUIDELINES.md` §13); verified against a real local Qdrant instance (matching every prior Phase 1 session's "real infrastructure, not mocks" standard), not a mocked client
+
+- Task `ATLAS-P2-AGENTS-04` — Traveler Profile Agent
+    - **Scope:** reads `traveler_profile.py` (`PROF-02`) and `user_memory` (`MEM-02`); does not duplicate either table's fields. Produces a structured traveler-preference summary the other four Core Agents consume.
+    - Dependencies: AGENTS-01, AGENTS-02, AGENTS-03
+    - Required docs: `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Memory/§Context Awareness, `PRD.md` §7.13
+    - Allowed files to modify: new `ai/agents/traveler_profile_agent.py`; new `ai/prompts/traveler_profile_prompt.py`; new `ai/schemas/traveler_profile.py`
+    - Priority: High | Complexity: M | Context: M
+    - Acceptance: zero field overlap with `traveler_profile.py`/`user_memory` (checked and stated explicitly in this task's handoff, the same check `MEM-02` performed against `PROF-02` before it was built); read-only against both tables — this agent never writes to `traveler_profile.py` (that remains `PROF-02`'s owned write path via `/api/v1/profile/me`)
+
+- Task `ATLAS-P2-AGENTS-05` — Destination Intelligence Agent
+    - **Scope:** discovery, ranking, and comparison via `AGENTS-03`'s RAG retrieval over static/curated sources only.
+    - Dependencies: AGENTS-01 through AGENTS-04
+    - Required docs: `ARCHITECTURE.md` §8, `PRD.md` §7.2, `AI_EXPERIENCE.md` §Explainability
+    - Allowed files to modify: new `ai/agents/destination_intelligence_agent.py`; new `ai/prompts/destination_intelligence_prompt.py`; new `ai/schemas/destination.py`
+    - Priority: High | Complexity: M | Context: M
+    - Acceptance: every recommendation explains why it was selected (`AI_EXPERIENCE.md` §Explainability — "Why this? Why now? Why for me?"); never returns a destination not grounded in the retrieved static/curated set — no fabricated destinations, weather, or facts
+
+- Task `ATLAS-P2-AGENTS-06` — Budget Agent (estimate-only)
+    - **Scope:** cost **estimation** only — no real pricing exists until Phase 3's Flight/Hotel adapters (Q3, confirmed). Every response explicitly states it is an estimate.
+    - Dependencies: AGENTS-01 through AGENTS-04
+    - Required docs: `PRD.md` §7.9, `AI_EXPERIENCE.md` §Budget Assistance/§Uncertainty, `GUIDELINES.md` §8 ("Never invent prices")
+    - Allowed files to modify: new `ai/agents/budget_agent.py`; new `ai/prompts/budget_prompt.py`; new `ai/schemas/budget.py`
+    - Priority: Medium | Complexity: M | Context: M
+    - Acceptance: **every output includes an explicit, unambiguous uncertainty/estimate disclosure** — a hard acceptance gate, not a style preference (Q3); no absolute price is ever presented as confirmed or booked
+
+- Task `ATLAS-P2-AGENTS-07` — Itinerary Planner Agent
+    - **Scope:** daily schedules, consuming Destination Intelligence (`AGENTS-05`) and Budget (`AGENTS-06`) output.
+    - Dependencies: AGENTS-05, AGENTS-06
+    - Required docs: `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Itinerary Generation, `PRD.md` §7.3
+    - Allowed files to modify: new `ai/agents/itinerary_planner_agent.py`; new `ai/prompts/itinerary_planner_prompt.py`; new `ai/schemas/itinerary.py`
+    - Priority: High | Complexity: L | Context: L
+    - Acceptance: every itinerary section (overview/daily schedule/transportation/accommodation/estimated costs/tips) is present per `AI_EXPERIENCE.md` §Itinerary Generation; budget figures carry Budget Agent's own estimate disclosure forward, never restated as confirmed
+
+- Task `ATLAS-P2-AGENTS-08` — Recommendation Agent
+    - **Scope:** personalized ranking, consuming Traveler Profile (`AGENTS-04`) and Destination Intelligence (`AGENTS-05`) output.
+    - Dependencies: AGENTS-04, AGENTS-05
+    - Required docs: `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Recommendations, `PSYCHOLOGY_GUIDELINES.md` §13 (Decision Fatigue), §15 (Explainable AI)
+    - Allowed files to modify: new `ai/agents/recommendation_agent.py`; new `ai/prompts/recommendation_prompt.py`; new `ai/schemas/recommendation.py`
+    - Priority: Medium | Complexity: M | Context: M
+    - Acceptance: curated, ranked output, not an exhaustive list (`PSYCHOLOGY_GUIDELINES.md` §13 — "Never display 50 hotels at once"); every recommendation states its relevance reasoning, not a generic label
+
+- Task `ATLAS-P2-AGENTS-09` — Multi-agent integration
+    - **Scope:** wires all five Core Agents into the Orchestrator's real dispatch (`AGENTS-01`), and — the one task in this module that touches them — **replaces `chat_service.py`'s direct `conversation_manager` calls with a call into the Orchestrator**, adds status messages during generation (`"Finding destinations..."` / `"Building your itinerary..."` per `TRIP_PLANNING_EXPERIENCE.md` §AI Understanding Phase — no fake percentages), and confirms the existing SSE stream (`CHAT-04`'s wire format) carries them without a breaking change to the frontend contract.
+    - Dependencies: AGENTS-01 through AGENTS-08 (the only task in this module depending on more than two prior tasks)
+    - Required docs: `TRIP_PLANNING_EXPERIENCE.md` §AI Understanding Phase, `ARCHITECTURE.md` §7, `AI_EXPERIENCE.md` §Streaming
+    - Allowed files to modify: `backend/app/services/chat_service.py`, `backend/app/api/v1/chat.py` (both — for the first time since `CHAT-04`); new orchestrator-dispatch wiring under `ai/orchestrator/**`
+    - Priority: High | Complexity: L | Context: L
+    - Acceptance: the existing `CHAT-04` SSE frontend consumer (`frontend/lib/chat/stream-assistant-reply.ts`) requires **no changes** — the wire format is preserved exactly, only the backend's internal generation path changes; a live end-to-end smoke test (dependency-injected fake or real provider, matching every prior Phase 1 session's verification standard) confirms `/chat` still works for a guest user with zero regression before this task is considered done
+
+**Parallelization (per `CONVERSATION_STRATEGY.md` §8 — neither task's declared Dependencies names the other, and their Allowed Files to Modify don't overlap):**
+- `AGENTS-05` (Destination) and `AGENTS-06` (Budget) may run in parallel once `AGENTS-01`–`04` are Done — neither depends on the other and they touch disjoint new files.
+- `AGENTS-07` (Itinerary) and `AGENTS-08` (Recommendation) touch disjoint new files (`itinerary_planner_agent.py` vs `recommendation_agent.py`) and neither's Dependencies names the other, so they may run in parallel once their own respective dependencies are satisfied (`AGENTS-05`+`06` for `07`; `AGENTS-04`+`05` for `08`).
+- `AGENTS-09` is a hard serialization point — it is the only task in this module whose Dependencies field names more than two prior tasks, and every other `AGENTS` task must be Done before it starts.
+- No task in this module may run in parallel with any Phase 1 task (none remain — Phase 1 is closed) or with any Phase 3–7 task (none of those phases is elaborated to Task level yet).
+
+**Phase 2 exit criteria:** all nine `AGENTS` tasks Done; `/chat` is served by real multi-agent dispatch (not the Phase 1 single-model passthrough) with zero regression to the existing guest-mode streaming contract; every Core Agent's output is grounded (RAG-retrieved or profile-derived), never fabricated (`BRAND_GUIDELINES.md` §13, `GUIDELINES.md` §8); Budget Agent's estimate-only framing is present in 100% of its outputs (Q3); `TRIPPLAN` frontend elaboration (Q2) can begin as its own separate, future Task-level pass, since real agent output now exists for it to consume.
+
+Unlocks: `TRIPPLAN` (once separately elaborated — Q2) and, partially, `TIMELINE`/`TRIPDET` become buildable against real (if estimate-flagged) data.
 
 ## PHASE 3 — External Data Integration (Module/Feature level)
 
@@ -239,10 +342,12 @@ Unlocks: `TRIPDET`, `NOTIF` become real (live reservations, real weather-trigger
 - No oversized Tasks: every Phase 1 Task above is scoped to fit the Context estimates in `CONVERSATION_STRATEGY.md`'s S/M/L/XL scale (none rated XL).
 - No contradictory architecture introduced: every Task references existing ARCHITECTURE.md modules, none invents new ones.
 
+**Phase 2 (AGENTS) integrity check, 2026-09-09:** no duplicated work against Phase 1 (`AGENTS-01` explicitly extends, not duplicates, `CHAT-03`'s Conversation Manager); no circular dependencies (`AGENTS-09` is the only convergence point, and it depends strictly forward on `01`–`08`, none of which depends back on it); no Task rated XL (highest is L, matching Phase 1's own ceiling); the one real naming inconsistency found (four sketched modules vs. one consolidated `AGENTS` module) is resolved and recorded, not silently carried forward — see the Consolidation note above and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010.
+
 
 ---
 
 **END OF DOCUMENT (this baseline)**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation — added Module: DESIGNSYS). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation — added Module: DESIGNSYS), updated 2026-09-08 (Phase 1 — Core Platform MVP complete), updated 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, Module: AGENTS added, documentation-only, Q1–Q4 approved — see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010; no Phase 2 task authorized for implementation by this update). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

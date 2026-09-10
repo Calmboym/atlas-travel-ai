@@ -196,4 +196,55 @@ This is a naming/mapping correction using values that were already approved (Acc
 | 008 | `/settings` Route Placement | Approved | 2026-08-16 |
 | 009 | Task-Execution & Incremental-Delivery Governance | Approved | 2026-08-16 |
 
-**Next amendment number:** 010.
+---
+
+## Amendment 010 — Phase 2 (AI Agent System) Task-Level Elaboration: Scope Decisions, Module-Naming Resolution, Dependency Graph Extension
+
+**Status:** APPROVED
+**Approved:** 2026-09-09, by project owner (Q1–Q4 of the Phase 2 elaboration proposal presented this session).
+**Amends:** adds new governance surface area (Phase 2's Task-level elaboration, not previously formalized), and formally extends `DEPENDENCY_GRAPH.md` (LOCKED — Tier 1) without editing its body directly, per that document's own established mechanism ("Adding a [module] box needs its own dated amendment... not a direct edit" — the same precedent `DESIGNSYS_FOUNDATION_AUDIT_AND_WBS_PROPOSAL.md` already used for `DESIGNSYS`).
+**Reference:** Phase 2 — AI Agent System WBS Elaboration Proposal (this session's prior turn); `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 (Module: AGENTS), `TASK_BOARD.md` "Todo (Phase 2)", `INDEX.md` §AGENTS/§TRIPPLAN, `CONVERSATION_STRATEGY.md` §2, `SESSION_PROMPT.md` "Notes for the Human Operator" — all updated the same session as this amendment, per the incremental-output model (`MASTER_RULES.md` §26).
+
+**Text of amendment — four parts:**
+
+**1. Q1–Q4 scope decisions, formally recorded** (previously approved conversationally; this is their permanent, canonical record):
+
+- **Q1 — RAG/Qdrant scope in Phase 2.** `ATLAS-P2-AGENTS-03`'s Tool Service includes RAG retrieval over **static, curated** knowledge sources only, via Qdrant. No live external API (Maps/Weather/Currency/Flights/Hotels) is called by any Phase 2 `AGENTS` task — live data integration remains `ROADMAP.md` Phase 3 (`INTEG-*`/`DOMAIN-AGENTS`), unchanged.
+- **Q2 — TRIPPLAN independence.** The Trip Planning frontend (Design Bible Doc 19; `INDEX.md` §TRIPPLAN) is explicitly **excluded** from this elaboration pass. `AGENTS` is backend-only; `TRIPPLAN` remains at Module/Feature level and will be elaborated to Task level in its own separate future session, once `ATLAS-P2-AGENTS-09` ships real agent output for it to consume.
+- **Q3 — Budget Agent honesty framing.** `ATLAS-P2-AGENTS-06`'s output is **estimate-only**; every response must explicitly disclose its uncertainty, per `AI_EXPERIENCE.md` §Uncertainty. This is a hard acceptance-criterion gate on that task, not a preference, and remains true until real pricing adapters exist in Phase 3.
+- **Q4 — `ATLAS-P2-AGENTS-01` extends, does not rebuild, `CHAT-03`'s Conversation Manager Agent** (`ai/agents/conversation_manager.py`). Verified this session against the actual repository: the file is real, shipped, and its `generate_reply`/`stream_reply` functions and system-prompt-injection defense are preserved as-is; the new Orchestrator calls them as its own default/fallback path rather than replacing them.
+
+**2. Module-naming conflict, found and resolved.** `WORK_BREAKDOWN_STRUCTURE.md`'s prior Phase 2 stub (added at the original Bootstrap pass, 2026-07-22) sketched four separate modules — `ORCH`, `AGENTSVC`, `CORE-AGENTS`, `STRUCT-OUT` — matching `CONVERSATION_STRATEGY.md` §2's own placeholder example of "finer-grained codes assigned when each phase gets its own Task-level elaboration." The Phase 2 elaboration proposal this session instead used one consolidated module, `AGENTS`, with flat `ATLAS-P2-AGENTS-01..09` task IDs. This is a genuine, found inconsistency between two canonical documents — reported, not silently resolved, consistent with `MASTER_RULES.md` §2's conflict-handling rule. **Resolution, per the project owner's explicit approval of the 9-task `AGENTS` structure:** the single consolidated `AGENTS` module is authoritative. `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 and `CONVERSATION_STRATEGY.md` §2 are both updated this session to reflect it (see those documents' own dated notes). No document's body was silently rewritten without this cross-reference — both edits point back here.
+
+**3. `DEPENDENCY_GRAPH.md` extension, recorded (not a direct edit).** `DEPENDENCY_GRAPH.md` is LOCKED — Tier 1, same tier as the Design Bible; its own §2 (Module Dependency Order) does not yet show an `AGENTS` box. Per that document's own established amendment-only mechanism, this is recorded here rather than edited into the file:
+
+```
+... AI Orchestrator → Agent Service → Core Agents (Destination, Itinerary,
+    Recommendation, Budget, Traveler Profile)  [ORIGINAL, §2]
+                              ↓
+              Now realized as: Module AGENTS (ATLAS-P2-AGENTS-01..09)
+                              ↓
+              AGENTS-01 (Orchestrator) → AGENTS-02 (framework/schemas)
+                              ↓
+              AGENTS-03 (Tool Service + RAG/Qdrant)
+                              ↓
+              AGENTS-04 (Traveler Profile) → AGENTS-05 (Destination) ⇉ AGENTS-06 (Budget)
+                              ↓                                              ↓
+                    AGENTS-08 (Recommendation) ←——————————— AGENTS-07 (Itinerary) ←┘
+                              ↓
+                    AGENTS-09 (Integration — wires into CHAT-03/04's existing endpoints)
+```
+
+This is consistent with, and does not contradict, `DEPENDENCY_GRAPH.md` §2's original linear order (`AI Orchestrator → Agent Service → Core Agents`) — it is that same order elaborated to real Task IDs, not a redesign. `DEPENDENCY_GRAPH.md`'s own body remains unedited, per `WORKFLOW.md`'s "never modify previous documents" rule; this table is the authoritative extension for any future session that needs Phase 2's real task-level dependency shape.
+
+**4. No architecture, technology, or Design Bible content was altered.** This amendment is scope/process/dependency-graph documentation only — no code was written, no Phase 2 task was implemented or authorized for implementation, and no locked Design Bible document's body was touched.
+
+---
+
+**LOG UPDATE**
+
+| # | Title | Status | Date |
+|---|---|---|---|
+| 010 | Phase 2 (AI Agent System) Task-Level Elaboration: Scope Decisions, Module-Naming Resolution, Dependency Graph Extension | Approved | 2026-09-09 |
+
+**Next amendment number:** 011.
