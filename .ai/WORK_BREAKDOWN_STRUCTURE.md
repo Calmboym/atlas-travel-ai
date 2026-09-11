@@ -191,9 +191,9 @@ built, and verified work rather than a pending proposal.
 
 ---
 
-## PHASE 2 — AI Agent System — Task-level elaboration (2026-09-09)
+## PHASE 2 — AI Agent System — Task-level elaboration (2026-09-09); implementation started 2026-09-10
 
-**Status note:** Elaborated to Task level 2026-09-09, per the project owner's explicit approval of Q1–Q4 (formal record: `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). **Documentation-only — this elaboration does not itself authorize implementation of any Phase 2 task.** Per `DEVELOPMENT_EXECUTION_PLAN.md` §3, starting a new Phase requires the project owner's explicit sign-off; that has been given for this WBS elaboration (Q1–Q4), not yet for executing any individual task below — each still needs its own `"Execute ATLAS-P2-AGENTS-NN"` instruction, per `SESSION_PROMPT.md`.
+**Status note:** Elaborated to Task level 2026-09-09, per the project owner's explicit approval of Q1–Q4 (formal record: `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). **`ATLAS-P2-AGENTS-01` (AI Orchestrator core) is done (2026-09-10)** — the first Phase 2 task implemented, following its own explicit "Execute ATLAS-P2-AGENTS-01" instruction; see its task entry below and `PROJECT_STATE.md`. `AGENTS-02` through `AGENTS-09` remain Todo; each still needs its own explicit `"Execute ATLAS-P2-AGENTS-NN"` instruction, per `SESSION_PROMPT.md` and `DEVELOPMENT_EXECUTION_PLAN.md` §3 — the Q1–Q4 elaboration sign-off does not itself authorize any of them.
 
 **Milestone M2 objective:** Atlas reasons using five specialized Core Agents (Traveler Profile, Destination Intelligence, Budget, Itinerary Planner, Recommendation) dispatched by a real AI Orchestrator, replacing Phase 1's single-model passthrough — while never fabricating prices, availability, or facts it can't ground in retrieval (`GUIDELINES.md` §8, `MASTER_BUILD_PROMPT.md` §10).
 
@@ -221,17 +221,18 @@ Cross-references `ARCHITECTURE.md` §7–9, `PRD.md` §7.14, `GUIDELINES.md` §7
 
 **Task ID scheme:** `ATLAS-P2-AGENTS-{seq}` (flat, per the Consolidation note above).
 
-- Task `ATLAS-P2-AGENTS-01` — AI Orchestrator core
+- Task `ATLAS-P2-AGENTS-01` — AI Orchestrator core — **✅ DONE (2026-09-10)**
     - **Scope:** intent understanding, an agent registry (empty until `AGENTS-04..08` populate it), dispatch logic, output combination. Standalone and unit-testable — **not yet wired into `chat_service.py`/`chat.py`** (that's `AGENTS-09`). When no specialized agent applies, the Orchestrator falls back to calling `conversation_manager.generate_reply`/`stream_reply` directly — this is the "extend, don't rebuild" relationship (Q4): the existing Phase 1 module becomes the Orchestrator's own default path, not a discarded predecessor.
     - Dependencies: none (Phase 1 `CHAT-03`/`CHAT-04` already Done)
     - Required docs: `ARCHITECTURE.md` §7–8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §7
     - Allowed files to modify: new `ai/orchestrator/**`; extends (does not rewrite) `ai/agents/conversation_manager.py` only if a genuine shared-helper extraction is needed — report before doing so if it is
     - Priority: High | Complexity: L | Context: L
-    - Acceptance: never bypasses `LLMProvider` (`ARCHITECTURE.md` §2); an unrecognized/ambiguous request produces the same passthrough behavior Phase 1 users already get, not a regression; every dispatch decision is logged with its reasoning (`GUIDELINES.md` §16), never silent; unit tests cover intent-classification and fallback-to-passthrough paths using a dependency-injected fake provider, matching `CHAT-03`/`04`'s own established testing pattern (no live model call required for these tests)
+    - Acceptance: never bypasses `LLMProvider` (`ARCHITECTURE.md` §2); an unrecognized/ambiguous request produces the same passthrough behavior Phase 1 users already get, not a regression; every dispatch decision is logged with its reasoning (`GUIDELINES.md` §16 — cited as-is; the closer match by substance is actually §18 "Logging Rules", a minor citation note not a blocking conflict, see `PROJECT_STATE.md`), never silent; unit tests cover intent-classification and fallback-to-passthrough paths using a dependency-injected fake provider, matching `CHAT-03`/`04`'s own established testing pattern (no live model call required for these tests)
+    - **Delivered:** `ai/orchestrator/{__init__,types,registry,intent,orchestrator}.py`; 18 new tests in `backend/tests/test_orchestrator.py`; 155/155 suite passing; mypy strict clean. `ai/agents/conversation_manager.py` unchanged (extended/consumed only, per Q4). Full verification: `PROJECT_STATE.md` "Verification Results (2026-09-10, AGENTS-01)".
 
-- Task `ATLAS-P2-AGENTS-02` — Agent framework: base contract + structured-output schemas
-    - **Scope:** the base `Agent` contract every Core Agent below implements (Mission/Responsibilities/Allowed tools/Input schema/Output schema/Reasoning rules/System prompt — the exact 7 fields `ARCHITECTURE.md` §8 requires), Pydantic structured-output schemas, and the prompt-file loading convention wired to `ai/prompts/`/`ai/agents/`/`ai/schemas/` (`GUIDELINES.md` §7's directory structure — already scaffolded, not yet populated beyond `conversation_manager`'s own prompt).
-    - Dependencies: AGENTS-01
+- Task `ATLAS-P2-AGENTS-02` — Agent framework: base contract + structured-output schemas — **Definition-of-Ready** (`AGENTS-01` ✅ Done)
+    - **Scope:** the base `Agent` contract every Core Agent below implements (Mission/Responsibilities/Allowed tools/Input schema/Output schema/Reasoning rules/System prompt — the exact 7 fields `ARCHITECTURE.md` §8 requires), Pydantic structured-output schemas, and the prompt-file loading convention wired to `ai/prompts/`/`ai/agents/`/`ai/schemas/` (`GUIDELINES.md` §7's directory structure — already scaffolded, not yet populated beyond `conversation_manager`'s own prompt). **Note for whoever picks this up:** the base `Agent` class is expected to structurally satisfy `ai/orchestrator/types.py`'s `AgentHandler` Protocol (`name`, `intents`, `handle()`, `stream_handle()`) so `AGENTS-04` can register real agents into `Orchestrator().registry` without any change to `ai/orchestrator/` itself — `AGENTS-01` deliberately did not invent this 7-field contract itself, to avoid anticipating this task's own scope.
+    - Dependencies: AGENTS-01 ✅
     - Required docs: `ARCHITECTURE.md` §8, `GUIDELINES.md` §7 (Prompt Management), `MASTER_BUILD_PROMPT.md` §8–9
     - Allowed files to modify: new `ai/agents/base.py`; new files under `ai/schemas/` (first real content — currently `.gitkeep` only)
     - Priority: High | Complexity: M | Context: M
@@ -344,10 +345,12 @@ Unlocks: `TRIPDET`, `NOTIF` become real (live reservations, real weather-trigger
 
 **Phase 2 (AGENTS) integrity check, 2026-09-09:** no duplicated work against Phase 1 (`AGENTS-01` explicitly extends, not duplicates, `CHAT-03`'s Conversation Manager); no circular dependencies (`AGENTS-09` is the only convergence point, and it depends strictly forward on `01`–`08`, none of which depends back on it); no Task rated XL (highest is L, matching Phase 1's own ceiling); the one real naming inconsistency found (four sketched modules vs. one consolidated `AGENTS` module) is resolved and recorded, not silently carried forward — see the Consolidation note above and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010.
 
+**Phase 2 (AGENTS) integrity check update, 2026-09-10 (`AGENTS-01`):** delivered scope matches the planned scope exactly — no Task boundary crossed (`ai/orchestrator/**` only; `ai/agents/conversation_manager.py` read and called, not modified); no dependency violated (`AGENTS-01` declared none, and none were introduced during implementation); `AGENTS-02`'s Dependencies field (`AGENTS-01`) is now genuinely satisfied, not just declared. No integrity issue found.
+
 
 ---
 
 **END OF DOCUMENT (this baseline)**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation — added Module: DESIGNSYS), updated 2026-09-08 (Phase 1 — Core Platform MVP complete), updated 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, Module: AGENTS added, documentation-only, Q1–Q4 approved — see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010; no Phase 2 task authorized for implementation by this update). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation — added Module: DESIGNSYS), updated 2026-09-08 (Phase 1 — Core Platform MVP complete), updated 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, Module: AGENTS added, documentation-only, Q1–Q4 approved — see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010; no Phase 2 task authorized for implementation by this update), updated 2026-09-10 (`ATLAS-P2-AGENTS-01` — AI Orchestrator core — done, the first Phase 2 task implemented; `AGENTS-02` is now Definition-of-Ready). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

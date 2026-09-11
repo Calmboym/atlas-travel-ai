@@ -55,24 +55,24 @@ full.**
 ---
 
 **Current Phase:** Phase 1 — Core Platform MVP — **✅ complete (2026-09-08)**.
-Phase 2 — AI Agent System — **elaborated to Task level, documentation-only
-(2026-09-09); not authorized for implementation.**
+Phase 2 — AI Agent System — **in progress.** `ATLAS-P2-AGENTS-01` (AI
+Orchestrator core) is **done (2026-09-10)** — the first Phase 2 task
+implemented. `AGENTS-02` through `AGENTS-09` remain Todo.
 **Current Milestone:** M1 — **met.** M2 (Phase 2's objective) is now
-defined (`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2) but not started.
-**Current Module:** none active — `DESIGNSYS` (01–04), `AUTH` (01–08),
-`PROF` (01–03), `LAND` (01–03), `CHAT` (01–04), `MEM` (01–02), and `DASH`
-(01) are all complete and closed. `AGENTS` (01–09) is elaborated and
-Ready per `MASTER_RULES.md` §18, but no task in it is In Progress.
-**Current WBS ID:** none active (implementation)
-**Current Task:** none — Phase 1 is fully complete. Phase 2's
-`Module: AGENTS` is now elaborated to Task level (9 tasks,
-`ATLAS-P2-AGENTS-01..09` — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 and
-`TASK_BOARD.md` "Todo (Phase 2)"), per the project owner's approved
-Q1–Q4 (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). **This elaboration
-does not itself authorize implementation** — `ATLAS-P2-AGENTS-01` (AI
-Orchestrator core) is the recommended first task, awaiting its own
-explicit "Execute" instruction. See "Next Task" in Notes for Next
-Session, below.
+in progress — 1 of 9 `AGENTS` tasks done.
+**Current Module:** `AGENTS` — `AGENTS-01` done, `02`–`09` Todo.
+`DESIGNSYS` (01–04), `AUTH` (01–08), `PROF` (01–03), `LAND` (01–03),
+`CHAT` (01–04), `MEM` (01–02), and `DASH` (01) remain complete and
+closed from Phase 1.
+**Current WBS ID:** none active (implementation) — `ATLAS-P2-AGENTS-01`
+implemented and closed this session.
+**Current Task:** none in progress. `ATLAS-P2-AGENTS-01` (AI
+Orchestrator core) is done — see "Verification Results (2026-09-10,
+AGENTS-01)" below. `ATLAS-P2-AGENTS-02` (Agent framework: base contract
++ structured-output schemas) is now Definition-of-Ready (its sole
+dependency, `AGENTS-01`, is Done) and is the recommended next task,
+awaiting its own explicit "Execute ATLAS-P2-AGENTS-02" instruction. See
+"Next Task" in Notes for Next Session, below.
 
 **Phase 2 — AGENTS WBS Elaboration (2026-09-09, this session):** not a
 WBS task — documentation/planning-only, per its own explicit scope
@@ -902,6 +902,77 @@ architectural opportunities are now ready for that planning pass to
 pick up: introducing TanStack Query (see scope decision above), and
 deciding `AIQuickAccess`'s eventual owner.
 
+## Verification Results (2026-09-10, AGENTS-01 — actually run against real infrastructure, not asserted)
+
+First Phase 2 task implemented. Source baseline for this session: the
+uploaded repository ZIP (the same `atlas-travel-ai-main` baseline the
+2026-09-09 Phase 2 WBS Elaboration session left off at), not memory —
+`.ai/` was re-read from the real ZIP contents, per this project's own
+"trust the ZIP/repo, not memory" norm; several `.ai/` files (`INDEX.md`,
+`COMPONENT_OWNERSHIP_MATRIX.md`, `CONVERSATION_STRATEGY.md`,
+`DESIGN_BIBLE_AMENDMENTS.md`, `SESSION_PROMPT.md`) were confirmed newer
+in the repo than the copies previously available as project knowledge.
+
+Real Postgres 16 + Redis 7 installed via apt (no Docker daemon in this
+sandbox, matching every prior backend session's own documented
+approach) — clean baseline confirmed **before** any change: 137/137
+pytest passing, mypy strict clean on both `app`/`tests` and `ai/`.
+
+| Check | Result |
+|---|---|
+| `uv run pytest` (full suite, CI-exact command) | ✅ 155/155 passing (137 pre-existing + 18 new in `test_orchestrator.py`) |
+| `uv run mypy --ignore-missing-imports .` (CI-exact) | ✅ clean, 59 source files |
+| `uv run mypy --ignore-missing-imports --explicit-package-bases ../ai` (CI-exact) | ✅ clean, 14 source files (9 pre-existing + 5 new) |
+
+**No bugs found in already-shipped code this session.** `ai/agents/
+conversation_manager.py` and `ai/providers/base.py` were extended
+(consumed, not modified) exactly as Q4 required — neither file's
+content changed.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **`AgentHandler` is a minimal structural `Protocol`** (`name`,
+  `intents`, `handle()`, `stream_handle()`) — deliberately **not**
+  `AGENTS-02`'s full 7-field Agent contract (Mission / Responsibilities
+  / Allowed tools / Input schema / Output schema / Reasoning rules /
+  System prompt, `ARCHITECTURE.md` §8). `AGENTS-01`'s allowed files are
+  `ai/orchestrator/**` only; inventing `AGENTS-02`'s base class here
+  would have been scope creep. Because `Protocol` is structurally typed,
+  `AGENTS-02`'s real `Agent` base class is expected to satisfy this
+  shape without `ai/orchestrator/` importing from or depending on it.
+- **The registry is genuinely empty at the end of this task** — no
+  agent is registered by `AGENTS-01` itself, matching
+  `WORK_BREAKDOWN_STRUCTURE.md`'s own scope ("empty until `AGENTS-04..08`
+  populate it"). Every real request today classifies to the passthrough
+  path; `test_orchestrator.py`'s agent-routing tests register a
+  `FakeAgent` test double to exercise that path, since no real agent
+  exists yet to test against.
+- **No `self.last_decision`-style mutable state on `Orchestrator`.** An
+  early draft considered exposing the most recent `DispatchDecision` as
+  an instance attribute for `stream_dispatch()` callers. Rejected:
+  `app/core/ai.py`'s `LLMProvider` is an `@lru_cache` singleton shared
+  across concurrent requests, and a future `AGENTS-09` wiring the
+  Orchestrator the same way would make one request's decision leak into
+  a concurrent request's read of `self.last_decision`. The decision is
+  still always logged (structlog, never silent) and always returned
+  attached to `dispatch()`'s result; a caller needing it synchronously
+  during streaming can call `classify_intent` directly.
+- **Logging via `structlog`, not stdlib `logging`.** `ai/` has used no
+  logging at all before this task (`conversation_manager.py`,
+  `providers/*.py` are silent). `structlog` is already an installed
+  dependency (shared venv with `backend/`) and is the established
+  event-name-plus-keyword-fields convention at the API boundary
+  (`app/api/v1/chat.py`). Chosen over stdlib `logging` to match that
+  style rather than introduce a second one inside `ai/`.
+- **Citation note, not a blocking conflict:** `WORK_BREAKDOWN_STRUCTURE.md`'s
+  `AGENTS-01` acceptance text cites `GUIDELINES.md` §16 for "every
+  dispatch decision is logged with its reasoning" — `GUIDELINES.md` §16
+  is actually "Documentation Rules"; §18 ("Logging Rules") is the
+  section that actually matches this requirement's substance. Same
+  category of minor citation drift `DOCUMENTATION_AUDIT_REPORT.md`
+  already logged elsewhere in this project (Finding 2) — noted here,
+  not escalated, since the actual requirement was unambiguous and
+  implementing it did not depend on resolving the citation.
+
 ## Relevant Files
 
 **AUTH infrastructure (unchanged since 2026-08-24):**
@@ -951,19 +1022,29 @@ chat-composer,conversation-panel}.tsx` (CHAT-01), `frontend/messages/
 placeholders). Full list with New/Modified split: "Files Modified This
 Session (2026-09-05, CHAT-03 through CHAT-04)" below.
 
-**AGENTS infrastructure — elaborated 2026-09-09, not yet built. For
-whoever picks up `ATLAS-P2-AGENTS-01`:** read `ai/agents/
-conversation_manager.py` and `ai/providers/base.py` first — `AGENTS-01`
-extends/consumes both, per Q4; do not fork or rewrite either.
-`ai/config.py` and `backend/app/core/ai.py` are the existing
-config-wiring pattern for anything the Orchestrator itself needs
-configured. `ai/schemas/` and `ai/evaluations/` are real, empty
-directories (`.gitkeep` only) — `AGENTS-02` is the first task expected
-to populate `ai/schemas/`. `backend/app/services/chat_service.py` and
-`backend/app/api/v1/chat.py` are explicitly **out of scope** for
-`AGENTS-01` through `08` — only `AGENTS-09` touches either. Full
-per-task scope, dependencies, and acceptance criteria:
-`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
+**AGENTS infrastructure — `AGENTS-01` done (2026-09-10), `02`–`09`
+elaborated but not yet built. For whoever picks up `ATLAS-P2-AGENTS-02`:**
+`ai/orchestrator/{__init__,types,registry,intent,orchestrator}.py` now
+exist — `Orchestrator`, `AgentRegistry`, `AgentHandler` (a minimal
+structural `Protocol`, not the full Agent contract), `DispatchDecision`,
+`OrchestratorResult`. `AGENTS-02`'s base `Agent` class is expected to
+satisfy `AgentHandler`'s shape (`name`, `intents`, `handle()`,
+`stream_handle()`) so `AGENTS-04` can register real agents into
+`Orchestrator().registry` without any change to `ai/orchestrator/`
+itself. `ai/agents/conversation_manager.py` and `ai/providers/base.py`
+were extended/consumed, not modified — still exactly as `CHAT-03`/`04`
+left them. `ai/config.py` and `backend/app/core/ai.py` remain the
+config-wiring pattern for anything a real agent needs configured.
+`ai/schemas/` and `ai/evaluations/` are still real, empty directories
+(`.gitkeep` only) — `AGENTS-02` is still the first task expected to
+populate `ai/schemas/`. `backend/app/services/chat_service.py` and
+`backend/app/api/v1/chat.py` remain explicitly **out of scope** through
+`AGENTS-08` — only `AGENTS-09` touches either; `Orchestrator` is not
+wired into either file yet. `backend/tests/test_orchestrator.py` (18
+tests) is the new test file — standalone, no HTTP/`client` fixture used
+since there is no route to test against yet. Full per-task scope,
+dependencies, and acceptance criteria: `WORK_BREAKDOWN_STRUCTURE.md`
+§Phase 2 → Module: AGENTS.
 
 **MEM infrastructure (new, 2026-09-06):**
 `frontend/lib/chat/guest-session-store.ts` (new — the
@@ -1755,6 +1836,71 @@ session is documentation/planning only, consistent with the explicit
 "documentation-only, do not write production code, do not implement or
 execute any Phase 2 task" instruction it was scoped under.
 
+## Files Modified This Session (2026-09-10, AGENTS-01)
+
+First Phase 2 implementation session. `ATLAS-P2-AGENTS-01` (AI
+Orchestrator core) done in full — see Verification Results above.
+
+**Created — `ai/` application code (all within the task's declared
+Allowed-files-to-modify, `ai/orchestrator/**`):**
+- `ai/orchestrator/__init__.py` — public exports (`Orchestrator`,
+  `AgentRegistry`, `DuplicateAgentError`, `AgentHandler`,
+  `DispatchDecision`, `OrchestratorResult`)
+- `ai/orchestrator/types.py` — `AgentHandler` (structural `Protocol`),
+  `DispatchDecision`, `OrchestratorResult`
+- `ai/orchestrator/registry.py` — `AgentRegistry`, `DuplicateAgentError`
+- `ai/orchestrator/intent.py` — `classify_intent()` (keyword-substring
+  matching against the latest user message; always returns a reasoned
+  `DispatchDecision`)
+- `ai/orchestrator/orchestrator.py` — `Orchestrator.dispatch()`/
+  `stream_dispatch()`; logs every decision via `structlog`; falls back
+  to `ai.agents.conversation_manager` when no agent matches
+
+**Created — tests (18 new tests, 1 new file):**
+- `backend/tests/test_orchestrator.py` — registry (empty-by-default,
+  register/get, duplicate-name rejection, unregister-is-a-no-op),
+  `classify_intent` (empty registry, no user message, latest-message-only
+  scoping, match, no-match), `dispatch`/`stream_dispatch` passthrough
+  and agent-routing paths (proves `LLMProvider` is never bypassed on
+  the passthrough path, and never called at all when an agent handles
+  the request), decision logging (`structlog.testing.capture_logs()`)
+  for both `dispatch` and `stream_dispatch`, `DispatchDecision.
+  is_passthrough` value semantics. Uses a locally-defined
+  `FakeLLMProvider` (mirrors `test_chat.py`'s own, no shared fixture
+  module extracted) plus a new `FakeAgent` test double.
+
+**Modified:** none — `ai/agents/conversation_manager.py` and
+`ai/providers/base.py` were read and consumed (imported, called) but
+their content is unchanged, per Q4 ("extends, does not rebuild").
+
+**Governance files updated (this task):**
+- `.ai/PROJECT_STATE.md` — this file: Current Phase/Milestone/Module/
+  Task/WBS-ID pointers, new "Verification Results (2026-09-10,
+  AGENTS-01)" section, AGENTS-specific `Relevant Files` paragraph
+  updated for the now-real `ai/orchestrator/` files, this Files
+  Modified section, Notes for Next Session, LOCK STATUS footer
+- `.ai/TASK_BOARD.md` — `AGENTS-01` moved from the Phase 2 Todo table to
+  Done, with a verification note; Phase 2 Todo table's remaining 8 rows
+  unchanged (still not authorized)
+- `.ai/WORK_BREAKDOWN_STRUCTURE.md` — `AGENTS-01` marked Done with a
+  status note; `AGENTS-02`'s entry annotated as now Definition-of-Ready
+
+**Deliberately not modified, with reasons:**
+- `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — `AGENTS-01` is backend/AI-layer
+  only; no UI component created, modified, or consumed, matching
+  `CONVERSATION_STRATEGY.md` §7's backend-only exception (same as the
+  2026-09-09 elaboration session's own note).
+- `.ai/INDEX.md`, `.ai/INFRASTRUCTURE_BASELINE.md`,
+  `.ai/DESIGN_BIBLE_AMENDMENTS.md` — nothing in this task changed
+  routing, providers, i18n, test setup, CI, or backend scaffolding, and
+  no Design Bible document required a correction; the citation-drift
+  note recorded in Verification Results above did not require a new
+  amendment (same category already covered by Amendment 001's general
+  precedent).
+- `backend/app/services/chat_service.py`, `backend/app/api/v1/chat.py`
+  — explicitly out of scope through `AGENTS-08`; `Orchestrator` is not
+  wired into either file. `AGENTS-09` is the one task that touches them.
+
 ## Notes for Next Session
 
 
@@ -2029,11 +2175,22 @@ consistency and conflict-reporting; per `DEVELOPMENT_EXECUTION_PLAN.md`
 §3, the project owner's explicit sign-off (Q1–Q4) authorized the
 elaboration itself, not the implementation of any task within it.
 
-**Recommended next step (current): execute `ATLAS-P2-AGENTS-01`** (AI
-Orchestrator core — extends/consumes `CHAT-03`'s Conversation Manager,
-per Q4), pending its own explicit "Execute ATLAS-P2-AGENTS-01"
-instruction. Full scope, dependencies, and acceptance criteria:
-`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
+**`ATLAS-P2-AGENTS-01` — done (2026-09-10).** AI Orchestrator core
+implemented: `ai/orchestrator/**` (registry, intent classification,
+dispatch/stream_dispatch, decision logging), 18 new tests, 155/155
+suite passing, mypy strict clean. Extends/consumes `CHAT-03`'s
+Conversation Manager per Q4 — did not modify it. Not wired into
+`chat_service.py`/`chat.py` — that remains `AGENTS-09`.
+
+**Recommended next step (current): execute `ATLAS-P2-AGENTS-02`**
+(Agent framework: base contract + structured-output schemas — its sole
+dependency, `AGENTS-01`, is now Done), pending its own explicit
+"Execute ATLAS-P2-AGENTS-02" instruction. `AGENTS-02`'s base `Agent`
+class is expected to satisfy `ai/orchestrator/types.py`'s `AgentHandler`
+Protocol shape (`name`, `intents`, `handle()`, `stream_handle()`) so
+`AGENTS-04` can register real agents without any change to
+`ai/orchestrator/` itself. Full scope, dependencies, and acceptance
+criteria: `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
 
 ---
 
@@ -2060,7 +2217,8 @@ complete**; `/dashboard` is real, `Navbar`'s `userSlot`/
 level elaboration is the recommended next step), 2026-09-09 (**Phase 2
 — AI Agent System elaborated to Task level** — `Module: AGENTS`,
 `ATLAS-P2-AGENTS-01..09`, documentation-only, Q1–Q4 approved,
-`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010; **no Phase 2 task is
-authorized for implementation by this update** — `ATLAS-P2-AGENTS-01`
-is the recommended next task, awaiting its own explicit go-ahead).
+`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010), 2026-09-10 (**`AGENTS-01`
+— AI Orchestrator core — done**, the first Phase 2 implementation
+task; `ai/orchestrator/**` now exists; `AGENTS-02` is the recommended
+next task, awaiting its own explicit go-ahead).
 Future changes only via `MASTER_RULES.md` §21.
