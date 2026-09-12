@@ -1,6 +1,6 @@
 # TASK_BOARD.md
 
-**Last updated:** 2026-09-10 (`ATLAS-P2-AGENTS-01` — AI Orchestrator core — complete; the first Phase 2 implementation task, moved from Todo to a new "Done (Phase 2)" table; `AGENTS-02` now Definition-of-Ready). Prior: 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, `Module: AGENTS`, 9 tasks added to Todo — documentation-only, Q1–Q4 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010); 2026-09-08 (`DASH-01` complete — Phase 1 fully closed); 2026-09-06 (MEM-01 through MEM-02 — the MEM module is closed).
+**Last updated:** 2026-09-12 (`ATLAS-P2-AGENTS-02` and `ATLAS-P2-AGENTS-03` — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server — complete, executed as one task group; moved from Todo to Done; `AGENTS-04` now Definition-of-Ready). Prior: 2026-09-10 (`ATLAS-P2-AGENTS-01` — AI Orchestrator core — complete; the first Phase 2 implementation task, moved from Todo to a new "Done (Phase 2)" table; `AGENTS-02` now Definition-of-Ready). Prior: 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, `Module: AGENTS`, 9 tasks added to Todo — documentation-only, Q1–Q4 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010); 2026-09-08 (`DASH-01` complete — Phase 1 fully closed); 2026-09-06 (MEM-01 through MEM-02 — the MEM module is closed).
 **Document tier:** Living — updated every session via `MASTER_RULES.md` §21.
 
 Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every card cites its WBS ID and required documentation set so it can be picked up without re-deriving context. **Governance Sessions** (below) are a separate, non-WBS category — documentation/process work, not product implementation; see `MASTER_RULES.md` §3 Scope Control for why these never carry a WBS ID.
@@ -136,6 +136,8 @@ first wants a persistent, cross-page AI entry point.)*
 | Task ID | Title | Priority | Docs Used | Completed |
 |---|---|---|---|---|
 | ATLAS-P2-AGENTS-01 | AI Orchestrator core (extends/consumes `CHAT-03`'s Conversation Manager — Q4) | High | `ARCHITECTURE.md` §7–8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §7 | 2026-09-10 |
+| ATLAS-P2-AGENTS-02 | Agent framework: base contract + structured-output schemas | High | `ARCHITECTURE.md` §8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §8–9 | 2026-09-12 |
+| ATLAS-P2-AGENTS-03 | Tool Service: registry, permissions, validation, RAG (static/curated + Qdrant only — Q1) | High | `ARCHITECTURE.md` §9–10, `GUIDELINES.md` §9, `INFRASTRUCTURE_BASELINE.md` §8 | 2026-09-12 |
 
 **Verification status (AGENTS-01, 2026-09-10 — actually executed
 against real infrastructure, not asserted):** first Phase 2
@@ -166,25 +168,56 @@ both the exact CI commands. **Not wired into `chat_service.py`/
 but nothing calls it from an HTTP route yet. Full detail:
 `.ai/PROJECT_STATE.md`.
 
+**Verification status (AGENTS-02 and AGENTS-03, 2026-09-12 — executed
+as one task group, against real infrastructure, not asserted):**
+`AGENTS-02`'s sole dependency (`AGENTS-01`) and `AGENTS-03`'s sole
+dependency (`AGENTS-02`) were both Done before each task started, in
+that order, within this same session. Real Postgres 16 + Redis 7 (apt)
+plus a **real local Qdrant 1.19.1 server** (downloaded release binary,
+run as its own process on `localhost:6333` — not the embedded/in-memory
+client mode) — confirmed clean baseline before any change: 155/155
+pytest passing, mypy strict clean. Delivered `ai/agents/base.py`
+(`Agent` ABC — the 7 `ARCHITECTURE.md` §8 fields, plus `name`/`intents`
+as required constructor attributes rather than abstract properties, a
+real Protocol-compatibility fix made without touching
+`ai/orchestrator/` — see `.ai/PROJECT_STATE.md` for the full mypy-
+surfaced conflict and its resolution) and `ai/schemas/base.py`
+(`AgentOutputBase`/`ConfidenceLevel` — operationalizes
+`AI_EXPERIENCE.md` §Explainability/§Uncertainty as real Pydantic
+validation). Delivered `ai/tools/**` (`ToolRegistry`, `ToolService`
+enforcing permission → lookup → input validation → output validation,
+in that order, before any tool call reaches its resource; the
+`knowledge_search` tool) and `ai/rag/**` (`HashingEmbeddingProvider` —
+a real, deterministic, offline embedding, not a mock and not a live
+external API call, per Q1; 10 curated travel-preparation documents
+containing no fabricated prices/visas/availability, per
+`GUIDELINES.md` §8; `QdrantKnowledgeStore`, verified end-to-end against
+the real running Qdrant server including re-index-updates-not-
+duplicates). 39 new tests (17 in `test_agent_base.py`, 22 in
+`test_tools_rag.py`). Full suite: 194/194 passing. mypy strict clean:
+61 backend files, 27 `ai/` files, both exact CI commands. **Neither
+task is wired into `chat_service.py`/`chat.py`** — that remains
+`AGENTS-09`'s scope. No concrete Core Agent exists yet — that's
+`AGENTS-04` onward. Full detail: `.ai/PROJECT_STATE.md`.
+
 ---
 
 ## Todo (Phase 2 — AI Agent System)
 
 Elaborated to Task level 2026-09-09 — documentation-only session.
-`AGENTS-01` (above) is now Done. Every row below is Definition-of-Ready
-per `MASTER_RULES.md` §18 once its own dependencies are Done — `AGENTS-02`
-is Definition-of-Ready now that `AGENTS-01` is Done — but **no row is
-authorized for implementation by this table alone** — each still
-requires its own explicit `"Execute ATLAS-P2-AGENTS-NN"` instruction,
-per `SESSION_PROMPT.md` and `DEVELOPMENT_EXECUTION_PLAN.md` §3. Full
+`AGENTS-01` through `AGENTS-03` (above) are now Done. Every row below
+is Definition-of-Ready per `MASTER_RULES.md` §18 once its own
+dependencies are Done — `AGENTS-04` is Definition-of-Ready now that
+`AGENTS-02`/`03` are Done — but **no row is authorized for
+implementation by this table alone** — each still requires its own
+explicit `"Execute ATLAS-P2-AGENTS-NN"` instruction, per
+`SESSION_PROMPT.md` and `DEVELOPMENT_EXECUTION_PLAN.md` §3. Full
 task-level detail (scope, allowed files, acceptance criteria):
 `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
 
 | Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
 |---|---|---|---|---|---|
-| ATLAS-P2-AGENTS-02 | Agent framework: base contract + structured-output schemas | High | AGENTS-01 ✅ | `ARCHITECTURE.md` §8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §8–9 | M |
-| ATLAS-P2-AGENTS-03 | Tool Service: registry, permissions, validation, RAG (static/curated + Qdrant only — Q1) | High | AGENTS-02 | `ARCHITECTURE.md` §9–10, `GUIDELINES.md` §9, `INFRASTRUCTURE_BASELINE.md` §8 | M |
-| ATLAS-P2-AGENTS-04 | Traveler Profile Agent (reads `PROF-02`/`MEM-02`, no field duplication) | High | AGENTS-01 ✅, 02, 03 | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 | M |
+| ATLAS-P2-AGENTS-04 | Traveler Profile Agent (reads `PROF-02`/`MEM-02`, no field duplication) | High | AGENTS-01 ✅, 02 ✅, 03 ✅ | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 | M |
 | ATLAS-P2-AGENTS-05 | Destination Intelligence Agent | High | AGENTS-01 ✅ through 04 | `ARCHITECTURE.md` §8, `PRD.md` §7.2, `AI_EXPERIENCE.md` §Explainability | M |
 | ATLAS-P2-AGENTS-06 | Budget Agent — **estimate-only, explicit uncertainty required (Q3)** | Medium | AGENTS-01 ✅ through 04 | `PRD.md` §7.9, `AI_EXPERIENCE.md` §Budget Assistance/§Uncertainty, `GUIDELINES.md` §8 | M |
 | ATLAS-P2-AGENTS-07 | Itinerary Planner Agent | High | AGENTS-05, 06 | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Itinerary Generation, `PRD.md` §7.3 | L |
@@ -197,9 +230,9 @@ their own respective dependencies are Done). `AGENTS-09` is a hard
 serialization point — every other row above must be Done first. See
 `WORK_BREAKDOWN_STRUCTURE.md` for the full parallelization note.
 
-**Recommended next task: `ATLAS-P2-AGENTS-02`.** Definition-of-Ready
-(its sole dependency, `AGENTS-01`, is Done), pending the project
-owner's own explicit go-ahead to execute.
+**Recommended next task: `ATLAS-P2-AGENTS-04`.** Definition-of-Ready
+(both dependencies, `AGENTS-02` and `AGENTS-03`, are Done), pending the
+project owner's own explicit go-ahead to execute.
 
 ---
 
@@ -234,4 +267,4 @@ owner's own explicit go-ahead to execute.
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard), 2026-08-25 (PROF-01 through PROF-03 complete), 2026-08-29 (LAND-01 through LAND-03 complete), 2026-09-01 (CHAT-01 through CHAT-02 complete), 2026-09-05 (CHAT-03 through CHAT-04 complete), 2026-09-06 (MEM-01 through MEM-02 complete), 2026-09-08 (DASH-01 complete — Phase 1 fully closed), 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, documentation-only, Q1–Q4 approved — Amendment 010; no Phase 2 task authorized for implementation). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard), 2026-08-25 (PROF-01 through PROF-03 complete), 2026-08-29 (LAND-01 through LAND-03 complete), 2026-09-01 (CHAT-01 through CHAT-02 complete), 2026-09-05 (CHAT-03 through CHAT-04 complete), 2026-09-06 (MEM-01 through MEM-02 complete), 2026-09-08 (DASH-01 complete — Phase 1 fully closed), 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, documentation-only, Q1–Q4 approved — Amendment 010; no Phase 2 task authorized for implementation), 2026-09-10 (AGENTS-01 complete — first Phase 2 implementation task), 2026-09-12 (AGENTS-02 and AGENTS-03 complete, executed as one task group — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server; 3 of 9 AGENTS tasks done). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

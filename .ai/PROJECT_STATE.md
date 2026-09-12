@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-09-09 (Phase 2 — AI Agent System WBS Elaboration session — documentation-only, `Module: AGENTS` added to `WORK_BREAKDOWN_STRUCTURE.md` at Task level, Q1–Q4 approved, no Phase 2 task authorized for implementation)
+**Last updated:** 2026-09-12 (`ATLAS-P2-AGENTS-02` through `ATLAS-P2-AGENTS-03` implemented — Agent base contract + structured-output schemas, and Tool Service + RAG over Qdrant)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -56,23 +56,27 @@ full.**
 
 **Current Phase:** Phase 1 — Core Platform MVP — **✅ complete (2026-09-08)**.
 Phase 2 — AI Agent System — **in progress.** `ATLAS-P2-AGENTS-01` (AI
-Orchestrator core) is **done (2026-09-10)** — the first Phase 2 task
-implemented. `AGENTS-02` through `AGENTS-09` remain Todo.
+Orchestrator core, 2026-09-10), `ATLAS-P2-AGENTS-02` (Agent base
+contract + structured-output schemas), and `ATLAS-P2-AGENTS-03` (Tool
+Service + RAG over Qdrant) are **done (2026-09-12)**. `AGENTS-04`
+through `AGENTS-09` remain Todo.
 **Current Milestone:** M1 — **met.** M2 (Phase 2's objective) is now
-in progress — 1 of 9 `AGENTS` tasks done.
-**Current Module:** `AGENTS` — `AGENTS-01` done, `02`–`09` Todo.
-`DESIGNSYS` (01–04), `AUTH` (01–08), `PROF` (01–03), `LAND` (01–03),
-`CHAT` (01–04), `MEM` (01–02), and `DASH` (01) remain complete and
-closed from Phase 1.
-**Current WBS ID:** none active (implementation) — `ATLAS-P2-AGENTS-01`
-implemented and closed this session.
-**Current Task:** none in progress. `ATLAS-P2-AGENTS-01` (AI
-Orchestrator core) is done — see "Verification Results (2026-09-10,
-AGENTS-01)" below. `ATLAS-P2-AGENTS-02` (Agent framework: base contract
-+ structured-output schemas) is now Definition-of-Ready (its sole
-dependency, `AGENTS-01`, is Done) and is the recommended next task,
-awaiting its own explicit "Execute ATLAS-P2-AGENTS-02" instruction. See
-"Next Task" in Notes for Next Session, below.
+in progress — 3 of 9 `AGENTS` tasks done.
+**Current Module:** `AGENTS` — `AGENTS-01`, `02`, `03` done; `04`–`09`
+Todo. `DESIGNSYS` (01–04), `AUTH` (01–08), `PROF` (01–03), `LAND`
+(01–03), `CHAT` (01–04), `MEM` (01–02), and `DASH` (01) remain complete
+and closed from Phase 1.
+**Current WBS ID:** none active (implementation) — `ATLAS-P2-AGENTS-02`
+and `ATLAS-P2-AGENTS-03` implemented and closed this session, in that
+dependency order (`AGENTS-03` depends on `AGENTS-02`, per
+`WORK_BREAKDOWN_STRUCTURE.md`).
+**Current Task:** none in progress. `AGENTS-01` through `AGENTS-03` are
+done — see "Verification Results (2026-09-12, AGENTS-02 through
+AGENTS-03)" below. `ATLAS-P2-AGENTS-04` (Traveler Profile Agent) is now
+Definition-of-Ready (its dependencies, `AGENTS-02` and `AGENTS-03`, are
+both Done) and is the recommended next task, awaiting its own explicit
+"Execute ATLAS-P2-AGENTS-04" instruction. See "Next Task" in Notes for
+Next Session, below.
 
 **Phase 2 — AGENTS WBS Elaboration (2026-09-09, this session):** not a
 WBS task — documentation/planning-only, per its own explicit scope
@@ -972,6 +976,154 @@ content changed.
   already logged elsewhere in this project (Finding 2) — noted here,
   not escalated, since the actual requirement was unambiguous and
   implementing it did not depend on resolving the citation.
+
+## Verification Results (2026-09-12, AGENTS-02 through AGENTS-03 — actually run against real infrastructure, not asserted)
+
+Task group: `Execute ATLAS-P2-AGENTS-02 through ATLAS-P2-AGENTS-03`.
+Source baseline: the uploaded repository ZIP (the same
+`atlas-travel-ai-main` baseline `AGENTS-01` left off at), re-read from
+the real ZIP, not memory — `.ai/PROJECT_STATE.md`/`TASK_BOARD.md`/
+`WORK_BREAKDOWN_STRUCTURE.md` confirmed `AGENTS-01` Done and
+`AGENTS-02`'s sole dependency satisfied before starting; `AGENTS-03`'s
+dependency on `AGENTS-02` was satisfied within this same session, in
+that order, per the task-group handling in `SESSION_PROMPT.md`.
+
+Real Postgres 16 + Redis 7 installed via apt (no Docker daemon in this
+sandbox). **Real local Qdrant 1.19.1 server binary** downloaded
+(`github.com/qdrant/qdrant` release asset, linux-musl x86_64) and run
+as its own process — not the embedded/in-memory client mode, an actual
+networked server on `localhost:6333`/`6334`, the same way Postgres and
+Redis are real local servers rather than mocks — specifically to
+satisfy `AGENTS-03`'s "verified against a real local Qdrant instance...
+not a mocked client" acceptance criterion unambiguously. Clean baseline
+confirmed **before** any change: 155/155 pytest passing, mypy strict
+clean on both `app`/`tests` and `ai/`.
+
+| Check | Result |
+|---|---|
+| `uv run pytest` (full suite, CI-exact command) | ✅ 194/194 passing (155 pre-existing + 17 new in `test_agent_base.py` + 22 new in `test_tools_rag.py`) |
+| `uv run mypy --ignore-missing-imports .` (CI-exact) | ✅ clean, 61 source files |
+| `uv run mypy --ignore-missing-imports --explicit-package-bases ../ai` (CI-exact) | ✅ clean, 27 source files (14 pre-existing + 13 new) |
+| Real Qdrant round trip (`ensure_collection`/`index_documents`/`search`) | ✅ verified against the running local server, including re-index-updates-not-duplicates and collection cleanup after every test |
+
+**No bugs found in already-shipped code this session.** `ai/orchestrator/**`
+was consumed (registered a real `Agent` through `AgentRegistry` and
+`Orchestrator.dispatch()` end-to-end in `test_agent_base.py`), not
+modified — confirmed by re-diffing every `ai/orchestrator/*.py` file
+against the `AGENTS-01` baseline after this session: zero changes.
+
+**A real integration conflict was found and fixed — not a documentation
+conflict, a genuine API mismatch surfaced by actually running mypy:**
+`ai.orchestrator.types.AgentHandler` declares `name: str` and
+`intents: tuple[str, ...]` as plain, settable instance attributes.
+`AGENTS-02`'s original draft of `Agent` implemented both as read-only
+`@property`/`@abstractmethod` (matching the other 7 `ARCHITECTURE.md`
+§8 fields). `mypy` correctly rejected this: a Protocol member declared
+as a plain attribute requires a settable attribute on the implementer,
+not a read-only property, and this task's own acceptance criteria
+require `Agent` to satisfy `AgentHandler` "without modifying
+`ai/orchestrator/` at all" — ruling out the alternative fix (declaring
+`AgentHandler`'s members as properties instead, which would touch an
+`AGENTS-01` file outside this task's scope). **Fix:** `name` and
+`intents` are required, keyword-only constructor arguments on `Agent.
+__init__`, set as plain instance attributes — still fails at
+construction time if omitted (a `TypeError: missing ... required
+keyword-only argument`, arguably a clearer failure than the abstract-
+property route for these two specific fields), still Protocol-
+compatible, and `ai/orchestrator/types.py` was never touched. Verified:
+`mypy` clean, and `test_agent_registers_and_dispatches_through_the_
+real_orchestrator` in `test_agent_base.py` proves a concrete `Agent`
+registers into a real `AgentRegistry` and is dispatched to by a real
+`Orchestrator` with no changes to either.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **`ai/schemas/base.py` ships only the shared `AgentOutputBase`
+  contract, not per-agent schemas.** `AgentOutputBase` operationalizes
+  `AI_EXPERIENCE.md` §Explainability/§Uncertainty (`summary`,
+  `reasoning`, `confidence`, `assumptions`, `uncertainty_notes`) as real
+  validated Pydantic fields every Core Agent's own `output_schema` is
+  expected to build on. Domain-specific schemas (e.g. a future
+  `ai/schemas/traveler_profile.py`) remain each owning task's own
+  responsibility (`AGENTS-04` onward) — not invented here, matching
+  `AGENTS-01`'s own precedent of not anticipating a later task's scope.
+- **`Agent.reason()` is the one abstract method a Core Agent implements**;
+  `handle()`/`stream_handle()` are concrete, shared machinery that call
+  it, validate the returned type against `output_schema`, and render it
+  to text. `stream_handle()`'s default yields the full rendered reply as
+  a single chunk — structured-output reasoning doesn't naturally
+  decompose into meaningful partial-text chunks the way a raw text
+  completion does; a future Core Agent may override this once it has a
+  concrete reason to (e.g. streaming a long itinerary section by
+  section). No such agent exists yet, so this was not invented
+  speculatively.
+- **`ai/rag/`'s default `EmbeddingProvider` is a real, deterministic,
+  offline "hashing trick" (feature-hashing) implementation, not a
+  mock and not an external API call.** `ARCHITECTURE.md` §9 requires
+  the embedding layer be "provider independent"; `AGENTS-03`'s own Q1
+  requires "no live external API calls" from this module at all — an
+  external embedding API would itself be exactly that. `HashingEmbeddingProvider`
+  hashes tokens into fixed buckets with a deterministic sign (the same
+  established technique behind scikit-learn's `HashingVectorizer` and
+  Vowpal Wabbit), L2-normalized for cosine similarity. Verified
+  end-to-end against the real running Qdrant server: queries sharing
+  vocabulary with a curated document (e.g. "power adapter for
+  electronics abroad" against the power-adapter document) rank that
+  document first with a meaningfully positive score; this is a
+  keyword-overlap mechanism, not learned semantic similarity, and the
+  code's own docstring says so explicitly rather than overstating it.
+  Swapping in a real neural `EmbeddingProvider` later (OpenAI, a local
+  sentence-transformers model) is a drop-in replacement — nothing in
+  `ai/rag/vector_store.py` or `ai/tools/knowledge_tools.py` would need
+  to change.
+- **The curated knowledge base (`ai/rag/knowledge_base.py`, 10
+  documents) contains only general, evergreen travel-preparation
+  guidance** (packing, document safety, staying reachable, embassy
+  registration) — never a specific, falsifiable claim about a
+  particular country, price, date, or current policy. `GUIDELINES.md`
+  §8 forbids fabricating exactly those categories (prices, visa rules,
+  availability), so this knowledge base simply does not contain them.
+  Where a topic genuinely varies by destination and time (visas,
+  vaccinations), the document's own text tells the reader to verify
+  with an official source rather than asserting a rule itself
+  (`DOC_VISA_CHECK`, `DOC_HEALTH_CHECK`) — directly following `PRD.md`
+  §7.7 ("Visa information must rely on trusted sources. The AI must
+  never invent immigration rules"). Every document's `source_note`
+  states plainly that it is general Atlas-authored guidance, not a live
+  or authoritative source. This is a human-curation property this
+  session is responsible for, not a mechanically-enforced one; a
+  handful of structural tests in `test_tools_rag.py` (unique ids, the
+  source-note text, a forbidden-certainty-language check) catch an
+  obvious regression but do not substitute for that review.
+- **Qdrant point IDs are derived via `uuid5(namespace, document.id)`,
+  not the human-readable `document.id` string directly** — confirmed
+  empirically against the real server that Qdrant rejects arbitrary
+  string point IDs ("is not a valid point ID, valid values are either
+  an unsigned integer or a UUID"). Deterministic derivation means
+  re-indexing the same curated document updates its existing point
+  rather than creating a duplicate — verified by a dedicated test.
+- **RAG retrieval is reachable only as a registered `Tool`
+  (`knowledge_search`, `ai/tools/knowledge_tools.py`), never called
+  directly by anything.** `ToolService.invoke()` enforces, in this
+  exact order: permission (`tool_name in agent.allowed_tools`) before
+  the registry is even consulted, then registry lookup, then input-
+  schema validation, then the handler call, then output-schema
+  validation — satisfying this task's "no tool call reaches Qdrant or
+  any other resource without passing permission + validation first"
+  criterion structurally, not by convention. A dedicated test proves
+  the permission check fires even for a tool name that isn't
+  registered either (an agent without permission gets
+  `ToolPermissionError`, not `ToolNotFoundError`).
+- **`ToolRegistry`/`DuplicateToolError` mirror `AgentRegistry`/
+  `DuplicateAgentError`'s established pattern exactly** (dict-backed,
+  `.get()` returns `None` rather than raising, a dedicated
+  `Duplicate*Error` subclassing `ValueError`) rather than inventing a
+  second registry idiom in the same codebase.
+- **No `backend/pyproject.toml` change was needed.** `qdrant-client` was
+  already declared (Phase 0); no new dependency (no `fastembed`, no
+  neural embedding library) was added, consistent with `AGENTS-03`'s
+  own allowed-files boundary ("`backend/pyproject.toml` only if a new
+  supporting library is genuinely needed... report before adding") —
+  none was.
 
 ## Relevant Files
 
@@ -1901,6 +2053,102 @@ their content is unchanged, per Q4 ("extends, does not rebuild").
   — explicitly out of scope through `AGENTS-08`; `Orchestrator` is not
   wired into either file. `AGENTS-09` is the one task that touches them.
 
+## Files Modified This Session (2026-09-12, AGENTS-02 through AGENTS-03)
+
+Second and third Phase 2 implementation sessions, executed as one task
+group. `ATLAS-P2-AGENTS-02` (Agent base contract + structured-output
+schemas) and `ATLAS-P2-AGENTS-03` (Tool Service + RAG over Qdrant) both
+done in full — see Verification Results above.
+
+**Created — `AGENTS-02` (within its declared Allowed-files-to-modify,
+`ai/agents/base.py` new, new files under `ai/schemas/`):**
+- `ai/agents/base.py` — `Agent` (ABC): the 7 `ARCHITECTURE.md` §8
+  fields as abstract properties (`mission`, `responsibilities`,
+  `allowed_tools`, `input_schema`, `output_schema`, `reasoning_rules`,
+  `system_prompt`), `name`/`intents` as required constructor
+  attributes (see the `AgentHandler` compatibility fix in Verification
+  Results above), abstract `reason()`, concrete `handle()`/
+  `stream_handle()`/`render_output()`/`_with_system_prompt()`
+- `ai/schemas/base.py` — `ConfidenceLevel` (enum), `AgentOutputBase`
+  (Pydantic `BaseModel`: `summary`, `reasoning`, `confidence`,
+  `assumptions`, `uncertainty_notes`)
+- `ai/schemas/__init__.py` — first real content for this package
+  (previously `.gitkeep` only); exports `AgentOutputBase`,
+  `ConfidenceLevel`
+
+**Created — `AGENTS-03` (within its declared Allowed-files-to-modify,
+`ai/tools/**` new, `ai/rag/**` new):**
+- `ai/tools/types.py` — `Tool` (frozen dataclass), `ToolHandler` type
+  alias, `ToolError`/`ToolNotFoundError`/`ToolPermissionError`/
+  `ToolValidationError`
+- `ai/tools/registry.py` — `ToolRegistry`, `DuplicateToolError`
+- `ai/tools/service.py` — `ToolService.invoke()`: permission → lookup →
+  input validation → handler call → output validation → `structlog`
+  monitoring event, in that order
+- `ai/tools/knowledge_tools.py` — `build_knowledge_search_tool()`,
+  `KNOWLEDGE_SEARCH_TOOL_NAME`
+- `ai/tools/__init__.py` — public exports
+- `ai/rag/embeddings.py` — `EmbeddingProvider` (ABC),
+  `HashingEmbeddingProvider` (concrete default — see Verification
+  Results above)
+- `ai/rag/schemas.py` — `RAGQuery`, `RetrievedPassage`, `RAGSearchResult`
+- `ai/rag/knowledge_base.py` — `CuratedDocument`, `CURATED_DOCUMENTS`
+  (10 documents — see Verification Results above)
+- `ai/rag/vector_store.py` — `QdrantKnowledgeStore`
+  (`ensure_collection`/`index_documents`/`search`, `AsyncQdrantClient`-backed)
+- `ai/rag/__init__.py` — package docstring/overview
+
+**Created — tests (39 new tests, 2 new files):**
+- `backend/tests/test_agent_base.py` (17 tests) — `Agent` abstractness
+  (base class and an incomplete subclass both fail at instantiation),
+  a complete `FakeCoreAgent` registers into a real `AgentRegistry` and
+  is dispatched to by a real `Orchestrator` end-to-end, `handle()`/
+  `stream_handle()`, `render_output()` (both the `AgentOutputBase` path
+  and the JSON-fallback path), `_with_system_prompt()`, `AgentOutputBase`/
+  `ConfidenceLevel` Pydantic validation.
+- `backend/tests/test_tools_rag.py` (22 tests) — `ToolRegistry`
+  (register/get/duplicate), `ToolService.invoke()`'s full permission →
+  lookup → input-validation → output-validation ordering (including the
+  permission-checked-before-lookup ordering test), `HashingEmbeddingProvider`
+  (dimension, determinism, distinctness), `QdrantKnowledgeStore` against
+  the real local Qdrant server (collection creation, indexing curated
+  documents, search relevance, re-index-updates-not-duplicates, source-note
+  presence), the `knowledge_search` tool end-to-end through
+  `ToolService` against real Qdrant, and curated-content structural
+  checks (unique ids, source-note text, forbidden-certainty-language).
+
+**Modified:** none — `ai/orchestrator/**`, `ai/agents/conversation_manager.py`,
+and `ai/providers/base.py` were consumed (imported, registered against,
+called) but their content is unchanged; re-diffed against the
+`AGENTS-01` baseline to confirm.
+
+**Governance files updated (this task group):**
+- `.ai/PROJECT_STATE.md` — this file: Current Phase/Milestone/Module/
+  Task/WBS-ID pointers, new "Verification Results (2026-09-12, AGENTS-02
+  through AGENTS-03)" section, this Files Modified section, Notes for
+  Next Session, LOCK STATUS footer
+- `.ai/TASK_BOARD.md` — `AGENTS-02` and `AGENTS-03` moved from the
+  Phase 2 Todo table to Done, each with a verification note; Phase 2
+  Todo table's remaining 6 rows unchanged (still not authorized)
+- `.ai/WORK_BREAKDOWN_STRUCTURE.md` — `AGENTS-02` and `AGENTS-03` marked
+  Done with status notes; `AGENTS-04`'s entry annotated as now
+  Definition-of-Ready
+
+**Deliberately not modified, with reasons:**
+- `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — both tasks are backend/AI-layer
+  only; no UI component created, modified, or consumed
+  (`CONVERSATION_STRATEGY.md` §7's backend-only exception).
+- `.ai/INDEX.md`, `.ai/INFRASTRUCTURE_BASELINE.md` — nothing in this
+  task group changed routing, providers, i18n, test setup, CI, or
+  backend scaffolding.
+- `.ai/DESIGN_BIBLE_AMENDMENTS.md` — no Design Bible document required a
+  correction this session.
+- `backend/pyproject.toml` — no new dependency needed (`qdrant-client`
+  was already declared) — see Verification Results above.
+- `backend/app/services/chat_service.py`, `backend/app/api/v1/chat.py`
+  — explicitly out of scope through `AGENTS-08`; `Orchestrator` is not
+  wired into either file. `AGENTS-09` is the one task that touches them.
+
 ## Notes for Next Session
 
 
@@ -2182,15 +2430,37 @@ suite passing, mypy strict clean. Extends/consumes `CHAT-03`'s
 Conversation Manager per Q4 — did not modify it. Not wired into
 `chat_service.py`/`chat.py` — that remains `AGENTS-09`.
 
-**Recommended next step (current): execute `ATLAS-P2-AGENTS-02`**
-(Agent framework: base contract + structured-output schemas — its sole
-dependency, `AGENTS-01`, is now Done), pending its own explicit
-"Execute ATLAS-P2-AGENTS-02" instruction. `AGENTS-02`'s base `Agent`
-class is expected to satisfy `ai/orchestrator/types.py`'s `AgentHandler`
-Protocol shape (`name`, `intents`, `handle()`, `stream_handle()`) so
-`AGENTS-04` can register real agents without any change to
-`ai/orchestrator/` itself. Full scope, dependencies, and acceptance
-criteria: `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
+**`ATLAS-P2-AGENTS-02` and `ATLAS-P2-AGENTS-03` — done (2026-09-12),
+executed as one task group.** Agent base contract implemented:
+`ai/agents/base.py`'s `Agent` (ABC, the 7 `ARCHITECTURE.md` §8 fields)
+and `ai/schemas/base.py`'s `AgentOutputBase`/`ConfidenceLevel` — a real
+integration fix was needed and made without touching
+`ai/orchestrator/` (see Verification Results above for the `name`/
+`intents` constructor-attribute design and why). Tool Service + RAG
+implemented: `ai/tools/**` (registry, permission+validation+monitoring
+`ToolService`, the `knowledge_search` tool) and `ai/rag/**` (a real,
+offline `HashingEmbeddingProvider`, 10 curated travel-preparation
+documents containing no fabricated facts, `QdrantKnowledgeStore`
+verified against an actual local Qdrant 1.19.1 server this session
+downloaded and ran, not a mock). 39 new tests, 194/194 suite passing,
+mypy strict clean on 61 backend + 27 `ai/` files. Neither task is wired
+into `chat_service.py`/`chat.py` — that remains `AGENTS-09`; no Core
+Agent exists yet — that's `AGENTS-04` onward.
+
+**Recommended next step (current): execute `ATLAS-P2-AGENTS-04`**
+(Traveler Profile Agent — its dependencies, `AGENTS-02` and `AGENTS-03`,
+are both now Done), pending its own explicit "Execute
+ATLAS-P2-AGENTS-04" instruction. It is the first task to actually
+subclass `Agent` and register a real agent into `AgentRegistry`, and
+the first to define a domain-specific `output_schema` (expected to
+build on `AgentOutputBase`, per this session's own docstrings) and a
+domain-specific `ai/schemas/traveler_profile.py`. `PROF-02`'s existing
+`TravelerProfile` model/table should be checked first — the prior
+session's own "Relevant Files" notes on `MEM-02`-vs-`PROF-02` overlap
+apply equally here: this agent almost certainly reads that table rather
+than reinventing traveler-preference storage. Full scope, dependencies,
+and acceptance criteria: `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 →
+Module: AGENTS.
 
 ---
 
@@ -2220,5 +2490,11 @@ level elaboration is the recommended next step), 2026-09-09 (**Phase 2
 `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010), 2026-09-10 (**`AGENTS-01`
 — AI Orchestrator core — done**, the first Phase 2 implementation
 task; `ai/orchestrator/**` now exists; `AGENTS-02` is the recommended
-next task, awaiting its own explicit go-ahead).
+next task, awaiting its own explicit go-ahead), 2026-09-12
+(**`AGENTS-02` and `AGENTS-03` — done**, executed as one task group;
+`ai/agents/base.py`'s `Agent` contract, `ai/schemas/base.py`'s
+`AgentOutputBase`, and `ai/tools/**`/`ai/rag/**`'s Tool Service + RAG
+over a real local Qdrant server now exist; 3 of 9 `AGENTS` tasks done;
+`AGENTS-04` is the recommended next task, awaiting its own explicit
+go-ahead).
 Future changes only via `MASTER_RULES.md` §21.
