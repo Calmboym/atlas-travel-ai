@@ -1,6 +1,6 @@
 # TASK_BOARD.md
 
-**Last updated:** 2026-09-12 (`ATLAS-P2-AGENTS-02` and `ATLAS-P2-AGENTS-03` — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server — complete, executed as one task group; moved from Todo to Done; `AGENTS-04` now Definition-of-Ready). Prior: 2026-09-10 (`ATLAS-P2-AGENTS-01` — AI Orchestrator core — complete; the first Phase 2 implementation task, moved from Todo to a new "Done (Phase 2)" table; `AGENTS-02` now Definition-of-Ready). Prior: 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, `Module: AGENTS`, 9 tasks added to Todo — documentation-only, Q1–Q4 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010); 2026-09-08 (`DASH-01` complete — Phase 1 fully closed); 2026-09-06 (MEM-01 through MEM-02 — the MEM module is closed).
+**Last updated:** 2026-09-16 (`ATLAS-P2-AGENTS-07` — Itinerary Planner Agent, the first task requiring genuine agent-to-agent composition — complete; moved from Todo to Done; `ItineraryPlan.destination`/`.budget` hold AGENTS-05's/AGENTS-06's own literal output objects). Prior: 2026-09-15 (`ATLAS-P2-AGENTS-06` — Budget Agent, estimate-only, never invents a price — complete; Q3's hard uncertainty-disclosure gate Pydantic-enforced). Prior: 2026-09-14 (`ATLAS-P2-AGENTS-05` — Destination Intelligence Agent, the first agent to consume `AGENTS-03`'s RAG/Tool infrastructure — complete; a significant, prominently-flagged scope decision to add a second curated content domain). Prior: 2026-09-13 (`ATLAS-P2-AGENTS-04` — Traveler Profile Agent, the first concrete Core Agent — complete). Prior: 2026-09-12 (`ATLAS-P2-AGENTS-02` and `ATLAS-P2-AGENTS-03` — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server — complete, executed as one task group). Prior: 2026-09-10 (`ATLAS-P2-AGENTS-01` — AI Orchestrator core — complete; the first Phase 2 implementation task). Prior: 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, `Module: AGENTS`, 9 tasks added to Todo — documentation-only, Q1–Q4 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010); 2026-09-08 (`DASH-01` complete — Phase 1 fully closed).
 **Document tier:** Living — updated every session via `MASTER_RULES.md` §21.
 
 Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every card cites its WBS ID and required documentation set so it can be picked up without re-deriving context. **Governance Sessions** (below) are a separate, non-WBS category — documentation/process work, not product implementation; see `MASTER_RULES.md` §3 Scope Control for why these never carry a WBS ID.
@@ -138,6 +138,10 @@ first wants a persistent, cross-page AI entry point.)*
 | ATLAS-P2-AGENTS-01 | AI Orchestrator core (extends/consumes `CHAT-03`'s Conversation Manager — Q4) | High | `ARCHITECTURE.md` §7–8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §7 | 2026-09-10 |
 | ATLAS-P2-AGENTS-02 | Agent framework: base contract + structured-output schemas | High | `ARCHITECTURE.md` §8, `GUIDELINES.md` §7, `MASTER_BUILD_PROMPT.md` §8–9 | 2026-09-12 |
 | ATLAS-P2-AGENTS-03 | Tool Service: registry, permissions, validation, RAG (static/curated + Qdrant only — Q1) | High | `ARCHITECTURE.md` §9–10, `GUIDELINES.md` §9, `INFRASTRUCTURE_BASELINE.md` §8 | 2026-09-12 |
+| ATLAS-P2-AGENTS-04 | Traveler Profile Agent (reads `PROF-02`/`MEM-02`, no field duplication) | High | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 | 2026-09-13 |
+| ATLAS-P2-AGENTS-05 | Destination Intelligence Agent (adds a new curated destination content domain — see verification note) | High | `ARCHITECTURE.md` §8, `PRD.md` §7.2, `AI_EXPERIENCE.md` §Explainability | 2026-09-14 |
+| ATLAS-P2-AGENTS-06 | Budget Agent — estimate-only, explicit uncertainty required (Q3) | Medium | `PRD.md` §7.9, `AI_EXPERIENCE.md` §Budget Assistance/§Uncertainty, `GUIDELINES.md` §8 | 2026-09-15 |
+| ATLAS-P2-AGENTS-07 | Itinerary Planner Agent (first genuine agent-to-agent composition — see verification note) | High | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Itinerary Generation, `PRD.md` §7.3 | 2026-09-16 |
 
 **Verification status (AGENTS-01, 2026-09-10 — actually executed
 against real infrastructure, not asserted):** first Phase 2
@@ -200,39 +204,147 @@ task is wired into `chat_service.py`/`chat.py`** — that remains
 `AGENTS-09`'s scope. No concrete Core Agent exists yet — that's
 `AGENTS-04` onward. Full detail: `.ai/PROJECT_STATE.md`.
 
+**Verification status (AGENTS-04, 2026-09-13 — actually executed
+against real infrastructure, not asserted):** all three dependencies
+(`AGENTS-01`, `02`, `03`) were already Done at session start. Real
+Postgres 16 + Redis 7 + the standing local Qdrant 1.19.1 server (unused
+by this task, but part of the environment) — confirmed clean baseline
+before any change: 194/194 pytest passing, mypy strict clean. Delivered
+`ai/agents/traveler_profile_agent.py` (`TravelerProfileAgent` — the
+**first concrete Core Agent**, the first real subclass of `Agent`),
+`ai/prompts/traveler_profile_prompt.py`, and `ai/schemas/traveler_profile.py`
+(`TravelerProfileSummary`). Reads `traveler_profiles` (`PROF-02`) and
+`user_memory` (`MEM-02`) **read-only, mechanically verified** — a
+dedicated test confirms calling `reason()` against a user with neither
+row yet leaves both still absent afterward, unlike `get_or_create_profile`/
+`get_or_create_memory`, which both create an empty row as a side effect.
+**Zero field overlap, checked and stated explicitly** (this task's own
+acceptance criterion): `TravelerProfileSummary`'s preference fields are
+a read-time projection of the existing source of truth, never a second
+persisted copy — no migration, no new table, no new column. Only the
+free-text `summary` field is LLM-authored; every structured preference
+value and the `reasoning` field are deterministic database pass-throughs,
+making `GUIDELINES.md` §8's "never invent" rule mechanically unbreakable
+for this agent's data. First `ai/` file to import FROM `backend/app/`
+(its two ORM models) — flagged explicitly as a direct, necessary
+consequence of this task's own named scope, not an accidental layering
+violation. 9 new tests; 203/203 suite passing; mypy strict clean: 62
+backend files, 30 `ai/` files. **Not registered into any real request
+yet** — that remains `AGENTS-09`'s scope. Full verification:
+`PROJECT_STATE.md` "Verification Results (2026-09-13, AGENTS-04)".
+
+**Verification status (AGENTS-05, 2026-09-14 — actually executed
+against real infrastructure, not asserted):** all four dependencies
+(`AGENTS-01` through `04`) were already Done at session start. Real
+Postgres 16 + Redis 7 + the standing local Qdrant 1.19.1 server —
+confirmed clean baseline before any change: 203/203 pytest passing,
+mypy strict clean. Delivered `ai/agents/destination_intelligence_agent.py`
+(`DestinationIntelligenceAgent` — the first agent to actually consume
+`AGENTS-03`'s RAG/Tool infrastructure), `ai/prompts/
+destination_intelligence_prompt.py`, and `ai/schemas/destination.py`
+(`DestinationOption`, `DestinationRecommendation`). **⚠ Significant,
+prominently-flagged scope decision:** `AGENTS-03`'s existing curated
+knowledge base has zero destination-specific content by design, so this
+task adds a **second, separate 8-entry curated destination reference
+set** (real, well-known places; general/evergreen characteristics only
+— never a price, current weather figure, safety alert, or visa rule),
+indexed into a **new, separate Qdrant collection**
+(`atlas_destination_reference`), reusing `AGENTS-03`'s generic
+`QdrantKnowledgeStore`/`CuratedDocument`/`HashingEmbeddingProvider`
+unmodified — `AGENTS-03`'s own collection and every file under
+`ai/rag/`/`ai/tools/` are untouched (confirmed by re-diff). **Grounding
+mechanically verified**: every returned destination's name/id is
+checked against the actual curated set in dedicated tests — a
+hallucinated destination in the model's own prose can never reach the
+structured `destinations` field, which is built entirely from retrieval
+results, never parsed from model text. A real retrieval-quality issue
+was found via actual testing (a gibberish query containing ordinary
+English words scored a nonzero, occasionally higher score than a
+genuine query, from `HashingEmbeddingProvider`'s own known limitation)
+and fixed with an empirically-derived relevance threshold inside this
+task's own file, not by modifying `ai/rag/`. 14 new tests; 217/217
+suite passing; mypy strict clean: 63 backend files, 33 `ai/` files.
+**Not registered into any real request yet** — that remains
+`AGENTS-09`'s scope. Full verification: `PROJECT_STATE.md`
+"Verification Results (2026-09-14, AGENTS-05)".
+
+**Verification status (AGENTS-06, 2026-09-15 — actually executed
+against real infrastructure, not asserted):** its four dependencies
+(`AGENTS-01` through `04`) were already Done at session start (it never
+depended on `AGENTS-05`). Real Postgres 16 + Redis 7 + the standing
+local Qdrant 1.19.1 server (unused by this task — the first Core Agent
+needing no external infrastructure at all) — confirmed clean baseline
+before any change: 217/217 pytest passing, mypy strict clean. Delivered
+`ai/agents/budget_agent.py` (`BudgetAgent`), `ai/prompts/budget_prompt.py`,
+and `ai/schemas/budget.py` (`BudgetCategory`, `BudgetEstimate`).
+**Never invents a price** — `GUIDELINES.md` §8 forbids it and no real
+pricing source exists until Phase 3, so the only honest source of a
+concrete number is the traveler's own stated total, parsed via a plain
+regex (zero LLM involvement, mechanically verified across 8 parametrized
+cases) and allocated across a fixed general 30/20/20/20/10 spending
+split; with no stated total, no amount is shown at all — only the
+percentage split. **Q3's hard acceptance gate is Pydantic-enforced**:
+`BudgetEstimate.estimate_disclosure` is a required, non-empty field —
+`ValidationError` is raised if it's ever omitted, not merely encouraged
+by the prompt. 19 new tests; 236/236 suite passing; mypy strict clean:
+64 backend files, 36 `ai/` files. **Not registered into any real
+request yet** — that remains `AGENTS-09`'s scope. Full verification:
+`PROJECT_STATE.md` "Verification Results (2026-09-15, AGENTS-06)".
+
+**Verification status (AGENTS-07, 2026-09-16 — actually executed
+against real infrastructure, not asserted):** its two dependencies
+(`AGENTS-05`, `AGENTS-06`) were already Done at session start. Real
+Postgres 16 + Redis 7 + the standing local Qdrant 1.19.1 server
+(needed this time — a real `DestinationIntelligenceAgent` is composed
+into every test) — confirmed clean baseline before any change: 236/236
+pytest passing, mypy strict clean. Delivered `ai/agents/
+itinerary_planner_agent.py` (`ItineraryPlannerAgent`), `ai/prompts/
+itinerary_planner_prompt.py`, and `ai/schemas/itinerary.py`
+(`ItineraryDay`, `ItineraryPlan`). **The first task requiring genuine
+agent-to-agent composition** — `ItineraryPlannerAgent` is constructed
+with actual `DestinationIntelligenceAgent`/`BudgetAgent` instances and
+calls their own `reason()` directly; `ItineraryPlan.destination`/`.budget`
+hold those calls' literal return objects, mechanically proven in tests
+(`result.budget.estimate_disclosure` is asserted to be `AGENTS-06`'s
+own exact text). The day-by-day schedule is a general, honestly-labeled
+template — never a fabricated specific activity — except Day 1, which
+reuses `AGENTS-05`'s own retrieved destination description verbatim.
+Tips reuse three of `AGENTS-03`'s own already-curated documents
+verbatim, opening no new content-curation surface. 20 new tests;
+256/256 suite passing; mypy strict clean: 65 backend files, 39 `ai/`
+files. **Not registered into any real request yet** — that remains
+`AGENTS-09`'s scope. Full verification: `PROJECT_STATE.md`
+"Verification Results (2026-09-16, AGENTS-07)".
+
 ---
 
 ## Todo (Phase 2 — AI Agent System)
 
 Elaborated to Task level 2026-09-09 — documentation-only session.
-`AGENTS-01` through `AGENTS-03` (above) are now Done. Every row below
-is Definition-of-Ready per `MASTER_RULES.md` §18 once its own
-dependencies are Done — `AGENTS-04` is Definition-of-Ready now that
-`AGENTS-02`/`03` are Done — but **no row is authorized for
-implementation by this table alone** — each still requires its own
-explicit `"Execute ATLAS-P2-AGENTS-NN"` instruction, per
-`SESSION_PROMPT.md` and `DEVELOPMENT_EXECUTION_PLAN.md` §3. Full
-task-level detail (scope, allowed files, acceptance criteria):
-`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
+`AGENTS-01` through `AGENTS-07` (above) are now Done. `AGENTS-08` is
+Definition-of-Ready (dependencies `AGENTS-04`/`05`, unaffected by
+`AGENTS-07`) — but **no row is authorized for implementation by this
+table alone** — each still requires its own explicit `"Execute
+ATLAS-P2-AGENTS-NN"` instruction, per `SESSION_PROMPT.md` and
+`DEVELOPMENT_EXECUTION_PLAN.md` §3. Full task-level detail (scope,
+allowed files, acceptance criteria): `WORK_BREAKDOWN_STRUCTURE.md`
+§Phase 2 → Module: AGENTS.
 
 | Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
 |---|---|---|---|---|---|
-| ATLAS-P2-AGENTS-04 | Traveler Profile Agent (reads `PROF-02`/`MEM-02`, no field duplication) | High | AGENTS-01 ✅, 02 ✅, 03 ✅ | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Memory, `PRD.md` §7.13 | M |
-| ATLAS-P2-AGENTS-05 | Destination Intelligence Agent | High | AGENTS-01 ✅ through 04 | `ARCHITECTURE.md` §8, `PRD.md` §7.2, `AI_EXPERIENCE.md` §Explainability | M |
-| ATLAS-P2-AGENTS-06 | Budget Agent — **estimate-only, explicit uncertainty required (Q3)** | Medium | AGENTS-01 ✅ through 04 | `PRD.md` §7.9, `AI_EXPERIENCE.md` §Budget Assistance/§Uncertainty, `GUIDELINES.md` §8 | M |
-| ATLAS-P2-AGENTS-07 | Itinerary Planner Agent | High | AGENTS-05, 06 | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Itinerary Generation, `PRD.md` §7.3 | L |
-| ATLAS-P2-AGENTS-08 | Recommendation Agent | Medium | AGENTS-04, 05 | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Recommendations, `PSYCHOLOGY_GUIDELINES.md` §13/§15 | M |
+| ATLAS-P2-AGENTS-08 | Recommendation Agent | Medium | AGENTS-04 ✅, 05 ✅ | `ARCHITECTURE.md` §8, `AI_EXPERIENCE.md` §Recommendations, `PSYCHOLOGY_GUIDELINES.md` §13/§15 | M |
 | ATLAS-P2-AGENTS-09 | Multi-agent integration — wires `chat_service.py`/`chat.py` to the Orchestrator for the first time since CHAT-04; zero SSE contract change | High | AGENTS-01 ✅ through 08 | `TRIP_PLANNING_EXPERIENCE.md` §AI Understanding Phase, `ARCHITECTURE.md` §7, `AI_EXPERIENCE.md` §Streaming | L |
 
-**Parallelizable pairs (per `CONVERSATION_STRATEGY.md` §8):** `AGENTS-05`
-+ `AGENTS-06` (once 01–04 are Done); `AGENTS-07` + `AGENTS-08` (once
-their own respective dependencies are Done). `AGENTS-09` is a hard
-serialization point — every other row above must be Done first. See
-`WORK_BREAKDOWN_STRUCTURE.md` for the full parallelization note.
+**`AGENTS-09` is a hard serialization point** — `AGENTS-08` must be
+Done first; no further parallelization is possible within Phase 2 once
+it starts. See `WORK_BREAKDOWN_STRUCTURE.md` for the full
+parallelization note.
 
-**Recommended next task: `ATLAS-P2-AGENTS-04`.** Definition-of-Ready
-(both dependencies, `AGENTS-02` and `AGENTS-03`, are Done), pending the
-project owner's own explicit go-ahead to execute.
+**Recommended next task: `ATLAS-P2-AGENTS-08`.** Definition-of-Ready
+(both dependencies, `AGENTS-04` and `AGENTS-05`, are Done), pending the
+project owner's own explicit go-ahead to execute. Once it's Done,
+`ATLAS-P2-AGENTS-09` — the final Phase 2 task — becomes
+Definition-of-Ready for the first time.
 
 ---
 
@@ -267,4 +379,4 @@ project owner's own explicit go-ahead to execute.
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard), 2026-08-25 (PROF-01 through PROF-03 complete), 2026-08-29 (LAND-01 through LAND-03 complete), 2026-09-01 (CHAT-01 through CHAT-02 complete), 2026-09-05 (CHAT-03 through CHAT-04 complete), 2026-09-06 (MEM-01 through MEM-02 complete), 2026-09-08 (DASH-01 complete — Phase 1 fully closed), 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, documentation-only, Q1–Q4 approved — Amendment 010; no Phase 2 task authorized for implementation), 2026-09-10 (AGENTS-01 complete — first Phase 2 implementation task), 2026-09-12 (AGENTS-02 and AGENTS-03 complete, executed as one task group — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server; 3 of 9 AGENTS tasks done). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard), 2026-08-25 (PROF-01 through PROF-03 complete), 2026-08-29 (LAND-01 through LAND-03 complete), 2026-09-01 (CHAT-01 through CHAT-02 complete), 2026-09-05 (CHAT-03 through CHAT-04 complete), 2026-09-06 (MEM-01 through MEM-02 complete), 2026-09-08 (DASH-01 complete — Phase 1 fully closed), 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, documentation-only, Q1–Q4 approved — Amendment 010; no Phase 2 task authorized for implementation), 2026-09-10 (AGENTS-01 complete — first Phase 2 implementation task), 2026-09-12 (AGENTS-02 and AGENTS-03 complete, executed as one task group — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server; 3 of 9 AGENTS tasks done), 2026-09-13 (AGENTS-04 complete — the first concrete Core Agent, Traveler Profile Agent; 4 of 9 AGENTS tasks done), 2026-09-14 (AGENTS-05 complete — the first agent to consume AGENTS-03's RAG/Tool infrastructure, Destination Intelligence Agent, adding a second curated content domain; 5 of 9 AGENTS tasks done), 2026-09-15 (AGENTS-06 complete — Budget Agent, estimate-only, never invents a price, Q3's hard uncertainty-disclosure gate Pydantic-enforced; 6 of 9 AGENTS tasks done), 2026-09-16 (AGENTS-07 complete — Itinerary Planner Agent, the first task requiring genuine agent-to-agent composition, composing AGENTS-05's and AGENTS-06's own literal output objects; 7 of 9 AGENTS tasks done). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
