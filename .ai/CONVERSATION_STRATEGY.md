@@ -9,6 +9,8 @@
 > **APPROVED (2026-08-16):** new §8 (Parallel Execution) and the incremental-output line in §5 (Governance Reconciliation, `DESIGN_BIBLE_AMENDMENTS.md` Amendment 009).
 >
 > **APPROVED (2026-09-09):** §2's Phase 2 module-code example (`ORCH`/`AGENTSVC`/`CORE-AGENTS`) is corrected to the single, real `AGENTS` module, consistent with `WORK_BREAKDOWN_STRUCTURE.md`'s 2026-09-09 Task-level elaboration (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010).
+>
+> **APPROVED (2026-09-17):** §2's Phase 3 module-code example (`INTEG-MAPS`/`DOMAIN-AGENTS`/`RAG`) is corrected below — `RAG` was never Phase 3 scope (it shipped in Phase 2's `AGENTS-03`) and the per-category split is replaced by one consolidated `INTEG` module for Wave 1, mirroring `AGENTS`'s own consolidation, with `DOMAIN-AGENTS` reserved as Wave 2's own future module name (not yet elaborated) — consistent with `WORK_BREAKDOWN_STRUCTURE.md`'s 2026-09-17 Phase 3 Wave 1 elaboration (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 011).
 
 Atlas will be built across many independent Claude conversations rather than one continuous session. This document defines how each one is scoped so that conversation history never has to serve as project memory — `.ai/` does that job instead.
 
@@ -32,7 +34,7 @@ A conversation never:
 ```
 Example: `AUTH-001 — Email/Password Registration Flow`
 
-Module codes match the WBS: `LAND`, `AUTH`, `PROF`, `CHAT`, `MEM`, `DASH`, `ONBOARD`, `INFRA` (Phase 0–1, elaborated to Task level). `AGENTS` (Phase 2, elaborated to Task level 2026-09-09 — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010: this single flat module *replaces* the `ORCH`/`AGENTSVC`/`CORE-AGENTS`/`STRUCT-OUT` four-module split this document previously sketched as a placeholder example — the project owner approved one consolidated `AGENTS-01..09` task sequence instead). Phase 3–7 still use finer-grained codes assigned when each phase gets its own future Task-level elaboration (e.g. `INTEG-MAPS`, `DOMAIN-AGENTS`, `RAG` for Phase 3; `MEMSVC`, `PERSONALIZE` for Phase 4) — see `WORK_BREAKDOWN_STRUCTURE.md` for the authoritative, current set at any point in time.
+Module codes match the WBS: `LAND`, `AUTH`, `PROF`, `CHAT`, `MEM`, `DASH`, `ONBOARD`, `INFRA` (Phase 0–1, elaborated to Task level). `AGENTS` (Phase 2, elaborated to Task level 2026-09-09 — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010: this single flat module *replaces* the `ORCH`/`AGENTSVC`/`CORE-AGENTS`/`STRUCT-OUT` four-module split this document previously sketched as a placeholder example — the project owner approved one consolidated `AGENTS-01..09` task sequence instead). `INTEG` (Phase 3 Wave 1, elaborated to Task level 2026-09-17 — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011: this single flat module, `ATLAS-P3-INTEG-01..06`, *replaces* the `INTEG-MAPS`/`DOMAIN-AGENTS`/`RAG` placeholder this document previously sketched — `RAG` was never Phase 3 scope at all, per-category module splitting was rejected in favor of one consolidated module, mirroring `AGENTS`'s own resolution, and `DOMAIN-AGENTS` is reserved as Wave 2's own future module name, not yet elaborated). Phase 3 Wave 2 and Phases 4–7 still use finer-grained codes assigned when each gets its own future Task-level elaboration — see `WORK_BREAKDOWN_STRUCTURE.md` for the authoritative, current set at any point in time.
 
 ---
 
@@ -163,4 +165,4 @@ If a task genuinely depends on another task's output, don't start it until that 
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**IMMUTABLE — approved baseline, 2026-07-22, following Q1–Q4 sign-off. §7 approved 2026-08-13. §8 added 2026-08-16, Governance Reconciliation (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 009), plus the incremental-output line in §5. §2's Phase 2 module-code example corrected 2026-09-09 (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 010).**
+**IMMUTABLE — approved baseline, 2026-07-22, following Q1–Q4 sign-off. §7 approved 2026-08-13. §8 added 2026-08-16, Governance Reconciliation (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 009), plus the incremental-output line in §5. §2's Phase 2 module-code example corrected 2026-09-09 (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 010). §2's Phase 3 module-code example corrected 2026-09-17 (`DESIGN_BIBLE_AMENDMENTS.md`, Amendment 011).**

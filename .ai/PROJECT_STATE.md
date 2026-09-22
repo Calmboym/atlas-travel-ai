@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-09-16 (`ATLAS-P2-AGENTS-07` implemented — Itinerary Planner Agent, the first agent to genuinely compose two other agents' own outputs)
+**Last updated:** 2026-09-17 (Phase 3 — External Data Integration, Wave 1, elaborated to Task level — `Module: INTEG`, `ATLAS-P3-INTEG-01..06` — per the project owner's own Q1–Q5 sign-off, `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011. **`ATLAS-P3-INTEG-01` is Definition-of-Ready; no Phase 3 task authorized for implementation.**)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -55,29 +55,86 @@ full.**
 ---
 
 **Current Phase:** Phase 1 — Core Platform MVP — **✅ complete (2026-09-08)**.
-Phase 2 — AI Agent System — **in progress.** `ATLAS-P2-AGENTS-01`
-through `ATLAS-P2-AGENTS-07` are **done (2026-09-10 / 2026-09-12 /
-2026-09-12 / 2026-09-13 / 2026-09-14 / 2026-09-15 / 2026-09-16)**.
-`AGENTS-08` and `AGENTS-09` remain Todo.
-**Current Milestone:** M1 — **met.** M2 (Phase 2's objective) is now
-in progress — 7 of 9 `AGENTS` tasks done.
-**Current Module:** `AGENTS` — `AGENTS-01` through `07` done; `08`–`09`
-Todo. `DESIGNSYS` (01–04), `AUTH` (01–08), `PROF` (01–03), `LAND`
-(01–03), `CHAT` (01–04), `MEM` (01–02), and `DASH` (01) remain complete
-and closed from Phase 1.
-**Current WBS ID:** none active (implementation) — `ATLAS-P2-AGENTS-07`
-implemented and closed this session; its dependencies (`AGENTS-05`,
-`AGENTS-06`) were already Done at session start.
-**Current Task:** none in progress. `AGENTS-01` through `AGENTS-07` are
-done — see "Verification Results (2026-09-16, AGENTS-07)" below.
-`ATLAS-P2-AGENTS-08` (Recommendation Agent) remains Definition-of-Ready
-(unchanged since `AGENTS-05` — its dependencies, `AGENTS-04` and
-`AGENTS-05`, don't include `AGENTS-07`) and is the recommended next
-task, awaiting its own explicit "Execute ATLAS-P2-AGENTS-08" instruction.
-Once it's Done, `ATLAS-P2-AGENTS-09` (the final Phase 2 task — wiring
-the Orchestrator into `chat_service.py`/`chat.py`) becomes
-Definition-of-Ready for the first time. See "Next Task" in Notes for
-Next Session, below.
+Phase 2 — AI Agent System — **✅ complete (2026-09-17).** All nine
+`ATLAS-P2-AGENTS-01` through `ATLAS-P2-AGENTS-09` tasks are **done
+(2026-09-10 / 2026-09-12 / 2026-09-12 / 2026-09-13 / 2026-09-14 /
+2026-09-15 / 2026-09-16 / 2026-09-17 / 2026-09-17)**.
+**Current Milestone:** M1 — **met.** M2 (Phase 2's objective) — **met.**
+9 of 9 `AGENTS` tasks done; the Orchestrator now handles a real `/chat`
+request end-to-end. Phase 3's own milestone (M3, if the project owner
+wants one named) has not started implementation — Wave 1 is elaborated
+to Task level only.
+**Current Module:** none active (implementation). `AGENTS` (01–09) joins
+`DESIGNSYS` (01–04), `AUTH` (01–08), `PROF` (01–03), `LAND` (01–03),
+`CHAT` (01–04), `MEM` (01–02), and `DASH` (01) as complete and closed.
+`INTEG` (Phase 3, Wave 1) is now elaborated to Task level
+(`ATLAS-P3-INTEG-01..06`) but **not yet implemented** — see below.
+**Current WBS ID:** none active (implementation) — `ATLAS-P2-AGENTS-08`
+and `ATLAS-P2-AGENTS-09` implemented and closed in the prior session, in
+that order (`09`'s own dependency on `08`). This session elaborated
+`ATLAS-P3-INTEG-01..06` (documentation only — no implementation).
+**Current Task:** none in progress. `AGENTS-01` through `AGENTS-09` are
+all done — see "Verification Results (2026-09-17, AGENTS-08)" and
+"Verification Results (2026-09-17, AGENTS-09)" below. **Phase 2 is
+fully closed. Phase 3 Wave 1 is elaborated to Task level, per the
+project owner's own Q1–Q5 sign-off** (`DESIGN_BIBLE_AMENDMENTS.md`
+Amendment 011) — **`ATLAS-P3-INTEG-01` is Definition-of-Ready** (its
+only dependency, `AGENTS-03`, is Done), awaiting its own explicit
+`"Execute ATLAS-P3-INTEG-01"` instruction; this elaboration's own
+approval is not that instruction. See "Next Task" in Notes for Next
+Session, below.
+
+**Phase 3 — INTEG WBS Elaboration, Wave 1 (2026-09-17, this session):**
+not a WBS task — documentation/planning-only, per its own explicit
+scope (mirrors the 2026-09-09 Phase 2 elaboration's own category,
+below), executed as a direct continuation of the same session that just
+closed `AGENTS-08`/`09`. Verified the actual repository baseline before
+writing anything: confirmed `ai/tools/{types,registry,service}.py`
+(`AGENTS-03`) has no caching, rate limiting, timeout, or retry logic of
+its own (only permission/validation/monitoring); confirmed
+`app/core/rate_limit.py`'s `RateLimiter` is keyed per-client-IP, not
+directly reusable as-is for provider-scoped limiting; confirmed no
+`app/core/cache.py`-equivalent, `base_adapter.py`, or `integrations/`
+module exists anywhere in the real repository (a direct correction of
+`DEBUG_LOG.md`'s stale M0 claim, which traces to a since-superseded
+bootstrap-reconstruction attempt); confirmed `.env.example` has no key,
+token, or URL for any Maps/Weather/Currency/Events/Safety-source
+provider. A prior-turn proposal document (`PHASE3_INTEG_WBS_PROPOSAL.md`)
+presented this analysis plus five open questions (Q1–Q5); **the project
+owner answered all five explicitly, in the same session**, and this
+elaboration formally records those answers (`DESIGN_BIBLE_AMENDMENTS.md`
+Amendment 011) and merges the resulting Task-level detail directly into
+`WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 — the same proposal-then-approval
+-then-merge sequence the 2026-09-09 Phase 2 elaboration itself followed
+for its own Q1–Q4. Elaborated `WORK_BREAKDOWN_STRUCTURE.md`'s previously
+Module-level Phase 3 stub (which itself sketched a different, since
+-superseded module shape — `INTEG-MAPS`/`INTEG-WEATHER`/`INTEG-CURRENCY`/
+`INTEG-EVENTS` as four separate modules, plus `RAG`, which was never
+actually Phase 3 scope) to one consolidated `Module: INTEG`, six tasks
+(`ATLAS-P3-INTEG-01`: adapter foundation — timeout, retry,
+provider-scoped rate limiting, caching, validation/error normalization,
+monitoring hooks, the project owner's own explicit scope expansion;
+`INTEG-02` through `06`: Currency, Weather, Maps, Events, Travel/Safety
+Source adapters), each with Dependencies, Required docs,
+Priority/Complexity/Context, Allowed-files-to-modify, and
+task-specific Acceptance Criteria, plus a Parallelization note and Wave
+1 exit criteria. **One genuine documentation conflict found and
+reported, deliberately left unresolved per the project owner's own
+Q1 decision** — Flight/Hotel Domain Agent phase placement
+(`ARCHITECTURE.md` §11 vs. `ROADMAP.md`/`DEBUG_LOG.md`) — see "Findings
+Requiring Project Owner Decision" below and `DESIGN_BIBLE_AMENDMENTS.md`
+Amendment 011 for the full record. `TASK_BOARD.md`, `INDEX.md`,
+`CONVERSATION_STRATEGY.md`, and `SESSION_PROMPT.md` were all updated the
+same session to stay synchronized with the WBS change — see "Files
+Modified This Session" below for the complete list.
+`COMPONENT_OWNERSHIP_MATRIX.md` was deliberately **not** touched: every
+`INTEG` task is backend/AI-layer only, matching `CONVERSATION_STRATEGY.md`
+§7's own backend-only exception (same as `AGENTS`'s own precedent).
+**Wave 2 (`Module: DOMAIN-AGENTS`) was deliberately not elaborated** —
+the project owner's own Q5 answer defers it to a separate, later
+planning pass, after Wave 1 is built and independently verified; no
+Domain Agent task ID, scope, or design decision exists anywhere in this
+session's output.
 
 **Phase 2 — AGENTS WBS Elaboration (2026-09-09, this session):** not a
 WBS task — documentation/planning-only, per its own explicit scope
@@ -1510,6 +1567,166 @@ baseline after this session: zero changes to any of them.
   concerns (the caller — eventually `AGENTS-09` — is responsible for
   that setup, exactly as `AGENTS-05`'s own tests already do).
 
+## Verification Results (2026-09-17, AGENTS-08 — actually run against real infrastructure, not asserted)
+
+Task: `Execute ATLAS-P2-AGENTS-08`, the first half of `Execute
+ATLAS-P2-AGENTS-08 through ATLAS-P2-AGENTS-09`. Source baseline: the
+same `atlas-travel-ai-main` baseline `AGENTS-07` left off at, re-read
+from the real uploaded ZIP. `.ai/TASK_BOARD.md`/`WORK_BREAKDOWN_
+STRUCTURE.md` confirmed `AGENTS-04` and `AGENTS-05` both Done,
+satisfying `AGENTS-08`'s full dependency list, before starting.
+
+Real Postgres 16 + Redis 7 + a real local Qdrant 1.19.1 server
+(downloaded release binary, run as its own process) confirmed up.
+Clean baseline confirmed **before** any change: 256/256 pytest
+passing, mypy strict clean on 65 backend files and 39 `ai/` files.
+
+| Check | Result |
+|---|---|
+| `uv run pytest` (full suite, CI-exact command) | ✅ 278/278 passing (256 pre-existing + 22 new in `test_recommendation_agent.py`) |
+| `uv run mypy --ignore-missing-imports .` (CI-exact) | ✅ clean, 66 source files |
+| `uv run mypy --ignore-missing-imports --explicit-package-bases ../ai` (CI-exact) | ✅ clean, 43 source files (39 pre-existing + 4 new: `recommendation_agent.py`, `recommendation_prompt.py`, `recommendation.py`, plus the `ai/agents/__init__.py` file count already included) |
+| Personalization boost re-ranks a lower-score candidate above a higher-score one | ✅ mechanically tested — `_score_and_rank` unit test: 0.10-relevance "Adventure City" (literal match) ends up ranked above 0.30-relevance "Quiet Town" (no match) |
+| `_MAX_RECOMMENDATIONS = 5` is a real ceiling, not a limit that happens to never bind | ✅ proven with a synthetic 8-candidate input — returns exactly 5, highest-scored |
+| No preferences saved → identical to the Destination Agent's own retrieval order | ✅ mechanically tested (stable-sort preservation) |
+
+**"Personalized ranking" resolved as follows, since the WBS left the
+exact mechanism as this task's own design decision, same as
+`AGENTS-07`:** with no live pricing/availability/semantic-matching
+infrastructure until Phase 3+, this agent never claims a destination
+genuinely *suits* a traveler's stated style. The only personalization
+signal is `_find_matched_preference` — a literal, case-insensitive
+substring check of a saved preference value (e.g. `"adventure"`, from
+`AGENTS-04`'s own `TravelerProfileSummary`) against a candidate's own
+retrieved description (from `AGENTS-05`'s own `DestinationOption`).
+Real, not contrived: Queenstown's own curated description genuinely
+contains the word "adventure" — the one literal overlap in the current
+six-destination reference set — confirmed by reading the source text
+directly before writing the mechanism, not the other way around. A
+match adds a small, fixed, internal-only ranking boost
+(`_PREFERENCE_MATCH_BOOST = 0.5`) and is disclosed in
+`Recommendation.matched_preference`/`.relevance_reasoning` exactly as
+what it is; no match means no personalization claim is made for that
+item, and (when the traveler has no saved preferences at all) an
+explicit uncertainty note says so plainly.
+
+**No changes to any already-shipped file.** `ai/agents/base.py`,
+`ai/agents/traveler_profile_agent.py`,
+`ai/agents/destination_intelligence_agent.py`, `ai/schemas/base.py`,
+`ai/schemas/traveler_profile.py`, `ai/schemas/destination.py`,
+`ai/orchestrator/**` were all consumed (imported, instantiated, called)
+but re-diffed against the `AGENTS-07` baseline after this session: zero
+changes to any of them.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **`_MAX_RECOMMENDATIONS = 5`, chosen to match
+  `PSYCHOLOGY_GUIDELINES.md` §13's own wording** ("Recommend Top 5"),
+  not an arbitrary round number.
+- **`RecommendationAgent` has no `allowed_tools` of its own** —
+  mirrors `AGENTS-07`'s own precedent for a composing agent.
+- **Registration order (for `AGENTS-09` to use) is not decided here**
+  — this task only confirmed, by direct inspection (`grep -n
+  "intents=" ai/agents/*.py`), that none of the five agents' own
+  declared intent phrases are literal substrings of each other.
+
+## Verification Results (2026-09-17, AGENTS-09 — actually run against real infrastructure, not asserted)
+
+Task: `Execute ATLAS-P2-AGENTS-09`, the second half of the task group,
+executed immediately after `AGENTS-08` within this same session.
+`.ai/TASK_BOARD.md`/`WORK_BREAKDOWN_STRUCTURE.md` confirmed all eight
+dependencies (`AGENTS-01` through `08`) Done before starting —
+`AGENTS-08` by this session's own immediately-preceding work.
+
+Real Postgres 16 + Redis 7 + the standing local Qdrant 1.19.1 server.
+Clean baseline confirmed **before** any change: 278/278 pytest
+passing, mypy strict clean on 66 backend files and 43 `ai/` files.
+
+| Check | Result |
+|---|---|
+| `uv run pytest` (full suite, CI-exact command) | ✅ 295/295 passing (278 pre-existing + 17 new across `test_agent_wiring.py` and `test_chat_multi_agent.py`) |
+| `uv run mypy --ignore-missing-imports .` (CI-exact) | ✅ clean, 68 source files (66 pre-existing + 2 new test files) |
+| `uv run mypy --ignore-missing-imports --explicit-package-bases ../ai` (CI-exact) | ✅ clean, 43 source files (unchanged count — `agent_wiring.py` added, no other `ai/` file added) |
+| Every pre-existing `tests/test_chat.py` assertion, file unmodified | ✅ all still pass — the exact `["chunk","chunk","chunk","done"]` and single-event `[{"type":"error",...}]` shapes, the Atlas-system-prompt-prepended passthrough, rate limiting, 503-vs-422 ordering |
+| Guest message triggering each of the 3 static agents' own intent | ✅ routes to that agent (destination/budget/itinerary), content is that agent's own `render_output`, not the Phase 1 passthrough |
+| Guest message triggering `"my preferences"`/`"recommend for me"` | ✅ falls back to the Phase 1 passthrough — `TravelerProfileAgent`/`RecommendationAgent` are not registered for a guest |
+| Authenticated message triggering the same two | ✅ routes to the real `TravelerProfileAgent`/`RecommendationAgent` |
+| SSE `"status"` event: present, leading, only for an agent-routed message | ✅ `{"type":"status","message":"Finding destinations..."}` (etc., per agent) precedes the `"chunk"` event; a passthrough message has none |
+| `frontend/lib/chat/stream-assistant-reply.ts` | ✅ read directly, zero changes made — its `parseServerEvent`/dispatch `if/else if` chain recognizes exactly `"chunk"`/`"done"`/`"error"` and has no `else`, so the new `"status"` type is parsed successfully and then simply matches nothing, today — inert, not broken |
+| Live end-to-end smoke (real ASGI transport via `httpx.AsyncClient(transport=ASGITransport(app=app))`, not a mock) | ✅ every test above exercises the real FastAPI app, real routing, real dependency injection — not a unit-level stand-in |
+
+**Guest vs. authenticated split — the design decision the WBS left
+open, resolved as follows:** `/chat` stays deliberately unguarded
+(`chat_service.py`'s own long-standing docstring, unchanged in
+substance). `TravelerProfileAgent`/`RecommendationAgent` both require a
+real `db`+`user_id` at construction (`AGENTS-04`'s/`AGENTS-08`'s own
+constructors, neither touched by this task); fabricating a UUID for a
+guest to force their inclusion would be exactly the kind of invented
+data `GUIDELINES.md` §8 forbids, so a guest registry simply omits
+them — three of five Core Agents, not a workaround, and not a
+regression (neither was reachable from `/chat` for anyone before this
+task). `_optional_current_user_id` (`chat.py`) resolves a real,
+validated session when one exists and returns `None` otherwise —
+**never raises**, unlike `app/core/deps.py`'s `get_current_user`,
+which this task deliberately does not import or modify (outside its
+own Allowed-files-to-modify), duplicating a small, documented slice of
+its token-extraction logic instead.
+
+**Process-wide singleton caching, and the real bug it caused mid-task,
+fixed and documented:** three of the five Core Agents hold no
+per-request state, so `ai/orchestrator/agent_wiring.py` builds them
+**once per process** (an `asyncio.Lock`-guarded lazy singleton,
+mirroring `app/core/ai.py`'s own `@lru_cache` `get_llm_provider()`
+precedent) rather than re-indexing Qdrant on every message. This is
+correct for real production use, but **broke test isolation**: a
+cached agent binds whichever `LLMProvider` built it first, and
+`tests/test_chat.py`'s own `_override_provider` convention swaps in a
+fresh fake per test. Found by direct execution, not anticipated in
+advance — fixed with `reset_for_tests()`, an explicit, documented,
+test-only reset hook (closes the cached Qdrant client, clears the
+cache), used as an `autouse` fixture in both new test files. Never
+called from application code.
+
+**Qdrant connection configuration — a deliberate, flagged, scoped
+compromise, not a silent shortcut:** the fully consistent way to add a
+`QDRANT_URL` setting would touch `ai/config.py`, `app/core/ai.py`, and
+`app/core/config.py` — none in this task's own Allowed-files-to-modify
+(`backend/app/services/chat_service.py`, `backend/app/api/v1/chat.py`,
+`ai/orchestrator/**` only). `agent_wiring.py` instead reads the
+`QDRANT_URL` environment variable directly (falling back to
+`.env.example`'s own documented `http://localhost:6333`), flagged
+explicitly in that module's own docstring as a real follow-up worth a
+small dedicated task, not expanded into here.
+
+**No changes to any already-shipped file beyond the two named in the
+WBS.** `ai/agents/*.py` (all five), `ai/orchestrator/orchestrator.py`,
+`ai/orchestrator/registry.py`, `ai/orchestrator/intent.py`,
+`ai/orchestrator/types.py`, `app/core/deps.py`, `app/core/security.py`,
+`app/core/session_store.py`, `app/db/session.py`, and
+`app/schemas/chat.py` were all consumed (imported, called) but
+re-diffed against the `AGENTS-08` baseline after this session: zero
+changes to any of them. `ai/orchestrator/__init__.py` gained one new
+export (`build_agent_registry`) and an updated docstring line — its
+existing exports (`Orchestrator`, `AgentRegistry`, etc.) are unchanged.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **Registration order**: Traveler Profile, Destination Intelligence,
+  Budget, Itinerary Planner, Recommendation — documented in
+  `agent_wiring.py`'s own docstring as the tie-break for
+  `classify_intent`'s first-match-wins behavior on an ambiguous
+  message; no existing test exercises genuine ambiguity (an
+  acknowledged limitation of `AGENTS-01`'s own "intentionally simple"
+  classifier, not newly introduced here).
+- **Status-message text lives in `chat_service.py`**, not
+  `ai/orchestrator/`, as a presentation-layer/UI-wording concern
+  (`TRIP_PLANNING_EXPERIENCE.md`'s own framing), not a general
+  orchestration one.
+- **`classify_intent` is called twice per streaming request** (once in
+  `chat_service.stream_chat` to choose the status text, once more
+  inside `Orchestrator.stream_dispatch` itself) — a pure,
+  side-effect-free function over the same unchanged `(messages,
+  registry)`, so redundant but never a source of mismatch between the
+  status shown and the agent that actually runs.
+
 ## Relevant Files
 
 **AUTH infrastructure (unchanged since 2026-08-24):**
@@ -1559,29 +1776,37 @@ chat-composer,conversation-panel}.tsx` (CHAT-01), `frontend/messages/
 placeholders). Full list with New/Modified split: "Files Modified This
 Session (2026-09-05, CHAT-03 through CHAT-04)" below.
 
-**AGENTS infrastructure — `AGENTS-01` done (2026-09-10), `02`–`09`
-elaborated but not yet built. For whoever picks up `ATLAS-P2-AGENTS-02`:**
-`ai/orchestrator/{__init__,types,registry,intent,orchestrator}.py` now
-exist — `Orchestrator`, `AgentRegistry`, `AgentHandler` (a minimal
-structural `Protocol`, not the full Agent contract), `DispatchDecision`,
-`OrchestratorResult`. `AGENTS-02`'s base `Agent` class is expected to
-satisfy `AgentHandler`'s shape (`name`, `intents`, `handle()`,
-`stream_handle()`) so `AGENTS-04` can register real agents into
-`Orchestrator().registry` without any change to `ai/orchestrator/`
-itself. `ai/agents/conversation_manager.py` and `ai/providers/base.py`
-were extended/consumed, not modified — still exactly as `CHAT-03`/`04`
-left them. `ai/config.py` and `backend/app/core/ai.py` remain the
-config-wiring pattern for anything a real agent needs configured.
-`ai/schemas/` and `ai/evaluations/` are still real, empty directories
-(`.gitkeep` only) — `AGENTS-02` is still the first task expected to
-populate `ai/schemas/`. `backend/app/services/chat_service.py` and
-`backend/app/api/v1/chat.py` remain explicitly **out of scope** through
-`AGENTS-08` — only `AGENTS-09` touches either; `Orchestrator` is not
-wired into either file yet. `backend/tests/test_orchestrator.py` (18
-tests) is the new test file — standalone, no HTTP/`client` fixture used
-since there is no route to test against yet. Full per-task scope,
-dependencies, and acceptance criteria: `WORK_BREAKDOWN_STRUCTURE.md`
-§Phase 2 → Module: AGENTS.
+**AGENTS infrastructure — module fully closed, all 9 tasks done
+(2026-09-10 through 2026-09-17):**
+`ai/orchestrator/{__init__,types,registry,intent,orchestrator,
+agent_wiring}.py` (`Orchestrator`, `AgentRegistry`, `AgentHandler`,
+`DispatchDecision`, `OrchestratorResult`, `build_agent_registry` — the
+real wiring, added `AGENTS-09`); `ai/agents/{base,traveler_profile_agent,
+destination_intelligence_agent,budget_agent,itinerary_planner_agent,
+recommendation_agent}.py` (the `Agent` ABC plus all five real Core
+Agents); `ai/prompts/{atlas_conversation_prompt,traveler_profile_prompt,
+destination_intelligence_prompt,budget_prompt,itinerary_planner_prompt,
+recommendation_prompt}.py`; `ai/schemas/{base,traveler_profile,
+destination,budget,itinerary,recommendation}.py`; `ai/tools/**`
+(`ToolRegistry`, `ToolService`); `ai/rag/**` (`HashingEmbeddingProvider`,
+`QdrantKnowledgeStore`, `CURATED_DOCUMENTS`). `ai/agents/
+conversation_manager.py` and `ai/providers/base.py` remain
+extended/consumed, never modified — still exactly as `CHAT-03`/`04`
+left them; the Orchestrator's passthrough IS `conversation_manager`,
+not a replacement for it. `backend/app/services/chat_service.py` and
+`backend/app/api/v1/chat.py` **now route through `Orchestrator`** —
+`AGENTS-09`'s own scope, the first time either file was touched since
+`CHAT-04`; see that task's own Verification Results above for the
+guest/authenticated registry split and the new, purely additive SSE
+`"status"` frame. `backend/tests/{test_orchestrator,test_agent_base,
+test_tools_rag,test_traveler_profile_agent,
+test_destination_intelligence_agent,test_budget_agent,
+test_itinerary_planner_agent,test_recommendation_agent,
+test_agent_wiring,test_chat_multi_agent}.py` — 9 new test files across
+the module, `tests/test_chat.py` itself never modified. Full per-task
+scope, dependencies, and acceptance criteria (historical reference —
+every task is Done): `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module:
+AGENTS.
 
 **MEM infrastructure (new, 2026-09-06):**
 `frontend/lib/chat/guest-session-store.ts` (new — the
@@ -1598,6 +1823,41 @@ Full list with New/Modified split: "Files Modified This Session
 (2026-09-06, MEM-01 through MEM-02)" below.
 
 ## Findings Requiring Project Owner Decision
+
+**Newly found this session (Phase 3 — INTEG WBS Elaboration, 2026-09-17), reported per Q1 — resolved as "documented, not corrected":**
+- **`ARCHITECTURE.md` §11 lists Flights (Amadeus/Duffel/Skyscanner) and
+  Hotels alongside Maps/Weather/Currency under "External API Layer," but
+  `ROADMAP.md`'s own Phase 3 section names neither — both appear only
+  under Phase 6 ("Booking Features: Flight booking, Hotel booking"),
+  and `DEBUG_LOG.md`'s M0 completion record is explicit: "Integrations:
+  Flights/Hotels reserved (Phase 6, interface defined)."** Per
+  `MASTER_RULES.md` §2, not resolved unilaterally — reported as Q1 in
+  `PHASE3_INTEG_WBS_PROPOSAL.md`. **The project owner's decision
+  (2026-09-17): Flights and Hotels stay outside Phase 3, deferred to
+  Phase 6, matching `ROADMAP.md`/`DEBUG_LOG.md`'s more specific
+  statements. The conflict itself is recorded here, permanently, and in
+  `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011 — `ARCHITECTURE.md` §11's
+  own body is explicitly NOT corrected** (per `WORKFLOW.md`'s "never
+  modify previous documents" rule); any future correction to it needs
+  its own separate, explicit approval.
+
+**Newly found this session (AGENTS-09, 2026-09-17), NOT fixed — flagged
+for a future dedicated task, not expanded into here:**
+- **`QDRANT_URL` has no home in `ai.config.AIConfig`/
+  `app.core.config.Settings`.** `ai/orchestrator/agent_wiring.py` (the
+  first place in the whole codebase that actually constructs a live
+  `AsyncQdrantClient` for real request traffic) reads the `QDRANT_URL`
+  environment variable directly instead, falling back to
+  `.env.example`'s own documented `http://localhost:6333`. The fully
+  consistent fix — adding a `qdrant_url` field to `Settings`, threading
+  it through `_build_ai_config()` in `app/core/ai.py`, and into
+  `ai.config.AIConfig` — would touch three files outside `AGENTS-09`'s
+  own Allowed-files-to-modify
+  (`backend/app/services/chat_service.py`, `backend/app/api/v1/chat.py`,
+  `ai/orchestrator/**` only). Not a correctness bug (the fallback
+  matches the one Qdrant host every environment this project has ever
+  actually run against), but worth a small, dedicated follow-up task
+  once one exists to assign it to.
 
 **Resolved this session (Phase 2 — AGENTS WBS Elaboration, 2026-09-09):**
 - **Module-naming conflict, found and reported per `MASTER_RULES.md` §2's
@@ -2799,6 +3059,206 @@ the `AGENTS-06` baseline to confirm zero changes.
 - `backend/app/services/chat_service.py`, `backend/app/api/v1/chat.py`
   — still `AGENTS-09`'s scope alone.
 
+## Files Modified This Session (2026-09-17, AGENTS-08 through AGENTS-09)
+
+Eighth and ninth (final) Phase 2 implementation sessions, executed as
+one task group. `ATLAS-P2-AGENTS-08` (Recommendation Agent) done in
+full, then `ATLAS-P2-AGENTS-09` (Multi-agent integration) done in
+full, immediately after within this same session — see Verification
+Results above for both. **Phase 2 — AI Agent System is now fully
+closed.**
+
+**Created — `AGENTS-08`, within its declared Allowed-files-to-modify
+(`ai/agents/recommendation_agent.py` new, `ai/prompts/
+recommendation_prompt.py` new, `ai/schemas/recommendation.py` new):**
+- `ai/agents/recommendation_agent.py` — `RecommendationAgent` (`Agent`
+  subclass, constructed with `TravelerProfileAgent` and
+  `DestinationIntelligenceAgent` instances), `RecommendationQuery`
+  (fieldless `input_schema` placeholder), `_traveler_preference_values`/
+  `_find_matched_preference`/`_build_relevance_reasoning`/
+  `_score_and_rank` (deterministic ranking/personalization helpers)
+- `ai/prompts/recommendation_prompt.py` — `RECOMMENDATION_SYSTEM_PROMPT`,
+  `RECOMMENDATION_PROMPT_VERSION`
+- `ai/schemas/recommendation.py` — `Recommendation`, `RecommendationList`
+  (`AgentOutputBase` subclass, nesting `DestinationOption` directly)
+
+**Created — `AGENTS-08` tests (22 new tests, 1 new file):**
+- `backend/tests/test_recommendation_agent.py` — the 7
+  `ARCHITECTURE.md` §8 fields/`AgentHandler` shape sanity checks,
+  parametrized `_find_matched_preference` cases, `_score_and_rank`
+  unit tests proving genuine re-ranking (a lower-relevance literal
+  match outranks a higher-relevance non-match) and the real
+  `_MAX_RECOMMENDATIONS` ceiling, genuine composition against a real
+  `TravelerProfileAgent` + real `DestinationIntelligenceAgent` (the
+  core proof: Queenstown ranks first and `matched_preference ==
+  "adventure"` for a traveler with that saved preference), the
+  no-saved-preferences case (no personalization claimed, explicit
+  uncertainty note), the no-destination-match case (empty list, LOW
+  confidence), the fixed-provenance-`reasoning` check, uncertainty
+  notes carrying the destination agent's own notes forward, and
+  end-to-end registration/dispatch through a real
+  `AgentRegistry`/`Orchestrator`.
+
+**Created — `AGENTS-09`, within its declared Allowed-files-to-modify
+(new orchestrator-dispatch wiring under `ai/orchestrator/**`):**
+- `ai/orchestrator/agent_wiring.py` — `build_agent_registry` (the real
+  wiring `AGENTS-01`'s own docstring named as still pending),
+  `reset_for_tests` (explicit, documented, test-only cache reset)
+
+**Modified — `AGENTS-09`, within its declared Allowed-files-to-modify:**
+- `ai/orchestrator/__init__.py` — added `build_agent_registry` to
+  `__all__`/exports; updated its own docstring's "not yet wired" line
+- `backend/app/services/chat_service.py` — `complete_chat`/`stream_chat`
+  now route through `Orchestrator`/`build_agent_registry` instead of
+  calling `ai.agents.conversation_manager` directly; new `db`/`user_id`
+  optional keyword-only parameters; new `ChatStreamEvent` dataclass and
+  `_STATUS_MESSAGES` mapping
+- `backend/app/api/v1/chat.py` — both routes gained `db: AsyncSession =
+  Depends(get_db)` and `user_id: uuid.UUID | None =
+  Depends(_optional_current_user_id)`; new `_extract_access_token`/
+  `_optional_current_user_id` (deliberately never-raising); the
+  streaming route's `event_source()` now branches on
+  `ChatStreamEvent.type` to emit the new, additive `"status"` SSE frame
+  alongside the unchanged `"chunk"`/`"done"`/`"error"` frames
+
+**Created — `AGENTS-09` tests (17 new tests, 2 new files):**
+- `backend/tests/test_agent_wiring.py` — `build_agent_registry`'s
+  guest-vs-authenticated agent count/identity, the static-agent
+  process-wide cache (same instance across two calls), and per-request
+  Traveler Profile/Recommendation independence (different instances
+  for two different authenticated calls)
+- `backend/tests/test_chat_multi_agent.py` — real `/chat` HTTP routing
+  for a guest (destination/budget/itinerary messages reach their
+  agent; profile/recommendation messages fall back to the Phase 1
+  passthrough) and for an authenticated caller (profile/recommendation
+  messages now reach their real agent), plus SSE `"status"`-event
+  presence/absence for agent-routed vs. passthrough messages
+
+**Modified:** no other file. Every file both tasks consumed (all five
+`ai/agents/*.py`, `ai/orchestrator/{orchestrator,registry,intent,
+types}.py`, `app/core/{deps,security,session_store}.py`,
+`app/db/session.py`, `app/schemas/chat.py`) was re-diffed against the
+`AGENTS-07` baseline to confirm zero changes.
+
+**Governance files updated (this session):**
+- `.ai/PROJECT_STATE.md` — this file: Current Phase/Milestone/Module/
+  Task/WBS-ID pointers, two new "Verification Results" sections
+  (2026-09-17, `AGENTS-08` and `AGENTS-09`), the "AGENTS infrastructure"
+  block rewritten for a fully-closed module, a new Findings entry (the
+  `QDRANT_URL` configuration compromise), this Files Modified section,
+  Notes for Next Session, LOCK STATUS footer
+- `.ai/TASK_BOARD.md` — `AGENTS-08`/`09` moved from the Phase 2 Todo
+  table to Done, with verification notes; the Todo (Phase 2) section
+  rewritten to reflect the module's closure and point to a future
+  Phase 3 elaboration session
+- `.ai/WORK_BREAKDOWN_STRUCTURE.md` — `AGENTS-08`/`09` marked Done with
+  status notes and Delivered summaries; the module's own Status note,
+  infrastructure-reuse notes, parallelization note, and exit criteria
+  all updated to reflect closure; two new integrity-check log entries
+
+**Deliberately not modified, with reasons:**
+- `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — backend/AI-layer only; no UI
+  component created, modified, or consumed.
+- `.ai/INDEX.md`, `.ai/INFRASTRUCTURE_BASELINE.md` — nothing in either
+  task changed routing, providers, i18n, test setup, CI, or backend
+  scaffolding infrastructure in the sense those two documents govern
+  (a new DB-session dependency on two existing routes is not new
+  scaffolding — `get_db` itself was already infrastructure, built and
+  documented by an earlier session).
+- `.ai/DESIGN_BIBLE_AMENDMENTS.md` — no Design Bible document required a
+  correction this session.
+- `backend/pyproject.toml` — no new dependency needed (re-verified
+  byte-identical against the original baseline after `uv sync`).
+- `app/core/deps.py`, `app/core/security.py`, `app/core/session_store.py`,
+  `app/db/session.py`, `app/schemas/chat.py` — all consumed (imported,
+  called), never edited; `_optional_current_user_id` deliberately
+  duplicates a small, documented slice of `deps.py`'s own logic rather
+  than importing/modifying it — see `AGENTS-09`'s own Verification
+  Results for why.
+- `ai/config.py`, `app/core/ai.py`, `app/core/config.py` — the fully
+  consistent home for `QDRANT_URL` configuration, explicitly not
+  touched (outside this task's own Allowed-files-to-modify) — see the
+  new Findings entry above.
+
+## Files Modified This Session (2026-09-17, Phase 3 — INTEG WBS Elaboration)
+
+**Documentation-only. No production code created, modified, or deleted.
+No Phase 3 task implemented or executed.** Direct continuation of the
+same session that closed `AGENTS-08`/`09` above. Source baseline: the
+same repository state that session left off at — re-verified, not
+assumed: `ai/tools/{types,registry,service}.py`, `app/core/rate_limit.py`,
+`app/core/redis.py`, and the full repository (searched for any
+`*adapter*`/`*integration*` file — none found) were all directly
+inspected before being cited in the elaboration below. A prior-turn
+deliverable, `PHASE3_INTEG_WBS_PROPOSAL.md` (delivered to the project
+owner, never merged into any `.ai/` file), supplied the analysis this
+elaboration formalizes once Q1–Q5 were answered.
+
+**Modified — canonical governance files:**
+- `.ai/WORK_BREAKDOWN_STRUCTURE.md` — Module-level Phase 3 stub (four
+  separate adapter modules + `DOMAIN-AGENTS` + `RAG`) replaced with one
+  consolidated `Module: INTEG` Task-level elaboration: 6 tasks
+  (`ATLAS-P3-INTEG-01..06`) each with Dependencies, Required docs,
+  Priority/Complexity/Context, Allowed-files-to-modify, and Acceptance
+  Criteria; a Phase 1/2-infrastructure-reuse note (verified against the
+  real repo); the Q1–Q5 scope-decision record; a Parallelization note;
+  Wave 1 exit criteria; a Wave 2 (`DOMAIN-AGENTS`) explicit-non
+  -elaboration note; a Consolidation note (module-naming conflict, found
+  and resolved); an integrity-check log entry; LOCK STATUS footer updated
+- `.ai/TASK_BOARD.md` — new "Todo (Phase 3 — External Data Integration,
+  Wave 1)" table (6 rows, `INTEG-01` marked Definition-of-Ready,
+  `02`–`06` explicitly not-yet-authorized); "Last updated" and LOCK
+  STATUS footer both updated
+- `.ai/PROJECT_STATE.md` — this file: header dates, Current
+  Phase/Milestone/Module/Task pointers, this session's own narrative, a
+  new Findings entry (the Flight/Hotel conflict — Q1, documented not
+  corrected), this Files Modified section, Notes for Next Session
+- `.ai/INDEX.md` — `INTEG` entry rewritten (real Task IDs, `Amendment
+  011` reference, Wave 2 not-yet-elaborated note); new dated header
+  banner; LOCK STATUS footer updated
+- `.ai/CONVERSATION_STRATEGY.md` — §2's Phase 3 module-code example
+  (`INTEG-MAPS`/`DOMAIN-AGENTS`/`RAG`) corrected — `RAG` was never Phase
+  3 scope (it shipped in `AGENTS-03`), and the per-category module split
+  is replaced by the real, consolidated `INTEG` module; new dated
+  approval blockquote added at the top; LOCK STATUS footer updated
+- `.ai/SESSION_PROMPT.md` — "Notes for the Human Operator" refreshed:
+  current status, recommended next task (`ATLAS-P3-INTEG-01`), the
+  provider-agnostic/no-live-integration-without-a-credential notes
+  (Q2–Q4), and the Wave 1 parallelization note; LOCK STATUS footer updated
+- `.ai/DESIGN_BIBLE_AMENDMENTS.md` — new Amendment 011 (Q1–Q5 formal
+  record; the module-naming conflict's found-and-resolved record;
+  `DEPENDENCY_GRAPH.md`'s Wave 1 extension, recorded here rather than
+  edited into that LOCKED file's body; explicit confirmation that
+  `ARCHITECTURE.md` §11's Flight/Hotel conflict is NOT corrected by this
+  amendment); Log table updated; next amendment number advanced to 012
+
+**Deliberately not modified, with reasons:**
+- `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — every `INTEG` task is
+  backend/AI-layer only; no task creates or consumes a UI component;
+  matches `CONVERSATION_STRATEGY.md` §7's own backend-only exception.
+- `docs/ARCHITECTURE.md` §11 — the Flight/Hotel conflict is documented
+  (Amendment 011, part 4), not corrected; editing a locked Design Bible
+  document's body requires its own separate, explicit approval, per
+  `WORKFLOW.md`.
+- `docs/DEPENDENCY_GRAPH.md` — LOCKED — Tier 1; extended via
+  `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011 (part 3) rather than a
+  direct body edit, mirroring Amendment 010's own precedent for `AGENTS`.
+- `.ai/MASTER_RULES.md` — no new governance mechanism was introduced
+  this session; existing §2, §18, §20, and `DEVELOPMENT_EXECUTION_PLAN.md`
+  §3 already fully cover how a new Phase gets elaborated and then
+  separately authorized for implementation.
+- `.ai/INFRASTRUCTURE_BASELINE.md` — nothing in this elaboration changed
+  routing, providers, i18n, test setup, CI, or backend scaffolding — it
+  is a documentation-only planning session, not an implementation one.
+- Any of the 26 locked Design Bible documents other than
+  `ARCHITECTURE.md` §11 (cited, not edited) — none apply to a
+  backend-only external-integration module.
+
+**Not created:** any file under `ai/`, `backend/`, or `frontend/` — this
+session is documentation/planning only, consistent with the explicit
+"only update documentation... do not write any production code... do
+not execute any Phase 3 task" instruction it was scoped under.
+
 ## Notes for Next Session
 
 
@@ -3154,24 +3614,69 @@ passing, mypy strict clean on 65 backend + 39 `ai/` files. Not
 registered into any real request yet — that remains `AGENTS-09`'s
 scope.
 
-**Recommended next step (current): execute `ATLAS-P2-AGENTS-08`**
-(Recommendation Agent — its dependencies, `AGENTS-04` and `AGENTS-05`,
-have been Done since `AGENTS-05`'s own session; it never depended on
-`AGENTS-06` or `AGENTS-07`), pending its own explicit "Execute
-ATLAS-P2-AGENTS-08" instruction. Its own acceptance criterion requires
-curated, ranked output — not an exhaustive list (`PSYCHOLOGY_GUIDELINES.md`
-§13: "Never display 50 hotels at once") — and every recommendation must
-state its own relevance reasoning, not a generic label
-(`PSYCHOLOGY_GUIDELINES.md` §15, Explainable AI). Like `AGENTS-07`, this
-task will need to decide its own composition mechanism for consuming
-`AGENTS-04`'s (`TravelerProfileAgent`) and `AGENTS-05`'s
-(`DestinationIntelligenceAgent`) output — not pre-solved here.
-**`ATLAS-P2-AGENTS-08` is the last task before `AGENTS-09` becomes
-Definition-of-Ready** — `AGENTS-09` depends on `AGENTS-01` through `08`
-in full and is the final Phase 2 task, wiring the Orchestrator into
-`chat_service.py`/`chat.py` for the first time since `CHAT-04`. Full
-scope, dependencies, and acceptance criteria:
-`WORK_BREAKDOWN_STRUCTURE.md` §Phase 2 → Module: AGENTS.
+**`ATLAS-P2-AGENTS-08` — done (2026-09-17).** Recommendation Agent:
+`ai/agents/recommendation_agent.py`'s `RecommendationAgent`, composing
+real `TravelerProfileAgent`/`DestinationIntelligenceAgent` instances
+(`AGENTS-07`'s own composition precedent, applied to a different pair).
+Personalization is a literal, case-insensitive substring overlap
+between a saved preference value and a destination's own retrieved
+description — never an inferred or fabricated fit assessment — capped
+at `_MAX_RECOMMENDATIONS = 5` (`PSYCHOLOGY_GUIDELINES.md` §13's own
+"Recommend Top 5" wording), a real code-enforced ceiling, proven with a
+synthetic input larger than the cap, not merely a limit that happens to
+never bind. 22 new tests, 278/278 suite passing, mypy strict clean on
+66 backend + 43 `ai/` files. Not registered into any real request yet
+— that remained `AGENTS-09`'s scope, executed immediately after within
+this same session.
+
+**`ATLAS-P2-AGENTS-09` — done (2026-09-17).** The final Phase 2 task,
+and the one hard serialization point in the module: `ai/orchestrator/
+agent_wiring.py`'s `build_agent_registry` wires all five Core Agents
+into a real `/chat` request for the first time, and `chat_service.py`/
+`chat.py` now route through `Orchestrator` instead of calling
+`ai.agents.conversation_manager` directly. Guest vs. authenticated is
+a registry-construction decision, not a new access guard — `/chat`
+stays deliberately unguarded; a guest gets the three Core Agents
+needing no traveler identity, an authenticated caller (resolved by a
+deliberately never-raising helper, since `app/core/deps.py`'s
+`get_current_user` always raises and sits outside this task's own
+Allowed-files-to-modify) additionally gets Traveler Profile and
+Recommendation. **Zero SSE contract change, mechanically proven**:
+every pre-existing `tests/test_chat.py` assertion — unmodified — still
+passes; the new, purely additive `"status"` SSE frame was verified
+directly against `frontend/lib/chat/stream-assistant-reply.ts`'s own
+parse/dispatch logic (recognizes exactly `"chunk"`/`"done"`/`"error"`,
+silently ignores anything else) with zero changes to that file. 17 new
+tests across two new files, 295/295 suite passing, mypy strict clean on
+68 backend + 43 `ai/` files.
+
+**Phase 2 — AI Agent System is now fully closed — 9 of 9 `AGENTS`
+tasks done.** The Orchestrator built in `AGENTS-01` now actually
+handles real traffic, five sessions after it was first built empty by
+design.
+
+**Phase 3 — INTEG WBS Elaboration, Wave 1 — done (2026-09-17).**
+`WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 elaborated to Task level —
+`Module: INTEG`, `ATLAS-P3-INTEG-01..06` — per the project owner's own
+explicit Q1–Q5 sign-off (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 011).
+Flight/Hotel confirmed out of scope, deferred to Phase 6 (Q1, conflict
+documented not corrected); Maps/Weather adapters must be
+provider-agnostic, no concrete provider pre-selected (Q2/Q3); no live
+integration or fabricated credential without a real one — contract,
+validation, error handling, and test fixtures are real and required
+regardless (Q4); Wave 2 (`Module: DOMAIN-AGENTS`) explicitly not
+elaborated (Q5). `INTEG-01`'s own scope was explicitly expanded by the
+project owner to name timeout, retry, provider-scoped rate limiting,
+caching, validation/error normalization, and monitoring hooks.
+
+**Recommended next step (current): execute `ATLAS-P3-INTEG-01`**
+(adapter foundation — its only dependency, `AGENTS-03`, has been Done
+since 2026-09-12), pending its own explicit "Execute
+ATLAS-P3-INTEG-01" instruction. This elaboration's own Q1–Q5 approval is
+not that instruction — same gate Phase 2's own 2026-09-09 elaboration
+passed through before `AGENTS-01` could ever be executed. Full scope,
+dependencies, and acceptance criteria: `WORK_BREAKDOWN_STRUCTURE.md`
+§Phase 3 → Module: INTEG.
 
 ---
 
@@ -3235,5 +3740,24 @@ agent-to-agent composition; `ai/agents/itinerary_planner_agent.py`'s
 `DestinationIntelligenceAgent`/`BudgetAgent` instances and holding
 their literal output objects, disclosure and grounding both carried
 forward unchanged; 7 of 9 `AGENTS` tasks done; `AGENTS-08` is the
-recommended next task, awaiting its own explicit go-ahead).
+recommended next task, awaiting its own explicit go-ahead), 2026-09-17
+(**`AGENTS-08` and `AGENTS-09` — done**, executed as one task group —
+the Recommendation Agent (personalized ranking via literal preference-
+overlap only, never a fabricated fit assessment), and the multi-agent
+integration wiring all five Core Agents into a real `/chat` request for
+the first time, zero SSE contract change mechanically proven against
+every pre-existing `test_chat.py` assertion; **Phase 2 — AI Agent
+System fully closed, 9 of 9 `AGENTS` tasks done**; a Phase 3 —
+External Data Integration elaboration session is the recommended next
+step, awaiting the project owner's own explicit go-ahead), 2026-09-17
+(**Phase 3 — External Data Integration, Wave 1, elaborated to Task
+level** — `Module: INTEG`, `ATLAS-P3-INTEG-01..06`, documentation-only,
+Q1–Q5 approved, `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011; Flight/Hotel
+confirmed deferred to Phase 6 with the underlying `ARCHITECTURE.md` §11
+conflict documented, not corrected; Maps/Weather adapters must be
+provider-agnostic with no concrete provider pre-selected; no live
+integration or fabricated credential without a real one; Wave 2
+(`Module: DOMAIN-AGENTS`) explicitly not elaborated; **`ATLAS-P3-INTEG-01`
+is Definition-of-Ready and is the recommended next task, awaiting its
+own explicit go-ahead**).
 Future changes only via `MASTER_RULES.md` §21.

@@ -7,6 +7,8 @@
 > **CORRECTED (2026-08-16, Governance Reconciliation):** the `DESIGNSYS` entry below previously said DESIGNSYS-03/04 were "not yet authorized to start" — both have since shipped (`TASK_BOARD.md`: 03 done 2026-08-15, 04 done 2026-08-16). Corrected below, and `INFRASTRUCTURE_BASELINE.md` added as a new cross-cutting entry. This INDEX entry does not restate task status going forward — see `TASK_BOARD.md`, always, for that — to avoid the two drifting apart again.
 >
 > **UPDATED (2026-09-09):** Phase 1 is complete (`TASK_BOARD.md`, `PROJECT_STATE.md`). The `AGENTS` entry below is elaborated to Task level for the first time (`ATLAS-P2-AGENTS-01..09`), documentation-only, per the project owner's approved Q1–Q4 (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 010). The `TRIPPLAN` entry is updated to note its explicit exclusion from this pass (Q2).
+>
+> **UPDATED (2026-09-17):** Phase 2 — AI Agent System is complete, 9/9 `AGENTS` tasks Done (`TASK_BOARD.md`, `PROJECT_STATE.md`). The `INTEG` entry below is elaborated to Task level for the first time (`ATLAS-P3-INTEG-01..06`, Wave 1 only), documentation-only, per the project owner's approved Q1–Q5 (`DESIGN_BIBLE_AMENDMENTS.md` Amendment 011). Wave 2 (`DOMAIN-AGENTS`) is explicitly not elaborated by this pass (Q5) and has no entry here yet.
 
 **Purpose:** for any feature area, this is the complete — and only necessary — documentation list. A session working on `AUTH` should never need to open `TIMELINE`'s documents, and vice versa. Context-size estimates are rough (S = 1–2 short docs/sections, M = 3–5, L = 6–10, XL = the full Design Bible) — treat them as planning guidance, not a hard token count.
 
@@ -94,11 +96,12 @@ Design Bible numbers below follow the canonical index approved 2026-07-22 (Q1) �
 - **Related WBS:** `ATLAS-P2-AGENTS-01..09` — **elaborated to Task level 2026-09-09** (documentation-only; not yet authorized for implementation — see `TASK_BOARD.md` and `PROJECT_STATE.md` for current status, authoritative, not restated here). Reuses Phase 1's `ai/agents/conversation_manager.py`, `ai/providers/**`, `PROF-02`'s `traveler_profile` table, and `MEM-02`'s `user_memory` store — see `WORK_BREAKDOWN_STRUCTURE.md` §Phase 2's own "Phase 1 infrastructure this module reuses" note for the full, verified list.
 - **Est. context:** M per task (L for `AGENTS-01`, `AGENTS-07`, `AGENTS-09`) / L if reading the whole module at once — see `WORK_BREAKDOWN_STRUCTURE.md` for per-task estimates
 
-## INTEG — External Integrations (Phase 3)
+## INTEG — External Integrations (Phase 3, Wave 1)
 
-- **Docs:** ARCHITECTURE §11, ROADMAP Phase 3, GUIDELINES §13
-- **Related WBS:** Phase 3 backlog
-- **Est. context:** M per adapter
+- **Docs:** ARCHITECTURE §11–12, ROADMAP Phase 3, GUIDELINES §13, `PHASE3_INTEG_WBS_PROPOSAL.md` (analysis/audit — superseded in its recommending capacity by `WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 and `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011, its own real analysis still accurate), `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011 (Q1–Q5 scope decisions, canonical)
+- **Backend:** none yet — `ai/tools/{types,registry,service}.py` (`AGENTS-03`) is the layer `INTEG-01` extends
+- **Related WBS:** `ATLAS-P3-INTEG-01..06`, elaborated to Task level 2026-09-17. `INTEG-01` Definition-of-Ready; `02`–`06` depend on it. Wave 2 (`Module: DOMAIN-AGENTS`) not elaborated — see `TASK_BOARD.md` for current status (authoritative; not restated here).
+- **Est. context:** M per adapter (confirmed accurate at Task level, not just estimated)
 
 ## DESIGNSYS — Design System / Tokens Implementation (cross-cutting, referenced by every module)
 
@@ -150,4 +153,4 @@ Any task touching more than one row above should still only load the specific do
 **END OF DOCUMENT (this baseline)**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation), updated 2026-08-16 (Governance Reconciliation — DESIGNSYS status corrected, INFRASTRUCTURE entry added), updated 2026-09-09 (AGENTS entry elaborated to Task level; TRIPPLAN entry notes its explicit Q2 exclusion from that pass). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-08-13 (Bootstrap Reconciliation), updated 2026-08-16 (Governance Reconciliation — DESIGNSYS status corrected, INFRASTRUCTURE entry added), updated 2026-09-09 (AGENTS entry elaborated to Task level; TRIPPLAN entry notes its explicit Q2 exclusion from that pass), updated 2026-09-17 (Phase 2 complete; INTEG entry elaborated to Task level, Wave 1 only — `ATLAS-P3-INTEG-01..06`, Amendment 011; Wave 2/DOMAIN-AGENTS not yet elaborated). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

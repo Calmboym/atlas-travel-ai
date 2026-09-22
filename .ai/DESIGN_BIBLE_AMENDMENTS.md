@@ -248,3 +248,64 @@ This is consistent with, and does not contradict, `DEPENDENCY_GRAPH.md` §2's or
 | 010 | Phase 2 (AI Agent System) Task-Level Elaboration: Scope Decisions, Module-Naming Resolution, Dependency Graph Extension | Approved | 2026-09-09 |
 
 **Next amendment number:** 011.
+
+---
+
+## Amendment 011 — Phase 3 (External Data Integration) Wave 1 Task-Level Elaboration: Scope Decisions (Q1–Q5), INTEG-01 Foundation Scope
+
+**Status:** APPROVED
+**Approved:** 2026-09-17, by project owner (Q1–Q5 of the Phase 3 Wave 1 elaboration proposal presented this session).
+**Amends:** adds new governance surface area (Phase 3's Wave 1 Task-level elaboration, not previously formalized beyond `INDEX.md`'s three-line `INTEG` pointer), and formally extends `DEPENDENCY_GRAPH.md` (LOCKED — Tier 1) without editing its body directly, per that document's own established mechanism — the same precedent Amendment 010 already used for `AGENTS`.
+**Reference:** `PHASE3_INTEG_WBS_PROPOSAL.md` (this session's prior turn — the proposal document itself, delivered but never merged into any `.ai/` file); `WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 (Module: INTEG), `TASK_BOARD.md` "Todo (Phase 3 — INTEG, Wave 1)", `INDEX.md` §INTEG, `CONVERSATION_STRATEGY.md` §2 — all updated the same session as this amendment, per the incremental-output model (`MASTER_RULES.md` §26).
+
+**Text of amendment — six parts:**
+
+**1. Q1–Q5 scope decisions, formally recorded** (previously approved conversationally, in Persian; this is their permanent, canonical, English-language record):
+
+- **Q1 — Flight/Hotel Domain Agent phase placement.** Flights and Hotels stay **outside Phase 3**, deferred to Phase 6, per `ROADMAP.md`'s and `DEBUG_LOG.md`'s own more specific statements (`PHASE3_INTEG_WBS_PROPOSAL.md` Part 3). The underlying conflict — `ARCHITECTURE.md` §11 lists Flights/Hotels alongside Maps/Weather/Currency, while `ROADMAP.md`/`DEBUG_LOG.md` place them in Phase 6 — **remains documented, not corrected**: `ARCHITECTURE.md`'s body is not edited by this amendment or any future Wave 1 task without its own separate, explicit approval, per `WORKFLOW.md`'s "never modify previous documents" rule. This amendment records the *scope* decision (what Wave 1 builds), not a retroactive fix to `ARCHITECTURE.md` §11's own listing.
+- **Q2/Q3 — Maps and Weather adapters must be provider-agnostic.** Provider-specific code is confined entirely to the adapter's own internal implementation; no Domain Agent (Wave 2, not yet built) may depend on, or even know, which concrete backend a given adapter uses. This generalizes `ARCHITECTURE.md` §2's own "External Provider Independence" principle ("External services must be accessed through abstraction layers... Hotel Service → Booking Adapter → Expedia Adapter → Hotelbeds Adapter") to Maps and Weather specifically, and reuses this codebase's own already-established provider-abstraction shape — `ai.providers.base.LLMProvider` (`CHAT-03`) and `ai.rag.embeddings.EmbeddingProvider` (`AGENTS-03`): an abstract contract the rest of the system depends on, with a swappable concrete implementation selected inside the module that owns it, never exposed upward. **No specific concrete provider (Google Maps, OpenStreetMap, Open-Meteo, or otherwise) is selected by this amendment** — `PHASE3_INTEG_WBS_PROPOSAL.md`'s own Q2/Q3 recommendations (a specific provider each) are superseded by this more general resolution; which concrete implementation, if any, an adapter actually ships with is the implementing session's own choice, made within the provider-agnostic contract this amendment establishes, not pre-selected here.
+- **Q4 — No live integration and no fabricated credential without a real credential.** Every Wave 1 adapter task builds its real contract (the provider-agnostic interface Q2/Q3 establishes), real request/response validation, real error handling, and real test fixtures (a fake/mock concrete provider implementation, mirroring every Phase 2 agent's own `FakeLLMProvider` test pattern) — all real, working code, verified by real tests. **Live verification against an actual external endpoint happens only once a real credential is supplied**, for any provider that requires one. A provider that is inherently keyless (no credential exists to be missing or fabricated) is not automatically exempted from this gate by this amendment — whether and when to exercise a live call against a keyless backend is left to the implementing session's own judgment, not decided here, since the project owner's own answer did not carve out that distinction explicitly.
+- **Q5 — Wave 2 (`DOMAIN-AGENTS`) is not elaborated now.** No Domain Agent (Weather Agent, Currency Agent, Safety Agent, Events Agent, or any other) is designed, scoped, or given task IDs by this amendment or `WORK_BREAKDOWN_STRUCTURE.md`'s new §Phase 3 section. A separate, later planning pass — after Wave 1's adapters are built and independently verified — is required before Wave 2 exists at Task level, mirroring the same rolling-wave discipline `DEVELOPMENT_EXECUTION_PLAN.md`'s own Risk Register already commits this project to.
+- **`ATLAS-P3-INTEG-01`'s scope, explicitly expanded per the project owner's own direction** beyond `PHASE3_INTEG_WBS_PROPOSAL.md`'s original draft: registered as the module's real foundation, its scope now explicitly names **timeout handling, retry policy, provider-scoped rate limiting, response caching, validation/error normalization** (turning any concrete provider's own raw error shape into one consistent internal error type, pairing directly with Q2/Q3's provider-agnostic principle), **and monitoring hooks** (structured logging for every adapter call — success, failure, cache hit, rate-limited, retry count — at adapter granularity, a real addition beyond `ToolService`'s own existing tool-level logging, not a duplicate of it). `WORK_BREAKDOWN_STRUCTURE.md` §Phase 3's own `INTEG-01` entry is the authoritative, detailed version of this scope; this amendment records that it was the project owner's own explicit direction, not the implementing session's later invention.
+
+**2. Module-naming conflict, found and resolved — mirroring Amendment 010's own Part 2.** `CONVERSATION_STRATEGY.md` §2's own placeholder text sketched three separate Phase 3 module codes — `INTEG-MAPS`, `DOMAIN-AGENTS`, `RAG` — as a hypothetical future example, written before any real Phase 3 elaboration existed. That placeholder is imprecise in two ways, both corrected here: `RAG` was never Phase 3 scope at all — it shipped as part of `AGENTS-03` in Phase 2 (`ai/rag/**`, done 2026-09-12) — and `INTEG-MAPS` implied a per-category module split (one module per adapter) rather than this amendment's single consolidated `INTEG` module covering all five Wave 1 categories, mirroring the same single-consolidated-module resolution Amendment 010 already chose for `AGENTS` over its own four-module placeholder sketch. **Resolution:** one consolidated `Module: INTEG` (`ATLAS-P3-INTEG-01..06`) is authoritative for Wave 1; `DOMAIN-AGENTS` remains reserved as Wave 2's own future module name, not yet elaborated (Q5). `CONVERSATION_STRATEGY.md` §2 is updated this session to reflect both corrections.
+
+**3. `DEPENDENCY_GRAPH.md` extension, recorded (not a direct edit).** Per the same mechanism Amendment 010 already established:
+
+```
+... Phase 3 — External Data Integration
+    Depends on: Phase 2's Tool Service (AGENTS-03)  [ORIGINAL, MASTER_IMPLEMENTATION_ROADMAP.md]
+                              ↓
+              Now realized as: Module INTEG, Wave 1 (ATLAS-P3-INTEG-01..06)
+                              ↓
+                    INTEG-01 (foundation: timeout, retry, rate limiting,
+                              caching, validation/error normalization,
+                              monitoring hooks — extends AGENTS-03's
+                              Tool Service, does not rebuild it)
+                              ↓
+        INTEG-02 (Currency) ⇉ INTEG-03 (Weather) ⇉ INTEG-04 (Maps)
+                    ⇉ INTEG-05 (Events) ⇉ INTEG-06 (Safety/Travel Sources)
+                    [all five run in parallel once INTEG-01 is Done —
+                     none depends on any other]
+                              ↓
+              Wave 2 — Module DOMAIN-AGENTS — NOT elaborated (Q5);
+              a separate future planning pass, after Wave 1 verification
+```
+
+This is consistent with, and does not contradict, `MASTER_IMPLEMENTATION_ROADMAP.md`'s own Phase 3 description ("Depends on: Phase 2's Tool Service... Unlocks: Trip Details Experience (20)... Notification & Communication Experience (23)") — it is that same relationship elaborated to real Task IDs, not a redesign. `DEPENDENCY_GRAPH.md`'s own body remains unedited, per `WORKFLOW.md`'s "never modify previous documents" rule; this table is the authoritative extension for any future session that needs Phase 3 Wave 1's real task-level dependency shape.
+
+**4. `ARCHITECTURE.md` §11 conflict — explicitly NOT corrected by this amendment.** Per Q1 above: the Flight/Hotel listing conflict between `ARCHITECTURE.md` §11 and `ROADMAP.md`/`DEBUG_LOG.md` is reported here, permanently, as a known, documented inconsistency — not silently resolved, and not fixed in `ARCHITECTURE.md`'s own body. Any future correction to that document requires its own separate, explicit approval, exactly as `WORKFLOW.md` requires for every locked document.
+
+**5. `PHASE3_INTEG_WBS_PROPOSAL.md`'s own status.** That document is now superseded, in its recommending capacity, by this amendment and by `WORK_BREAKDOWN_STRUCTURE.md`'s own new §Phase 3 section — its Parts 1–4 (source-document analysis, infrastructure audit, the Q1 conflict, the Q4 credential finding) remain accurate, real analysis and are not re-litigated here; its Part 6 task sketches and Part 7 open questions are the ones this amendment's Q1–Q5 now answer.
+
+**6. No architecture, technology, or Design Bible content was altered.** This amendment is scope/process/dependency-graph documentation only — no code was written, no Phase 3 task was implemented or authorized for implementation, and no locked Design Bible document's body was touched. `ATLAS-P3-INTEG-01` still requires its own separate, explicit `"Execute ATLAS-P3-INTEG-01"` instruction before any implementation session may begin — this amendment's approval of Q1–Q5 is not that instruction.
+
+---
+
+**LOG UPDATE**
+
+| # | Title | Status | Date |
+|---|---|---|---|
+| 011 | Phase 3 (External Data Integration) Wave 1 Task-Level Elaboration: Scope Decisions (Q1–Q5), INTEG-01 Foundation Scope | Approved | 2026-09-17 |
+
+**Next amendment number:** 012.
