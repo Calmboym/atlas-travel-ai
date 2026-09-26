@@ -1,6 +1,6 @@
 # TASK_BOARD.md
 
-**Last updated:** 2026-09-17 (Phase 3 — External Data Integration, Wave 1, elaborated to Task level — `Module: INTEG`, `ATLAS-P3-INTEG-01..06` added to Todo, documentation-only, Q1–Q5 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011; **`ATLAS-P3-INTEG-01` is Definition-of-Ready**). Prior, same day: 2026-09-17 (`ATLAS-P2-AGENTS-08` and `ATLAS-P2-AGENTS-09` — Recommendation Agent, and the multi-agent integration wiring all five Core Agents into a real `/chat` request for the first time — both complete, executed as one task group; **Phase 2 — AI Agent System is now fully closed, 9/9 AGENTS tasks Done**). Prior: 2026-09-16 (`ATLAS-P2-AGENTS-07` — Itinerary Planner Agent, the first task requiring genuine agent-to-agent composition — complete; moved from Todo to Done; `ItineraryPlan.destination`/`.budget` hold AGENTS-05's/AGENTS-06's own literal output objects). Prior: 2026-09-15 (`ATLAS-P2-AGENTS-06` — Budget Agent, estimate-only, never invents a price — complete; Q3's hard uncertainty-disclosure gate Pydantic-enforced). Prior: 2026-09-14 (`ATLAS-P2-AGENTS-05` — Destination Intelligence Agent, the first agent to consume `AGENTS-03`'s RAG/Tool infrastructure — complete; a significant, prominently-flagged scope decision to add a second curated content domain). Prior: 2026-09-13 (`ATLAS-P2-AGENTS-04` — Traveler Profile Agent, the first concrete Core Agent — complete). Prior: 2026-09-12 (`ATLAS-P2-AGENTS-02` and `ATLAS-P2-AGENTS-03` — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server — complete, executed as one task group). Prior: 2026-09-10 (`ATLAS-P2-AGENTS-01` — AI Orchestrator core — complete; the first Phase 2 implementation task). Prior: 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, `Module: AGENTS`, 9 tasks added to Todo — documentation-only, Q1–Q4 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010); 2026-09-08 (`DASH-01` complete — Phase 1 fully closed).
+**Last updated:** 2026-09-17 (`ATLAS-P3-INTEG-01` — Adapter foundation — done; the module's real foundation (timeout, retry, provider-scoped rate limiting, caching, validation/error normalization, monitoring hooks); moved from Todo to Done; **`INTEG-02` through `06` are now Definition-of-Ready**). Prior, same day: 2026-09-17 (Phase 3 — External Data Integration, Wave 1, elaborated to Task level — `Module: INTEG`, `ATLAS-P3-INTEG-01..06` added to Todo, documentation-only, Q1–Q5 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011). Prior, same day: 2026-09-17 (`ATLAS-P2-AGENTS-08` and `ATLAS-P2-AGENTS-09` — Recommendation Agent, and the multi-agent integration wiring all five Core Agents into a real `/chat` request for the first time — both complete, executed as one task group; **Phase 2 — AI Agent System is now fully closed, 9/9 AGENTS tasks Done**). Prior: 2026-09-16 (`ATLAS-P2-AGENTS-07` — Itinerary Planner Agent, the first task requiring genuine agent-to-agent composition — complete; moved from Todo to Done; `ItineraryPlan.destination`/`.budget` hold AGENTS-05's/AGENTS-06's own literal output objects). Prior: 2026-09-15 (`ATLAS-P2-AGENTS-06` — Budget Agent, estimate-only, never invents a price — complete; Q3's hard uncertainty-disclosure gate Pydantic-enforced). Prior: 2026-09-14 (`ATLAS-P2-AGENTS-05` — Destination Intelligence Agent, the first agent to consume `AGENTS-03`'s RAG/Tool infrastructure — complete; a significant, prominently-flagged scope decision to add a second curated content domain). Prior: 2026-09-13 (`ATLAS-P2-AGENTS-04` — Traveler Profile Agent, the first concrete Core Agent — complete). Prior: 2026-09-12 (`ATLAS-P2-AGENTS-02` and `ATLAS-P2-AGENTS-03` — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server — complete, executed as one task group). Prior: 2026-09-10 (`ATLAS-P2-AGENTS-01` — AI Orchestrator core — complete; the first Phase 2 implementation task). Prior: 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, `Module: AGENTS`, 9 tasks added to Todo — documentation-only, Q1–Q4 approved; see `DESIGN_BIBLE_AMENDMENTS.md` Amendment 010); 2026-09-08 (`DASH-01` complete — Phase 1 fully closed).
 **Document tier:** Living — updated every session via `MASTER_RULES.md` §21.
 
 Columns: Backlog → Todo → In Progress → Blocked → Review → Done. Every card cites its WBS ID and required documentation set so it can be picked up without re-deriving context. **Governance Sessions** (below) are a separate, non-WBS category — documentation/process work, not product implementation; see `MASTER_RULES.md` §3 Scope Control for why these never carry a WBS ID.
@@ -400,32 +400,62 @@ in the Done table above.
 
 ---
 
+## Done (Phase 3 — External Data Integration, Wave 1)
+
+| Task ID | Title | Completed | Docs Used |
+|---|---|---|---|
+| ATLAS-P3-INTEG-01 | Adapter foundation — timeout, retry, provider-scoped rate limiting, caching, validation/error normalization, monitoring hooks (the module's real foundation — see verification note) | 2026-09-17 | `ARCHITECTURE.md` §11–12, `GUIDELINES.md` §13, §11 |
+
+**Verification status (INTEG-01, 2026-09-17 — actually executed against
+real infrastructure, not asserted):** its one dependency (`AGENTS-03`)
+was already Done at session start. Real Postgres 16 + Redis 7 + the
+standing local Qdrant 1.19.1 server — confirmed clean baseline before
+any change: 295/295 pytest passing, mypy strict clean. Delivered
+`ai/tools/cache.py` (`ResponseCache`, wrapping the existing
+`app.core.redis.get_redis_client()` singleton) and
+`ai/tools/external_client.py` (`ExternalClient`, `ExternalCallConfig`,
+`ProviderRateLimiter`, and three normalized exception types). Found
+`app/core/rate_limit.py`'s existing `RateLimiter` not cleanly reusable
+as-is (a `Request`-coupled, `HTTPException`-raising FastAPI dependency,
+keyed per-client-IP) — `ProviderRateLimiter` is a new, small sibling
+class instead, reusing the same Redis `INCR`+`EXPIRE` mechanism with a
+provider-scoped key; neither `app/core/rate_limit.py` nor
+`app/core/redis.py` was modified. Ordering (cache → rate limit →
+timeout+retry) mechanically proven to satisfy both halves of this
+task's own acceptance criterion: a cache hit consumes neither rate-limit
+budget nor network, and a rate-limited call never reaches `fetch`. 17
+new tests (`test_external_client.py`), zero live network calls, per
+Q4. 312/312 suite passing; mypy strict clean: 69 backend files, 45
+`ai/` files. **`INTEG-02` through `06` are now Definition-of-Ready.**
+Full verification: `PROJECT_STATE.md` "Verification Results
+(2026-09-17, INTEG-01)".
+
+---
+
 ## Todo (Phase 3 — External Data Integration, Wave 1)
 
 Wave 1 elaborated to Task level 2026-09-17 — documentation-only session,
 per the project owner's explicit approval of Q1–Q5 (formal record:
 `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011). **`ATLAS-P3-INTEG-01` is
-Definition-of-Ready** (its only dependency, `AGENTS-03`, is Done) — but
+done (2026-09-17, above) — `ATLAS-P3-INTEG-02` through `06` are now
+Definition-of-Ready** (their one dependency, `INTEG-01`, is Done) — but
 **no row here is authorized for implementation by this table alone**;
 each still requires its own explicit `"Execute ATLAS-P3-INTEG-NN"`
 instruction, per `SESSION_PROMPT.md` and `DEVELOPMENT_EXECUTION_PLAN.md`
-§3, exactly as Phase 2's own 2026-09-09 elaboration did not itself
-authorize `AGENTS-01`. Full task-level detail (scope, allowed files,
-acceptance criteria): `WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 → Module:
-INTEG.
+§3. Full task-level detail (scope, allowed files, acceptance criteria):
+`WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 → Module: INTEG.
 
 | Task ID | Title | Priority | Dependencies | Docs Required | Est. Context |
 |---|---|---|---|---|---|
-| ATLAS-P3-INTEG-01 | Adapter foundation — timeout, retry, provider-scoped rate limiting, caching, validation/error normalization, monitoring hooks | High | AGENTS-03 ✅ | `ARCHITECTURE.md` §11–12, `GUIDELINES.md` §13, §11 | M |
-| ATLAS-P3-INTEG-02 | Currency adapter | High | INTEG-01 | `ARCHITECTURE.md` §11, `PRD.md` §7.9 | M |
-| ATLAS-P3-INTEG-03 | Weather adapter (provider-agnostic — no concrete provider selected by the elaboration) | Medium | INTEG-01 | `ARCHITECTURE.md` §11, `PRD.md` §7.8 | M |
-| ATLAS-P3-INTEG-04 | Maps adapter (provider-agnostic — no concrete provider selected by the elaboration) | Medium | INTEG-01 | `ARCHITECTURE.md` §11 | M |
-| ATLAS-P3-INTEG-05 | Events adapter | Low | INTEG-01 | `ARCHITECTURE.md` §2, `PRD.md` §7.11 | M |
-| ATLAS-P3-INTEG-06 | Travel/Safety source adapter | Low | INTEG-01 | `ARCHITECTURE.md` §11, `PRD.md` §7.7 | M |
+| ATLAS-P3-INTEG-02 | Currency adapter | High | INTEG-01 ✅ | `ARCHITECTURE.md` §11, `PRD.md` §7.9 | M |
+| ATLAS-P3-INTEG-03 | Weather adapter (provider-agnostic — no concrete provider selected by the elaboration) | Medium | INTEG-01 ✅ | `ARCHITECTURE.md` §11, `PRD.md` §7.8 | M |
+| ATLAS-P3-INTEG-04 | Maps adapter (provider-agnostic — no concrete provider selected by the elaboration) | Medium | INTEG-01 ✅ | `ARCHITECTURE.md` §11 | M |
+| ATLAS-P3-INTEG-05 | Events adapter | Low | INTEG-01 ✅ | `ARCHITECTURE.md` §2, `PRD.md` §7.11 | M |
+| ATLAS-P3-INTEG-06 | Travel/Safety source adapter | Low | INTEG-01 ✅ | `ARCHITECTURE.md` §11, `PRD.md` §7.7 | M |
 
-**`INTEG-01` blocks all five others** — no further parallelization is
-possible within this module until it is Done; `INTEG-02` through `06`
-may then all run in parallel (disjoint new files, no cross-dependency).
+**`INTEG-02` through `06` may all run in parallel** — disjoint new
+files, no cross-dependency among them, and their one shared dependency
+(`INTEG-01`) is now Done.
 
 **Scope decisions already resolved, not open for re-litigation by the
 implementing session (Q1–Q5, `DESIGN_BIBLE_AMENDMENTS.md` Amendment
@@ -437,8 +467,13 @@ and test fixtures are real and required regardless (Q4); Wave 2
 (`Module: DOMAIN-AGENTS` — Weather Agent, Currency Agent, etc.) is
 **not** elaborated and not started by any task in this table (Q5).
 
-**Recommended next task: `ATLAS-P3-INTEG-01`.** Definition-of-Ready,
-pending the project owner's own explicit go-ahead to execute.
+**Recommended next task: `ATLAS-P3-INTEG-02`** (Currency — the most
+immediate payoff, per `WORK_BREAKDOWN_STRUCTURE.md`'s own note: it's
+the real data source `AGENTS-06`'s permanently-estimate-only Budget
+Agent will eventually need). Definition-of-Ready, pending its own
+explicit go-ahead to execute — `INTEG-03` through `06` are equally
+Definition-of-Ready and may be executed in any order, or in parallel
+across separate sessions.
 
 ---
 
@@ -473,4 +508,4 @@ pending the project owner's own explicit go-ahead to execute.
 **END OF DOCUMENT**
 
 **LOCK STATUS:**
-**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard), 2026-08-25 (PROF-01 through PROF-03 complete), 2026-08-29 (LAND-01 through LAND-03 complete), 2026-09-01 (CHAT-01 through CHAT-02 complete), 2026-09-05 (CHAT-03 through CHAT-04 complete), 2026-09-06 (MEM-01 through MEM-02 complete), 2026-09-08 (DASH-01 complete — Phase 1 fully closed), 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, documentation-only, Q1–Q4 approved — Amendment 010; no Phase 2 task authorized for implementation), 2026-09-10 (AGENTS-01 complete — first Phase 2 implementation task), 2026-09-12 (AGENTS-02 and AGENTS-03 complete, executed as one task group — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server; 3 of 9 AGENTS tasks done), 2026-09-13 (AGENTS-04 complete — the first concrete Core Agent, Traveler Profile Agent; 4 of 9 AGENTS tasks done), 2026-09-14 (AGENTS-05 complete — the first agent to consume AGENTS-03's RAG/Tool infrastructure, Destination Intelligence Agent, adding a second curated content domain; 5 of 9 AGENTS tasks done), 2026-09-15 (AGENTS-06 complete — Budget Agent, estimate-only, never invents a price, Q3's hard uncertainty-disclosure gate Pydantic-enforced; 6 of 9 AGENTS tasks done), 2026-09-16 (AGENTS-07 complete — Itinerary Planner Agent, the first task requiring genuine agent-to-agent composition, composing AGENTS-05's and AGENTS-06's own literal output objects; 7 of 9 AGENTS tasks done), 2026-09-17 (AGENTS-08 and AGENTS-09 complete, executed as one task group — Recommendation Agent, personalized ranking via literal preference-overlap only, never a fabricated fit assessment; and the multi-agent integration wiring all five Core Agents into a real `/chat` request for the first time, zero SSE contract change, mechanically proven against every pre-existing `test_chat.py` assertion; **Phase 2 — AI Agent System fully closed, 9 of 9 AGENTS tasks done**), 2026-09-17 (Phase 3 — External Data Integration, Wave 1, elaborated to Task level, same day, second update — `Module: INTEG`, `ATLAS-P3-INTEG-01..06` added to Todo, documentation-only, Q1–Q5 approved — Amendment 011; `INTEG-01` (timeout, retry, provider-scoped rate limiting, caching, validation/error normalization, monitoring hooks) is Definition-of-Ready; no Phase 3 task authorized for implementation; Wave 2 `Module: DOMAIN-AGENTS` explicitly deferred). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**
+**LIVING — approved 2026-07-22 baseline, updated 2026-07-24, 2026-07-29 (×2), 2026-08-13 (Bootstrap Reconciliation), 2026-08-15 (DESIGNSYS-03 complete), 2026-08-16 (DESIGNSYS-04 complete; Governance Reconciliation, same date, second session), 2026-08-19 (AUTH-01 Audit & Bug Fix — Localization/RTL), 2026-08-22 (AUTH-02 through AUTH-05 complete — first real backend/app/ code in the repository), 2026-08-24 (AUTH-06 through AUTH-08 complete — forgot-password, Redis-backed sessions, RBAC scaffold + frontend route guard), 2026-08-25 (PROF-01 through PROF-03 complete), 2026-08-29 (LAND-01 through LAND-03 complete), 2026-09-01 (CHAT-01 through CHAT-02 complete), 2026-09-05 (CHAT-03 through CHAT-04 complete), 2026-09-06 (MEM-01 through MEM-02 complete), 2026-09-08 (DASH-01 complete — Phase 1 fully closed), 2026-09-09 (Phase 2 — AI Agent System elaborated to Task level, documentation-only, Q1–Q4 approved — Amendment 010; no Phase 2 task authorized for implementation), 2026-09-10 (AGENTS-01 complete — first Phase 2 implementation task), 2026-09-12 (AGENTS-02 and AGENTS-03 complete, executed as one task group — Agent base contract + structured-output schemas, and Tool Service + RAG over a real local Qdrant server; 3 of 9 AGENTS tasks done), 2026-09-13 (AGENTS-04 complete — the first concrete Core Agent, Traveler Profile Agent; 4 of 9 AGENTS tasks done), 2026-09-14 (AGENTS-05 complete — the first agent to consume AGENTS-03's RAG/Tool infrastructure, Destination Intelligence Agent, adding a second curated content domain; 5 of 9 AGENTS tasks done), 2026-09-15 (AGENTS-06 complete — Budget Agent, estimate-only, never invents a price, Q3's hard uncertainty-disclosure gate Pydantic-enforced; 6 of 9 AGENTS tasks done), 2026-09-16 (AGENTS-07 complete — Itinerary Planner Agent, the first task requiring genuine agent-to-agent composition, composing AGENTS-05's and AGENTS-06's own literal output objects; 7 of 9 AGENTS tasks done), 2026-09-17 (AGENTS-08 and AGENTS-09 complete, executed as one task group — Recommendation Agent, personalized ranking via literal preference-overlap only, never a fabricated fit assessment; and the multi-agent integration wiring all five Core Agents into a real `/chat` request for the first time, zero SSE contract change, mechanically proven against every pre-existing `test_chat.py` assertion; **Phase 2 — AI Agent System fully closed, 9 of 9 AGENTS tasks done**), 2026-09-17 (Phase 3 — External Data Integration, Wave 1, elaborated to Task level, same day, second update — `Module: INTEG`, `ATLAS-P3-INTEG-01..06` added to Todo, documentation-only, Q1–Q5 approved — Amendment 011; `INTEG-01` (timeout, retry, provider-scoped rate limiting, caching, validation/error normalization, monitoring hooks) is Definition-of-Ready; no Phase 3 task authorized for implementation; Wave 2 `Module: DOMAIN-AGENTS` explicitly deferred), 2026-09-17 (`ATLAS-P3-INTEG-01` complete, same day, third update — the module's real foundation; `ProviderRateLimiter` a new sibling class rather than a `RateLimiter` fork; 17 new tests, zero live network calls per Q4; **`INTEG-02` through `06` are now Definition-of-Ready**). Future changes only via the governed End-of-Session Checklist in `MASTER_RULES.md` §21.**

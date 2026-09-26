@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
 **Baseline locked:** 2026-07-22 (Bootstrap session, post Q1–Q4 approval)
-**Last updated:** 2026-09-17 (Phase 3 — External Data Integration, Wave 1, elaborated to Task level — `Module: INTEG`, `ATLAS-P3-INTEG-01..06` — per the project owner's own Q1–Q5 sign-off, `DESIGN_BIBLE_AMENDMENTS.md` Amendment 011. **`ATLAS-P3-INTEG-01` is Definition-of-Ready; no Phase 3 task authorized for implementation.**)
+**Last updated:** 2026-09-17 (`ATLAS-P3-INTEG-01` implemented — the module's real foundation: timeout, retry, provider-scoped rate limiting, caching, validation/error normalization, monitoring hooks. **`INTEG-02` through `06` are now Definition-of-Ready.**)
 **Document tier:** Living (Tier 3) — updated only via the End-of-Session Checklist in `MASTER_RULES.md` §21.
 
 ---
@@ -62,27 +62,82 @@ Phase 2 — AI Agent System — **✅ complete (2026-09-17).** All nine
 **Current Milestone:** M1 — **met.** M2 (Phase 2's objective) — **met.**
 9 of 9 `AGENTS` tasks done; the Orchestrator now handles a real `/chat`
 request end-to-end. Phase 3's own milestone (M3, if the project owner
-wants one named) has not started implementation — Wave 1 is elaborated
-to Task level only.
+wants one named) has not started in full — `INTEG-01`, the foundation,
+is done; the five provider adapters (`INTEG-02..06`) remain.
 **Current Module:** none active (implementation). `AGENTS` (01–09) joins
 `DESIGNSYS` (01–04), `AUTH` (01–08), `PROF` (01–03), `LAND` (01–03),
 `CHAT` (01–04), `MEM` (01–02), and `DASH` (01) as complete and closed.
-`INTEG` (Phase 3, Wave 1) is now elaborated to Task level
-(`ATLAS-P3-INTEG-01..06`) but **not yet implemented** — see below.
-**Current WBS ID:** none active (implementation) — `ATLAS-P2-AGENTS-08`
-and `ATLAS-P2-AGENTS-09` implemented and closed in the prior session, in
-that order (`09`'s own dependency on `08`). This session elaborated
-`ATLAS-P3-INTEG-01..06` (documentation only — no implementation).
-**Current Task:** none in progress. `AGENTS-01` through `AGENTS-09` are
-all done — see "Verification Results (2026-09-17, AGENTS-08)" and
-"Verification Results (2026-09-17, AGENTS-09)" below. **Phase 2 is
-fully closed. Phase 3 Wave 1 is elaborated to Task level, per the
-project owner's own Q1–Q5 sign-off** (`DESIGN_BIBLE_AMENDMENTS.md`
-Amendment 011) — **`ATLAS-P3-INTEG-01` is Definition-of-Ready** (its
-only dependency, `AGENTS-03`, is Done), awaiting its own explicit
-`"Execute ATLAS-P3-INTEG-01"` instruction; this elaboration's own
-approval is not that instruction. See "Next Task" in Notes for Next
-Session, below.
+`INTEG` (Phase 3, Wave 1) is 1 of 6 tasks Done (`INTEG-01`); `INTEG-02`
+through `06` are Definition-of-Ready.
+**Current WBS ID:** none active (implementation) — `ATLAS-P3-INTEG-01`
+implemented and closed this session; its only dependency, `AGENTS-03`,
+was already Done.
+**Current Task:** none in progress. `ATLAS-P3-INTEG-01` is done — see
+"Verification Results (2026-09-17, INTEG-01)" below. **`INTEG-02`
+through `INTEG-06` are all Definition-of-Ready** (their one shared
+dependency, `INTEG-01`, is Done) and may be executed in any order, or
+in parallel across separate sessions — each still needs its own
+explicit `"Execute ATLAS-P3-INTEG-NN"` instruction. See "Next Task" in
+Notes for Next Session, below.
+
+**Phase 3 — INTEG-01 implementation (2026-09-17, this session):** the
+first Phase 3 implementation session, executed as a direct continuation
+of the same session that elaborated Wave 1 to Task level. Delivered
+`ai/tools/cache.py` (`ResponseCache`) and `ai/tools/external_client.py`
+(`ExternalClient`, `ExternalCallConfig`, `ProviderRateLimiter`, and
+three normalized exception types — `ExternalRateLimitedError`,
+`ExternalTimeoutError`, `ExternalProviderError`). Re-verified the real
+repository fresh before writing anything (services had gone down again
+between turns — restarted, then re-confirmed `ai/tools/{types,service,
+registry}.py`, `app/core/rate_limit.py`, and `app/core/redis.py`
+directly rather than trusting this session's own earlier notes).
+**`app/core/rate_limit.py`'s existing `RateLimiter` was found not
+cleanly reusable** for this task's own provider-scoped need — it is a
+`Request`-coupled, `HTTPException`-raising FastAPI dependency keyed
+per-client-IP, none of which fits an internal, non-HTTP,
+one-counter-per-provider gate. `ProviderRateLimiter` is a new, small
+sibling class instead, reusing the identical underlying Redis
+`INCR`+`EXPIRE` mechanism with a provider-scoped key — reported per
+this task's own Allowed-files-to-modify note, rather than either
+forking `RateLimiter`'s body or silently coercing a `Request`-shaped
+dependency into a non-route call site. Neither `app/core/rate_limit.py`
+nor `app/core/redis.py` was modified. `call()`'s own ordering (cache
+check, then rate-limit check, then timeout+retry) is the mechanism
+behind both halves of this task's own acceptance criterion at once: a
+cache hit consumes neither rate-limit budget nor network (mechanically
+tested), and a rate-limited call never reaches `fetch` (mechanically
+tested). One real, empirically-required fix mid-task: `ai/tools/cache.py`'s
+`ResponseCache.get()` initially failed mypy strict (`bytes | str | None`
+vs. the declared `str | None`) — the redis-py stubs can't see that
+`get_redis_client()` constructs its client with `decode_responses=True`
+at runtime, so `get()`'s static return type stays the wider union;
+fixed by handling both possible runtime types for real (an `isinstance`
+check plus `.decode()`), not by suppressing the checker. A second,
+purely environmental failure occurred mid-verification: the full test
+suite errored on all 312 tests in one run — traced immediately to
+Postgres/Redis/Qdrant having gone down mid-run (this sandbox's
+services do not reliably survive long idle gaps between tool calls,
+an environment characteristic of this session, not a defect in any
+code); restarted and re-ran atomically, 312/312 passed cleanly,
+confirming the first result was infrastructure noise, not a
+regression. 17 new tests (`test_external_client.py`) — cache hit
+skips `fetch`, a different key still calls `fetch`, TTL is honored and
+expiry actually observed, rate limiting allows-then-blocks and is
+shared across independently-constructed `ProviderRateLimiter`
+instances (the entire point of "provider-scoped"), a cache hit does
+not consume rate-limit budget, rate-limiting rejects before `fetch` is
+ever called, a timeout is retried the configured number of times then
+raises `ExternalTimeoutError`, a retryable `ExternalProviderError` is
+retried and can either succeed or exhaust its retries, a non-retryable
+one fails on the first attempt, an unrecognized exception is
+normalized to a non-retryable `ExternalProviderError`, and a failed
+call is never cached — all against the real local Redis this suite
+already runs against (flushed automatically before every test by
+`conftest.py`'s own existing `_clean_database_and_redis` fixture — no
+new isolation mechanism was needed), zero live network calls anywhere,
+per Q4. `WORK_BREAKDOWN_STRUCTURE.md`, `TASK_BOARD.md`, and this file
+were updated the same session — see "Files Modified This Session"
+below for the complete list.
 
 **Phase 3 — INTEG WBS Elaboration, Wave 1 (2026-09-17, this session):**
 not a WBS task — documentation/planning-only, per its own explicit
@@ -1727,6 +1782,104 @@ existing exports (`Orchestrator`, `AgentRegistry`, etc.) are unchanged.
   registry)`, so redundant but never a source of mismatch between the
   status shown and the agent that actually runs.
 
+## Verification Results (2026-09-17, INTEG-01 — actually run against real infrastructure, not asserted)
+
+Task: `Execute ATLAS-P3-INTEG-01`, the first Phase 3 implementation
+session, executed as a direct continuation of the same session that
+elaborated Wave 1 to Task level. `.ai/TASK_BOARD.md`/`WORK_BREAKDOWN_
+STRUCTURE.md` confirmed `AGENTS-03` Done — `INTEG-01`'s only
+dependency — before starting.
+
+Services had gone down again between turns (this sandbox's own
+recurring characteristic, not a code issue) — restarted, then the real
+repository was re-inspected fresh (`ai/tools/{types,service,registry}.py`,
+`app/core/rate_limit.py`, `app/core/redis.py`) rather than trusted from
+this session's own earlier notes. Clean baseline confirmed **before**
+any change: 312/312 pytest passing (295 pre-elaboration + the
+elaboration itself added none — documentation only), mypy strict clean
+on 68 backend files and 43 `ai/` files.
+
+| Check | Result |
+|---|---|
+| `uv run pytest` (full suite, CI-exact command) | ✅ 312/312 passing (295 pre-existing + 17 new in `test_external_client.py`) — first run errored on all 312 (Postgres/Redis/Qdrant down mid-run, confirmed by direct service-status check immediately after); restarted and re-ran atomically, clean |
+| `uv run mypy --ignore-missing-imports .` (CI-exact) | ✅ clean, 69 source files (one real error found and fixed mid-task — see below) |
+| `uv run mypy --ignore-missing-imports --explicit-package-bases ../ai` (CI-exact) | ✅ clean, 45 source files (43 pre-existing + 2 new: `cache.py`, `external_client.py`) |
+| A cache hit never calls `fetch` again | ✅ mechanically tested |
+| A cache hit does not consume rate-limit budget | ✅ mechanically tested — a second call to an exhausted-budget provider still succeeds when it's a cache hit |
+| A rate-limited call is rejected before `fetch` is ever invoked | ✅ mechanically tested |
+| The provider-scoped counter is shared across independently-constructed `ProviderRateLimiter` instances | ✅ mechanically tested — the entire point of "provider-scoped" rather than per-caller |
+| A timeout is retried the configured number of times, then raises `ExternalTimeoutError` | ✅ mechanically tested (attempt count asserted exactly) |
+| A retryable `ExternalProviderError` is retried, and can either succeed or exhaust its retries and still raise | ✅ both mechanically tested |
+| A non-retryable `ExternalProviderError` fails on the first attempt, never retried | ✅ mechanically tested |
+| An unrecognized exception (e.g. a raw `ValueError`) is normalized to a non-retryable `ExternalProviderError` | ✅ mechanically tested |
+| A successful call is cached with its configured TTL; a failed call is never cached | ✅ both mechanically tested |
+| Zero live network call anywhere in this task's own tests | ✅ every `fetch` is an in-test fake coroutine, per Q4 |
+
+**A real mypy-strict failure found and fixed, not suppressed:**
+`ResponseCache.get()` initially failed strict mode —
+`redis.asyncio.Redis.get()`'s own stub types its return as
+`bytes | str | None` regardless of the `decode_responses=True` runtime
+flag `app.core.redis.get_redis_client()` sets (a flag the stubs have no
+static visibility into). Fixed by handling both possible runtime types
+for real — an `isinstance` check plus `.decode("utf-8")` for the
+`bytes` case — not by adding a `# type: ignore`. Verified the fix
+resolves it and changes no test's outcome.
+
+**A real, purely environmental test failure found, diagnosed, and not
+misattributed to the new code:** the first full-suite run this session
+errored on all 312 tests (not "many" — literally every one, including
+tests untouched by this task). Before assuming a code regression,
+service status was checked directly: `service postgresql status` /
+`service redis-server status` both reported down, and `curl` to Qdrant
+returned connection-refused — confirming the services had gone down
+mid-run (an environment characteristic already seen twice earlier this
+session, not something this task's own code could cause). Restarted
+all three and re-ran atomically in the same tool call; 312/312 passed
+cleanly. Recorded here so a future session reading this file
+understands why an apparent mass-failure in this session's own history
+was infrastructure noise, not a real regression requiring
+investigation.
+
+**`app/core/rate_limit.py`'s `RateLimiter` — found not cleanly
+reusable, resolved as a new sibling class, exactly per this task's own
+Allowed-files-to-modify note:** `RateLimiter.__call__(self, request:
+Request)` is a FastAPI dependency, keyed per-client-IP
+(`ratelimit:{prefix}:{client_ip}`), raising `HTTPException` directly —
+built for inbound HTTP requests, not an internal, non-HTTP,
+one-shared-counter-per-provider gate a `Tool.handler` would call.
+`ProviderRateLimiter` reuses the identical underlying mechanism (Redis
+`INCR`+`EXPIRE`, via the same `app.core.redis.get_redis_client()`
+singleton) with a fixed, provider-scoped key and no `Request`/
+`HTTPException` coupling. Neither `app/core/rate_limit.py` nor
+`app/core/redis.py` was modified — both were only imported/consumed,
+re-diffed against the `AGENTS-09` baseline to confirm.
+
+**No changes to any already-shipped file.** `ai/tools/{types,registry,
+service,knowledge_tools}.py`, `ai/rag/**`, `app/core/rate_limit.py`,
+`app/core/redis.py`, `app/core/config.py` were all consumed (imported,
+called, or read for reference) but re-diffed against the `AGENTS-09`
+baseline after this session: zero changes to any of them.
+
+**Scope decisions made and flagged, not silently assumed:**
+- **`ExternalClient.call()`'s own ordering — cache, then rate limit,
+  then timeout+retry — is the enforcement mechanism for two acceptance
+  -criterion bullets at once**, not two independent implementations: a
+  cache hit short-circuits before the rate limiter is ever consulted
+  (so it can never consume budget), and the rate limiter is checked
+  before `fetch` is ever called (so a limited call never reaches the
+  network).
+- **`call()` operates on `str` (JSON text), not a generic type
+  parameter** — caching fundamentally needs a string-serializable
+  value; `INTEG-02` through `06` are expected to serialize their own
+  Pydantic response schema to JSON before caching and parse it back out
+  after a hit. `ExternalClient` itself never needs to know any
+  provider's own schema, per Q2/Q3's provider-agnostic principle.
+- **An unexpected (non-`ExternalProviderError`, non-timeout) exception
+  from `fetch` is never retried**, only normalized and raised
+  immediately — a deliberately conservative default: only failures a
+  concrete adapter's own `fetch` explicitly marks `retryable=True`, or
+  a bare timeout, are retried at all.
+
 ## Relevant Files
 
 **AUTH infrastructure (unchanged since 2026-08-24):**
@@ -3259,6 +3412,66 @@ session is documentation/planning only, consistent with the explicit
 "only update documentation... do not write any production code... do
 not execute any Phase 3 task" instruction it was scoped under.
 
+## Files Modified This Session (2026-09-17, INTEG-01)
+
+First Phase 3 implementation session — `ATLAS-P3-INTEG-01` done in
+full, executed as a direct continuation of the same session that just
+elaborated Wave 1 to Task level. See Verification Results above.
+
+**Created — within `INTEG-01`'s declared Allowed-files-to-modify (new
+`ai/tools/{external_client,cache}.py`):**
+- `ai/tools/cache.py` — `ResponseCache` (get/set/TTL, wrapping the
+  existing `app.core.redis.get_redis_client()` singleton)
+- `ai/tools/external_client.py` — `ExternalClient` (`call()` — cache →
+  rate limit → timeout+retry → normalize, with a structured log event
+  per outcome), `ExternalCallConfig`, `ProviderRateLimiter`, and three
+  normalized exception types: `ExternalCallError` (base),
+  `ExternalRateLimitedError`, `ExternalTimeoutError`,
+  `ExternalProviderError`
+
+**Created — tests (17 new tests, 1 new file):**
+- `backend/tests/test_external_client.py` — `ResponseCache` get/set/TTL
+  -expiry in isolation; `ProviderRateLimiter` allow-up-to-max,
+  block-beyond-max, and shared-across-instances in isolation;
+  `ExternalClient.call()`'s full behavior — cache hit/miss, a cache hit
+  never consuming rate-limit budget, rate-limit rejection before any
+  `fetch` call, timeout-then-retry-then-raise, retryable-error-then
+  -succeeds, retryable-error-exhausting-retries-still-raises,
+  non-retryable-error-fails-immediately, unexpected-exception
+  -normalized, and a failed call never being cached
+
+**Modified:** no other file. `app/core/rate_limit.py` and
+`app/core/redis.py` were consumed (the latter's `get_redis_client()`
+imported and called directly) but neither was edited — confirmed by
+re-diff against the `AGENTS-09` baseline.
+
+**Governance files updated (this session):**
+- `.ai/WORK_BREAKDOWN_STRUCTURE.md` — `INTEG-01` marked Done with a
+  Delivered summary; Status note, Wave 1 exit-criteria progress, and a
+  new integrity-check log entry all updated
+- `.ai/TASK_BOARD.md` — `INTEG-01` moved from the Phase 3 Todo table to
+  a new Phase 3 Done table, with a verification note; the Todo table's
+  remaining five rows (`INTEG-02..06`) updated to show `INTEG-01 ✅` as
+  their satisfied dependency
+- `.ai/PROJECT_STATE.md` — this file: header dates, Current
+  Phase/Module/Task pointers, this session's own narrative, a new
+  "Verification Results (2026-09-17, INTEG-01)" section, this Files
+  Modified section, Notes for Next Session, LOCK STATUS footer
+
+**Deliberately not modified, with reasons:**
+- `.ai/COMPONENT_OWNERSHIP_MATRIX.md` — backend/AI-layer only; no UI
+  component created, modified, or consumed.
+- `.ai/INDEX.md`, `.ai/INFRASTRUCTURE_BASELINE.md`,
+  `.ai/CONVERSATION_STRATEGY.md`, `.ai/SESSION_PROMPT.md`,
+  `.ai/DESIGN_BIBLE_AMENDMENTS.md` — all already current as of the
+  elaboration earlier this same session; nothing in `INTEG-01`'s own
+  implementation changed routing, providers, i18n, test setup, CI,
+  module scope, or any scope decision those files record.
+- `ai/tools/{types,registry,service,knowledge_tools}.py`, `ai/rag/**` —
+  read for reference and imported, never edited.
+- `backend/pyproject.toml` — no new dependency needed (`redis.asyncio`
+  and `structlog` were already dependencies, per `AUTH-02`/`AGENTS-01`).
+
 ## Notes for Next Session
 
 
@@ -3669,14 +3882,29 @@ elaborated (Q5). `INTEG-01`'s own scope was explicitly expanded by the
 project owner to name timeout, retry, provider-scoped rate limiting,
 caching, validation/error normalization, and monitoring hooks.
 
-**Recommended next step (current): execute `ATLAS-P3-INTEG-01`**
-(adapter foundation — its only dependency, `AGENTS-03`, has been Done
-since 2026-09-12), pending its own explicit "Execute
-ATLAS-P3-INTEG-01" instruction. This elaboration's own Q1–Q5 approval is
-not that instruction — same gate Phase 2's own 2026-09-09 elaboration
-passed through before `AGENTS-01` could ever be executed. Full scope,
-dependencies, and acceptance criteria: `WORK_BREAKDOWN_STRUCTURE.md`
-§Phase 3 → Module: INTEG.
+**`ATLAS-P3-INTEG-01` — done (2026-09-17).** The module's real
+foundation: `ai/tools/cache.py`'s `ResponseCache` and `ai/tools/
+external_client.py`'s `ExternalClient`/`ExternalCallConfig`/
+`ProviderRateLimiter`/three normalized exception types. Found
+`app/core/rate_limit.py`'s `RateLimiter` not cleanly reusable for a
+provider-scoped, non-HTTP gate — `ProviderRateLimiter` is a new,
+reported sibling class instead, reusing the same Redis mechanism.
+17 new tests, zero live network calls (Q4); 312/312 suite passing;
+mypy strict clean on 69 backend + 45 `ai/` files (one real strict-mode
+error found and fixed for real, not suppressed). One purely
+environmental mass test failure (all 312 errored when Postgres/Redis/
+Qdrant went down mid-run) diagnosed and distinguished from a real
+regression before being re-run clean.
+
+**Recommended next step (current): execute `ATLAS-P3-INTEG-02`**
+(Currency adapter — its only dependency, `INTEG-01`, is now Done; the
+most immediate payoff among the five, since it is the real data source
+`AGENTS-06`'s permanently-estimate-only Budget Agent will eventually
+need), pending its own explicit "Execute ATLAS-P3-INTEG-02" instruction.
+`INTEG-03` through `06` are equally Definition-of-Ready and may be
+executed in any order, or in parallel across separate sessions — none
+depends on any other. Full scope, dependencies, and acceptance
+criteria: `WORK_BREAKDOWN_STRUCTURE.md` §Phase 3 → Module: INTEG.
 
 ---
 
@@ -3759,5 +3987,11 @@ provider-agnostic with no concrete provider pre-selected; no live
 integration or fabricated credential without a real one; Wave 2
 (`Module: DOMAIN-AGENTS`) explicitly not elaborated; **`ATLAS-P3-INTEG-01`
 is Definition-of-Ready and is the recommended next task, awaiting its
-own explicit go-ahead**).
+own explicit go-ahead**), 2026-09-17 (**`ATLAS-P3-INTEG-01` — done**,
+same day, third update — the module's real foundation: timeout, retry,
+provider-scoped rate limiting, caching, validation/error normalization,
+monitoring hooks; `ProviderRateLimiter` a new sibling class rather than
+a `RateLimiter` fork; 17 new tests, zero live network calls per Q4;
+312/312 suite passing, mypy strict clean; **`INTEG-02` through `06` are
+now Definition-of-Ready**, recommended next: `INTEG-02` (Currency)).
 Future changes only via `MASTER_RULES.md` §21.
